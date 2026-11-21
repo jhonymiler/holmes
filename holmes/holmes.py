@@ -286,9 +286,13 @@ def prova_de(db, por, prova, onde=None):
     if por in ("medicao", "reproducao") and not (prova or "").strip():
         raise Erro(f"--por {por} exige --prova \"<comando ou registro que reproduz a constatação>\"")
     if por == "teste":
-        t = pega(db, prova or "", "teste")
-        if not resultado_de(db, t["id"]):
-            raise Erro(f"{rot(t)} não tem resultado registrado: um teste só prova depois de rodar")
+        if not (prova or "").strip():
+            raise Erro("--por teste exige --prova T.. (o teste cujo resultado prova a constatação)")
+        t = pega(db, prova, "teste")
+        res, v = resultado_de(db, t["id"]), validade(db, t["id"])
+        if res != "positivo" or v:
+            raise Erro(f"{rot(t)} não prova nada: resultado {res or 'nenhum'}" + (f", {v}" if v else "")
+                       + ". Só um positivo válido (com instrumento, controle visto, não exploratório) prova")
         prova = rot(t)
     return por, prova
 
@@ -733,6 +737,10 @@ def mapa(db, caso, tudo=False):
         if nl:
             herdado[{"INDETERMINADO": "negativos indeterminados", "A REVALIDAR": "negativos a revalidar",
                      "INVÁLIDO": "resultados inválidos"}[chave]] = nl
+    velhos = um(db, "SELECT count(*) FROM no n JOIN fato f ON f.no=n.id WHERE n.tipo='fato' AND f.conferido IS NULL")[0]
+    if velhos:
+        alertas.append(("velho", f"{velhos} fato(s) sem prova registrada (banco anterior ao modelo fato/pista): rode "
+                                 "`reorganiza` (plano) e `reorganiza --aplica` (vira pista o que não está provado)."))
     rasc = um(db, "SELECT count(*) FROM no WHERE tipo='pista' AND estado='aberta' AND legado=0")[0]
     if rasc:
         alertas.append(("rasc", f"{rasc} pista(s) aberta(s): provar (`confere K.. --por ..`, vira fato) ou descartar "
@@ -862,11 +870,11 @@ def matriz_ach(db, f):
     vals = q(db, f"SELECT * FROM ach WHERE hipotese IN ({','.join('?' * len(hs))})", *[h["id"] for h in hs])
     fatos = sorted({v["fato"] for v in vals})
     cel = {(v["fato"], v["hipotese"]): v["valor"] for v in vals}
-    L = ["fato    " + " ".join(f"{rot(h):>6}" for h in hs) + "  diagnóstico?"]
+    L = ["fato/pista " + " ".join(f"{rot(h):>6}" for h in hs) + "  diagnóstico?"]
     for e in fatos:
         linha_v = [cel.get((e, h["id"]), "·") for h in hs]
         diag = "sim" if len({x for x in linha_v if x != "·"}) > 1 else "não (igual para todas)"
-        L.append(f"E{e:<6} " + " ".join(f"{x:>6}" for x in linha_v) + f"  {diag}")
+        L.append(f"{rot(um(db, 'SELECT * FROM no WHERE id=?', e)):<10} " + " ".join(f"{x:>6}" for x in linha_v) + f"  {diag}")
     inc = [sum(-ACH[cel[(e, h['id'])]] for e in fatos if (e, h["id"]) in cel and ACH[cel[(e, h['id'])]] < 0) for h in hs]
     L.append("inconsist " + " ".join(f"{x:>6}" for x in inc) + "  (menor = menos refutada; conta só I/II)")
     return "\n".join(L)
@@ -874,14 +882,14 @@ def matriz_ach(db, f):
 
 def saude(db):
     L = []
-    orf = q(db, "SELECT * FROM no WHERE tipo='fato' AND id NOT IN (SELECT de FROM aresta UNION SELECT para FROM aresta "
+    orf = q(db, "SELECT * FROM no WHERE tipo IN ('fato','pista') AND id NOT IN (SELECT de FROM aresta UNION SELECT para FROM aresta "
                 "UNION SELECT fato FROM ach)")
     if orf:
-        L.append(f"{len(orf)} fato(s) soltos, sem ligação a hipótese/entidade: " + ", ".join(rot(r) for r in orf[:15]))
+        L.append(f"{len(orf)} fato(s)/pista(s) soltos, sem ligação a hipótese/entidade: " + ", ".join(rot(r) for r in orf[:15]))
     sem_fonte = q(db, "SELECT n.* FROM no n JOIN fato f ON f.no=n.id WHERE n.origem IN ('autor','fonte') "
                       "AND f.fonte IS NULL AND n.estado != 'retratado'")
     if sem_fonte:
-        L.append(f"{len(sem_fonte)} fato(s) de origem autor/fonte sem --fonte: " + ", ".join(rot(r) for r in sem_fonte[:15]))
+        L.append(f"{len(sem_fonte)} fato(s)/pista(s) de origem autor/fonte sem --fonte: " + ", ".join(rot(r) for r in sem_fonte[:15]))
     velhos = q(db, "SELECT * FROM no WHERE tipo='teste' AND estado='planejado' AND criado < datetime('now','-3 day')")
     if velhos:
         L.append(f"{len(velhos)} teste(s) planejados há mais de 3 dias: " + ", ".join(rot(r) for r in velhos[:15]))
@@ -1289,7 +1297,8 @@ def reorganiza(db, aplica=False):
     rs = q(db, "SELECT n.*, f.natureza, f.conferido, f.citacao, f.fonte FROM no n JOIN fato f ON f.no=n.id "
                "WHERE n.tipo='fato'")
     # citação com o texto literal gravado e a fonte ligada carrega a própria prova
-    literal = {r["id"] for r in rs if r["natureza"] == "citacao" and (r["citacao"] or "").strip() and r["fonte"]}
+    literal = {r["id"] for r in rs if r["natureza"] == "citacao" and (r["citacao"] or "").strip() and r["fonte"]
+               and (r["conferido"] or (r["origem"] != "externo" and r["estado"] != "rascunho"))}
     vira = [r for r in rs if r["id"] not in literal and (r["natureza"] not in NATUREZAS_FATO or not r["conferido"])]
     por_nat = {}
     for r in vira:
@@ -1376,7 +1385,7 @@ def extrai(db, dados, aplica=False, so=None, rejeita=()):
 
     def mesmo(tipo, texto):
         alvo = " ".join(texto.lower().split())[:160]
-        return next((r for r in q(db, "SELECT * FROM no WHERE tipo=? AND estado NOT IN ('retratado','rejeitada')", tipo)
+        return next((r for r in q(db, "SELECT * FROM no WHERE tipo=? AND estado NOT IN ('retratado','rejeitada','descartada')", tipo)
                      if " ".join(r["titulo"].lower().split()) == alvo), None)
 
     fonte = dados.get("fonte")
@@ -1420,6 +1429,8 @@ def extrai(db, dados, aplica=False, so=None, rejeita=()):
                       fonte=o.get("fonte") or fonte_id, local=local, citacao=citacao, por=por, prova=o.get("prova"))
             mapa_ids[loc] = no
         provada = (o.get("pedaco") or (o.get("por") and o.get("origem") != "externo")) and nat in NATUREZAS_FATO
+        if provada and not o.get("pedaco") and not aplica:  # a prévia recusa o que a gravação recusaria
+            prova_de(db, o.get("por"), o.get("prova"), o.get("fonte") or fonte_id or o.get("citacao") or o.get("local"))
         plano.append(f"+ {loc} {'fato' if provada else 'pista'}/{nat}: {o['texto'][:90]}")
     for x in dados.get("questoes", []):
         loc = item(x, "id")
@@ -1580,7 +1591,7 @@ def main(argv=None):
     s = sub.add_parser("cita"); s.add_argument("pedaco", type=int); s.add_argument("afirmacao")
     s.add_argument("--natureza", default="citacao", choices=NATUREZAS); s.add_argument("--grau", default="B")
     s = sub.add_parser("confere"); s.add_argument("fato", help="pista K.. (vira fato) ou fato E.. (renova a prova)"); s.add_argument("nota")
-    s.add_argument("--por", required=True, choices=PROVAS); s.add_argument("--prova")
+    s.add_argument("--por", required=True, choices=PROVAS); s.add_argument("--prova"); s.add_argument("--fonte"); s.add_argument("--local")
     s = sub.add_parser("atributo"); s.add_argument("entidade"); s.add_argument("chave"); s.add_argument("valor")
     s.add_argument("--fato")
     s = sub.add_parser("ramo"); s.add_argument("acao", nargs="?", choices=["novo", "usa", "solta"])
@@ -2009,12 +2020,18 @@ def main(argv=None):
                 raise Erro(f"{rot(e)} é {nat}: não vira fato. Fato é constatação provada; o que sustenta uma {nat} é "
                            f"outro fato (`novo fato .. --por ..` e `liga E<novo> sustenta {rot(e)}`), e se ela explica "
                            "algo testável, é hipótese")
-            por, prova = prova_de(db, a.por, a.prova, a.nota)
-            if por == "fonte":  # a nota diz onde foi conferido: vira o localizador se não havia outro
-                db.execute("UPDATE fato SET local=coalesce(nullif(local, ''), ?) WHERE no=?", (a.nota[:300], e["id"]))
+            ja = um(db, "SELECT fonte, citacao, local FROM fato WHERE no=?", e["id"])
+            fonte = pega(db, a.fonte, "fonte")["id"] if a.fonte else ja["fonte"]
+            onde = str(fonte or "") or ja["citacao"] or a.local or ja["local"]
+            por, prova = prova_de(db, a.por, a.prova, onde)
+            if a.fonte or a.local:
+                db.execute("UPDATE fato SET fonte=coalesce(?, fonte), local=coalesce(?, local) WHERE no=?",
+                           (fonte if a.fonte else None, a.local, e["id"]))
+                if a.fonte:
+                    db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (e["id"], "deriva", fonte, None, agora()))
             if nat not in NATUREZAS_FATO:  # relato provado: vale o que foi constatado, não quem contou
                 nat = "citacao" if por == "fonte" else "observacao"
-            db.execute("UPDATE fato SET natureza=?, conferido=?, conferido_por=?, prova=coalesce(?, prova) WHERE no=?",
+            db.execute("UPDATE fato SET natureza=?, conferido=?, conferido_por=?, prova=? WHERE no=?",
                        (nat, agora(), por, prova, e["id"]))
             era = e["tipo"]
             db.execute("UPDATE no SET tipo='fato', estado='vigente' WHERE id=?", (e["id"],))

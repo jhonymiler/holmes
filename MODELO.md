@@ -258,7 +258,7 @@ flowchart LR
     I["pista: inference / interpretation"] -. "never a fact: a hypothesis if testable;<br/>what proves it is another fact, linked sustenta" .-> H["hipotese"]
 ```
 
-`cita <chunk>` comes out as a fact proven by source (an interpretation of the excerpt is refused: it is a clue). `--por fonte` must point to the source (`--fonte`, `--citacao` or `--local`; in `confere`, the note says where). `confere` does not revive what fell (`retratado`, `contestado`, `descartada`): reopen with `estado` first. In `extrai`, an observation becomes a fact only if proven
+`cita <chunk>` comes out as a fact proven by source (an interpretation of the excerpt is refused: it is a clue). `--por fonte` must point to the source (`--fonte`, `--citacao` or `--local`, also accepted by `confere`; a note alone is not a locator). A test proves only with a valid positive result. `confere` does not revive what fell (`retratado`, `contestado`, `descartada`): reopen with `estado` first. In `extrai`, an observation becomes a fact only if proven
 (`pedaco`, or `por` + `prova` when not external); otherwise it is a clue. External material never proves itself. An old database (inferences and reports stored as facts)
 is brought to this model by `reorganiza --aplica`, which turns every unproven fact into a clue with the same id.
 

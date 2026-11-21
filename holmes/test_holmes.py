@@ -133,6 +133,11 @@ def test_fatos_fontes_corpus_e_entidades():
     j.write_text('{"observacoes": [{"id": "o1", "texto": "Agente externo diz que a chave confere", '
                  '"origem": "externo", "por": "medicao", "prova": "true"}]}')
     assert "pista/observacao" in roda(r, "extrai", str(j))                                  # externo não se autoprova
+    kfon = roda(r, "novo", "pista", "O papel tem marca d'água", "--natureza", "observacao").strip()
+    roda(r, "confere", kfon, "ok", "--por", "fonte", ok=False)                             # nota não é localizador
+    assert "provado por fonte" in roda(r, "confere", kfon, "vi contra a luz", "--por", "fonte", "--local", "folha 1")
+    kte = roda(r, "novo", "pista", "A tinta é de 1897", "--natureza", "observacao").strip()
+    assert "exige --prova" in roda(r, "confere", kte, "x", "--por", "teste", ok=False)
     # entidade com alias: buscar "lock" acha o que foi escrito como "fechadura"
     roda(r, "novo", "entidade", "fechadura", "--classe", "conceito", "--alias", "lock,tumbler")
     roda(r, "novo", "fio", "Medir os pinos da fechadura do porão")
@@ -267,6 +272,8 @@ def test_integridade_exploratorio_script_controle():
     roda(r, "teste", "H3", "Lupa", "--alcance", "d", "--porque", "p", "--instrumento", "I5",
          "--controle", "folha conhecida", "--controle-tipo", "real")                                 # T7
     assert "controle não confirmado" in roda(r, "resultado", "T7", "positivo", "achou")              # positivo também
+    k = roda(r, "novo", "pista", "A lupa mostra a marca", "--natureza", "observacao").strip()
+    assert "não prova nada" in roda(r, "confere", k, "x", "--por", "teste", "--prova", "T7", ok=False)  # controle não visto
     roda(r, "resultado", "T7", "negativo", "x", "--sentido", "nenhum: x", ok=False)                  # motivo curto demais
     roda(r, "novo", "fato", "Prova vazia", "--prova", "", "--por", "fonte", "--local", "folha 1")
     assert "OK" not in roda(r, "prova", "--executa")                                                # vazio não prova nada
@@ -420,6 +427,7 @@ def test_reorganiza_banco_antigo():
     i = db.execute("INSERT INTO no(tipo, titulo, estado, origem, criado, atualizado) VALUES "
                    "('fato', 'Talvez a carta seja de um canhoto', 'vigente', 'agente', 'x', 'x')").lastrowid
     db.execute("INSERT INTO fato(no, natureza) VALUES (?, 'inferencia')", (i,)); db.commit(); db.close()
+    assert "sem prova registrada" in roda(r, "mapa", "--tudo")                       # banco antigo: avisa
     plano = roda(r, "reorganiza")
     assert "viram pista 1 (inferencia 1)" in plano and "ganham ramo 1" in plano and "plano apenas" in plano
     assert roda(r, "ver", f"E{i}").startswith(f"E{i} [fato:vigente")              # nada gravado sem --aplica

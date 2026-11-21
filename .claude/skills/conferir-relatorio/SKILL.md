@@ -26,7 +26,7 @@ Everything that comes from outside (subagent, external AI, another session, thir
    (`novo premissa`).
 8. **Record only what was checked:**
    - checked against the primary source: `cita <chunk> "<t>"`, or record it as a clue and prove it:
-     `novo pista "<t>" --origem externo --natureza relato` then `confere K.. "<where it was checked>" --por fonte`;
+     `novo pista "<t>" --origem externo --natureza relato` then `confere K.. "<what was checked>" --por fonte --fonte S..` (or `--local "<where>"`);
    - reproduced by you (rerun, recomputed): `confere K.. "<what was rerun>" --por reproducao --prova "<command>"`;
    - not checked: keep it as a clue (`novo pista ... --natureza relato --origem externo`, grade C), or do not record;
    - a lead without proof: `novo fio "<t>"`;
