@@ -34,7 +34,7 @@ read the harness code and the databases.
 | The database grows | Auto-consolidation produced 53 to 61% of the edges. The whole picture was requested 4 times in one night. Measured: the opening dashboard was cut from 465 KB to 14 KB, and the mod did not even load in the environment. | "you keep jumping from branch to branch without closing your reasoning" |
 | Validity in question | The instrument covered 22 of 7,502 targets. Weeks of negatives lost their validity. Parallel sessions collided ids in the same database. | "if it errors we'll never know" |
 | Bloat | ~1,900 claims, and 555 of 713 tests without an instrument. A list of combination "families" went from 11 to 319 in a single continuous-objective session. A false premise coming from the database itself supported ~15 tests over 11 h. | "we're always trying everything at once for nothing… I'm lost"; "database too bloated… we can't recover the hits" |
-| The path is lost | Interpretations stored as loose facts, 1,238 of 1,283 facts with no place in the tree; one conclusion (the film's numbers in the author's text) rediscovered three times in 17 days; four competing readings of the same clue recorded as a queue in which each "corrected" the previous one. | "we open branches but have no view of them… it should be a tree we can always go back to and fork" |
+| The path is lost | Interpretations stored as loose facts, 1,238 of 1,283 facts with no place in the tree; one conclusion rediscovered three times in 17 days; four competing readings of the same clue recorded as a queue in which each "corrected" the previous one. | "we open branches but have no view of them… it should be a tree we can always go back to and fork" |
 
 ## The failure patterns
 
