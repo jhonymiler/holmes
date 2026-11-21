@@ -1,0 +1,62 @@
+{
+  "caso": "relojoeiro",
+  "objetivo": "Abrir o cofre do relojoeiro (combinação de 4 dígitos)",
+  "solucao": "0347: a hora em que o relógio da sala parou (3h47), que o diário chama de 'a hora em que as metades se encontraram'",
+  "palavras_da_solucao": ["0347", "3h47", "parou"],
+  "pistas": [
+    {"id": "c01", "onda": 1, "texto": "A casa fica na Rua das Acácias, número 12"},
+    {"id": "c02", "onda": 1, "texto": "O relojoeiro vivia sozinho desde a viagem da filha"},
+    {"id": "c03", "onda": 1, "texto": "O relógio de parede da sala parou às 3h47 e nunca mais foi acertado"},
+    {"id": "c04", "onda": 1, "texto": "A porta dos fundos range quando chove"},
+    {"id": "c05", "onda": 1, "texto": "Poema na escrivaninha: duas metades que se buscam guardam o que importa"},
+    {"id": "c06", "onda": 1, "texto": "Há uma coleção de selos franceses na estante"},
+    {"id": "c07", "onda": 1, "texto": "A chave do escritório estava sob o vaso de girassóis"},
+    {"id": "c08", "onda": 1, "texto": "O jardim tem duas metades de canteiro, uma de rosas e outra de couves"},
+    {"id": "c09", "onda": 1, "texto": "O cofre tem quatro rodas numéricas de latão"},
+    {"id": "c10", "onda": 1, "texto": "O gato da casa se chama Pêndulo"},
+    {"id": "c11", "onda": 2, "texto": "Diário: guardei o segredo no instante em que tudo ficou imóvel"},
+    {"id": "c12", "onda": 2, "texto": "Recibo de conserto de um relógio, datado de 12/05/1931"},
+    {"id": "c13", "onda": 2, "texto": "O relógio de pulso do mordomo estava cinco minutos adiantado"},
+    {"id": "c14", "onda": 2, "texto": "No rodapé do poema há um yin-yang desenhado a tinta"},
+    {"id": "c15", "onda": 2, "texto": "A lareira não é acesa há anos"},
+    {"id": "c16", "onda": 2, "texto": "O vizinho ouviu badaladas um pouco antes das quatro da madrugada"},
+    {"id": "c17", "onda": 2, "texto": "Um mapa da Suíça pendurado no corredor"},
+    {"id": "c18", "onda": 2, "texto": "Conta de luz paga em 1931, sem atraso"},
+    {"id": "c19", "onda": 2, "texto": "Carta à filha: lembre do amarelo de Van Gogh quando voltar"},
+    {"id": "c20", "onda": 2, "texto": "O retrato da esposa a mostra segurando uma ampulheta"},
+    {"id": "c21", "onda": 3, "texto": "Caneca da cozinha decorada com um girassol pintado"},
+    {"id": "c22", "onda": 3, "texto": "O relojoeiro abriu a oficina em 1931, segundo a placa"},
+    {"id": "c23", "onda": 3, "texto": "O mordomo diz que o patrão gostava de xadrez"},
+    {"id": "c24", "onda": 3, "texto": "Na gaveta, um manual de rádio de válvulas"},
+    {"id": "c25", "onda": 3, "texto": "A última página do diário foi arrancada"},
+    {"id": "c26", "onda": 3, "texto": "O piano está desafinado"},
+    {"id": "c27", "onda": 3, "texto": "Fragmento queimado no forno: '...quando as metades se encontraram...'"},
+    {"id": "c28", "onda": 3, "texto": "Há poeira acumulada sobre o cofre, menos nas rodas"},
+    {"id": "c29", "onda": 3, "texto": "A filha mandou um cartão-postal de Lisboa"},
+    {"id": "c30", "onda": 3, "texto": "O relojoeiro marcava compromissos sempre em horas quebradas"}
+  ],
+  "ligacoes": [
+    {"de": "c03", "para": "c11", "conceito": "tempo parado", "literal": false},
+    {"de": "c05", "para": "c14", "conceito": "complementaridade", "literal": false},
+    {"de": "c07", "para": "c19", "conceito": "girassóis de Van Gogh", "literal": false},
+    {"de": "c09", "para": "c03", "conceito": "combinação numérica", "literal": false},
+    {"de": "c16", "para": "c03", "conceito": "hora da madrugada", "literal": false},
+    {"de": "c20", "para": "c11", "conceito": "tempo parado", "literal": false},
+    {"de": "c27", "para": "c05", "conceito": "metades", "literal": true},
+    {"de": "c25", "para": "c27", "conceito": "diário", "literal": false},
+    {"de": "c12", "para": "c22", "conceito": "1931", "literal": true}
+  ],
+  "armadilhas": [
+    {"de": "c08", "para": "c05", "porque": "'duas metades' do canteiro: mesma expressão, sem relação"},
+    {"de": "c13", "para": "c03", "porque": "outro relógio, adiantado, sem relação com a parada"},
+    {"de": "c21", "para": "c07", "porque": "girassol decorativo comum"},
+    {"de": "c18", "para": "c12", "porque": "1931 é o ano de tudo na casa, coincidência"}
+  ],
+  "conceitos_do_interprete": [
+    {"nome": "tempo parado", "aliases": "parou,imóvel,ampulheta,instante"},
+    {"nome": "complementaridade", "aliases": "duas metades,yin-yang,metades se encontraram"},
+    {"nome": "Van Gogh", "aliases": "girassóis,amarelo de Van Gogh"},
+    {"nome": "combinação do cofre", "aliases": "rodas numéricas,3h47,quatro da madrugada"},
+    {"nome": "diário", "aliases": "diário,página arrancada,fragmento queimado"}
+  ]
+}
