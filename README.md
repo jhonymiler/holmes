@@ -6,6 +6,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-FTS5-003B57?logo=sqlite&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-hooks_%2B_skills-D97757)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-success)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 **A kit that lets Claude Code run long investigations without losing the thread, fooling itself, or
 repeating work.**
@@ -227,3 +228,7 @@ The mod `.claude/skills/holmes/` is optional and only trims long Bash output; it
 
 > [!WARNING]
 > Not yet done: an evaluation with a real model end to end. The protocol is in `holmes/aval/README.md`.
+
+## License
+
+[MIT](LICENSE) © 2026 Jhony Miler

@@ -6,6 +6,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-FTS5-003B57?logo=sqlite&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-hooks_%2B_skills-D97757)
 ![Dependências](https://img.shields.io/badge/depend%C3%AAncias-nenhuma-success)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
 
 **Um kit para o Claude Code conduzir investigações longas sem perder o fio, sem se enganar e sem repetir
 trabalho.**
@@ -222,3 +223,7 @@ O mod `.claude/skills/holmes/` é opcional e só poda saídas longas do Bash; el
 
 > [!WARNING]
 > Ainda não feito: avaliação de ponta a ponta com um modelo real. O protocolo está em `holmes/aval/README.md`.
+
+## Licença
+
+[MIT](LICENSE) © 2026 Jhony Miler
