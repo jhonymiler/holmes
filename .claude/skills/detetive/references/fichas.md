@@ -11,7 +11,7 @@ with the `ficha` command, the one-page view of where the case stands.
 | Open | `init <case> "<objective>"`, `usa <case>`, `novo alvo`, `novo frente`, `ramo novo "TRUNK..." --de O1 --porque ..` |
 | Resume | `mapa`, `ficha`, `trilha` if needed, then `ver <id>` of whatever is active |
 | F0 | `fonte <path> --titulo "<t>"` |
-| F1 | `cita <chunk> "<t>"` or `novo fato "<t>" --natureza --origem --fonte --grau`; `confere <E> ".." --por ..`; `novo fio`; `novo questao`; many units: `extrai f.json [--aplica]` |
+| F1 | `cita <chunk> "<t>"`, `novo fato "<t>" --por .. --natureza --origem --fonte --grau` (proven) or `novo pista "<t>"` (not yet); `confere K.. ".." --por ..`; `novo fio`; `novo questao`; many units: `extrai f.json [--aplica]` |
 | Relations | `conexoes <id\|"concept">`; `conexao <from> <to> <relation> "<why>" --rival --discriminador`; `estado C.. confirmada\|rejeitada` |
 | F2 | `novo hipotese "<t>" --pai <front> --refuta-se ..`; `liga <H> responde <Q>`; `liga <a> rival <b>`; rival readings as sibling branches |
 | F3 | `teste <hyp> "<t>" --alcance --porque --fora --controle --controle-tipo --previsao --instrumento` |

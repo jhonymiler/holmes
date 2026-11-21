@@ -25,8 +25,10 @@
    `EXEMPLO.md`.
 5. Clues, sources and outputs are read for meaning, not only literally (skill `leitura`). The map's
    `LEITURA ATUAL` is the story the case seems to tell; rewrite it with `holmes.py leitura` when the map asks.
-6. A fact is a proven finding: `confere <E> "<note>" --por fonte|medicao|teste|reproducao` (measurement and
-   reproduction need `--prova "<command>"`). Inferences are never "proven"; what proves them is a new fact.
+6. A fact is a finding already proven: `novo fato "<t>" --por fonte|medicao|teste|reproducao [--prova ..]`.
+   What is not yet proven is a clue: `novo pista "<t>" --natureza observacao|relato|inferencia|interpretacao`;
+   a clue of observation or report becomes a fact with `confere K.. "<note>" --por ..`. An inference is never a
+   fact: it stays a clue, or becomes a hypothesis. Old databases: `reorganiza` (plan) then `--aplica`.
 
 ## This machine's environment
 <!-- Measured facts about the machine (CPU/thread limits, GPU, venv paths, unreliable tools) go here, and only here. -->

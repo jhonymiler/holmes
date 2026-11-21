@@ -154,27 +154,29 @@ holmes.py estado B9 pausado "no list of employees; reopen if the attendance book
 There is no way to test it now, and that is not a refutation. The branch pauses with what is missing written down,
 and comes back into view whenever someone looks at the tree. `--nao-usa` opens the branch without making it active.
 
-### 6. The "Jane" line: a fact proven without a source, a detour, and the way back
+### 6. The "Jane" line: a clue proven into a fact without a source, a detour, and the way back
 
 ```bash
 holmes.py ramo novo "J. = Jane, John's daughter" --de B5 --passo 3 \
     --porque "The firm passed to Jane in 1895; and the left-slanting hand recalls her letters"    # B10
-holmes.py novo fato "Blind comparison by a third party: the slant matches 3 letters signed by Jane." \
-    --natureza observacao --porque "Discriminating test written beforehand: same slant and same 'J'"   # E11
-holmes.py confere E11 "a second examiner repeated the comparison blind and got the same result" \
-    --por reproducao --prova "second examiner's report, 2 Nov"
+holmes.py novo pista "Blind comparison by a third party: the slant matches 3 letters signed by Jane." \
+    --natureza observacao --porque "Discriminating test written beforehand: same slant and same 'J'"   # K11 (a clue)
+holmes.py confere K11 "a second examiner repeated the comparison blind and got the same result" \
+    --por reproducao --prova "second examiner's report, 2 Nov"                                  # K11 → E11 (a fact)
 holmes.py passo pensou "So Jane wrote the letter in her own hand." \
     --porque "The slant is rare and matches in all 3 letters"
 holmes.py passo achou "But the letter's 'J' has a loop Jane never makes in the 3 letters." \
     --porque "Second half of the prediction: the 'J' should match, and it does not"
 ```
 
-**A fact is a proven finding, and the proof need not be a source.** E11 has no document to quote: what makes it a
-fact is that an independent examiner reproduced it. `confere --por` takes four kinds of proof: `fonte` (read in the
-primary source), `medicao` (a measurement anyone can rerun, with `--prova "<command>"`), `teste` (a test with a
-recorded result, `--prova T..`) and `reproducao` (reproduced independently). An inference such as step 3 ("so
-she wrote it in her own hand") cannot be proven this way: `confere` refuses it, because what would prove it is a
-new finding.
+**A fact is a finding already proven; until then it is a clue.** The comparison enters as the clue K11: one
+examiner's word is not yet proof. It becomes the fact E11 (same node, same links) when a second examiner reproduces
+it blind; the output says so: `E11 provado por reproducao (era a pista K11; agora é fato)`. There is no document to
+quote here: the proof is the reproduction. `confere --por` takes four kinds of proof: `fonte` (read in the primary
+source), `medicao` (a measurement anyone can rerun, with `--prova "<command>"`), `teste` (a test with a recorded
+result, `--prova T..`) and `reproducao` (reproduced independently). A fact that is already proven when it is found
+goes straight in with `novo fato ... --por ..`. Step 3 ("so she wrote it in her own hand") is an inference: it is
+never a fact, `novo fato` refuses it, and it can only be a clue, or a hypothesis if it is testable.
 
 Step 3 was a leap: the slant does not prove "in her own hand". Step 4 shows the problem. The correction **does not
 erase** step 3: you go back to the last step that still holds (step 2) and open another direction from there, like
@@ -190,7 +192,7 @@ gitGraph
     commit id: "B6 dead"
     checkout main
     branch B10-Jane
-    commit id: "B10 2 E11 slant matches (proven)"
+    commit id: "B10 2 K11 slant matches (clue, proven: E11)"
     branch B12-Jane-dictated
     checkout B10-Jane
     commit id: "B10 3 'in her own hand' (detour)"
@@ -208,7 +210,8 @@ holmes.py passo proximo "Compare the letter's 'J' with the handwriting of Jane's
     --porque "Separates 'Jane dictated' from 'a clerk': if the loop is the secretary's, the letter came from Jane's office"
 ```
 
-The new branch's trail inherits **only** steps 1 and 2 from B10. The detour and the evidence that brought it down
+The new branch's trail inherits **only** steps 1 and 2 from B10. Step 2 still says `K11`: it records what the item
+was when it was registered (a clue), and `ver K11` or `ver E11` both open the node, now a fact. The detour and the evidence that brought it down
 stay in B10, visible, but outside the path going forward:
 
 ```
@@ -224,7 +227,7 @@ O1 [aberto] Find out who wrote the anonymous letter signed J.
     B10 [pausado] J. = Jane, John's daughter
       1. abriu: nasce de B5 (passo 3): TRUNK: what is established about the letter
          porque: The firm passed to Jane in 1895; and the left-slanting hand recalls her letters
-      2. registrou: E11 Blind comparison by a third party: the slant matches 3 letters signed by Jane.
+      2. registrou: K11 Blind comparison by a third party: the slant matches 3 letters signed by Jane.
          porque: Discriminating test written beforehand: same slant and same 'J'
       B12 [ativo] Jane dictated; another hand wrote
         1. abriu: nasce de B10 (passo 2): J. = Jane, John's daughter
@@ -324,7 +327,9 @@ A dead branch shows with `✗` in front, so nobody walks it again by accident.
 | A test meets the refutation criterion | hypothesis refuted, branch dead with the reason, trail kept | 7 and 26 |
 | No way to test now | branch paused with what is missing, not discarded | 26 |
 | A conclusion was a leap | fork from the last valid step; the detour stays visible in the branch of origin | 25 |
-| A finding with no document behind it | a fact proven by reproduction (or measurement, or a test), not by a source | 11 |
+| A claim not yet proven | a clue (`pista`); proven, it becomes a fact with the same id | 11 |
+| A finding with no document behind it | a clue proven by reproduction (or measurement, or a test), not by a source | 11 |
+| An inference | never a fact: a clue, or a hypothesis if testable | 11 |
 | New session, no memory | `mapa` brings the active branch; `ficha` gives the rest on one page | 23 |
 | "Have we tried this?" | `busca` finds the line by its steps, with its state | 9 |
 
@@ -353,8 +358,8 @@ h estado B6 morto "T8: John died in 1895, before the 1897 paper"
 h ramo novo "J. = a clerk at the firm" --de B5 --passo 3 --nao-usa --porque "Rival reading: whoever used the firm's paper could be an employee"
 h estado B9 pausado "no list of employees; reopen if the attendance book turns up"
 h ramo novo "J. = Jane, John's daughter" --de B5 --passo 3 --porque "The firm passed to Jane in 1895; and the left-slanting hand recalls her letters"
-h novo fato "Blind comparison by a third party: the slant matches 3 letters signed by Jane." --natureza observacao --porque "Discriminating test written beforehand: same slant and same 'J'"
-h confere E11 "a second examiner repeated the comparison blind and got the same result" --por reproducao --prova "second examiner's report, 2 Nov"
+h novo pista "Blind comparison by a third party: the slant matches 3 letters signed by Jane." --natureza observacao --porque "Discriminating test written beforehand: same slant and same 'J'"
+h confere K11 "a second examiner repeated the comparison blind and got the same result" --por reproducao --prova "second examiner's report, 2 Nov"
 h passo pensou "So Jane wrote the letter in her own hand." --porque "The slant is rare and matches in all 3 letters"
 h passo achou "But the letter's 'J' has a loop Jane never makes in the 3 letters." --porque "Second half of the prediction: the 'J' should match, and it does not"
 h ramo novo "Jane dictated; another hand wrote" --de B10 --passo 2 --porque "Back to step 2: the slant holds; the detour was step 3 (concluding 'in her own hand'). The slant may come from the handwriting school Jane and her secretary both attended"

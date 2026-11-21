@@ -56,8 +56,8 @@ For `ceticismo`: the claim, the script, the log and the record, without a defenc
 
 - Do not redo the agent's work. Check the report against the source (skill `conferir-relatorio`).
 - A result from an agent or an external AI enters with `--origem agente|externo --grau C` until checked.
-- A fact from outside the repository that the agent asserts enters as an external report (grade C, draft), not
-  as a case premise, until a source has been read.
+- A fact from outside the repository that the agent asserts enters as a clue (`pista`, grade C), not as a
+  fact nor a case premise, until it is proven.
 
 ## Secrecy and security
 

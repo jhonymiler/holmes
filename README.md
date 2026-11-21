@@ -164,12 +164,12 @@ Full data model, with diagrams: [MODELO.md](MODELO.md). A fictional case from st
 | path | `ficha` (one page) · `arvore [id]` · `trilha [B..]` · `ramo novo "<question>" --de <id> [--passo N] --porque ".."` · `ramo usa B..` · `passo <leu\|pensou\|testou\|achou\|corrigiu\|decidiu\|proximo> ".." --porque ".."` |
 | orientation | `mapa [--tudo]` · `proximo` (what next, and why) · `ver <id>` · `cadeia <id>` (what it rests on) · `questoes` · `cronologia` · `busca "<txt>"` · `ja "<txt>"` (already tested?) · `saude` (health) |
 | overall reading | `leitura "<picture>" [--sustenta E,..] [--enfraquece] [--rival H,..] [--questao Q] [--lacuna Q,..] [--motivo]` · `leitura` (show current) |
-| create | `novo <type> "<title>" --pai ..` (types: alvo, frente, questao, hipotese, premissa, fato, entidade, decisao, fio) |
+| create | `novo <type> "<title>" --pai ..` (types: alvo, frente, questao, hipotese, premissa, fato (needs `--por`), pista, entidade, decisao, fio) |
 | extract | `extrai <contract.json> [--aplica] [--so ..] [--rejeita ..]` (observation, clue, interpretation, question, hypothesis, connection; contract in MODELO.md) |
 | relate | `conexoes <id\|"text">` (candidates; query) · `conexao <from> <to> <relation> "<why>" [--rival] [--discriminador]` · `estado C.. confirmada\|rejeitada "<reason>"` |
 | hypotheses | `prob <H> 0.4 "<reason>"` · `ach <E> <H> CC\|C\|N\|I\|II` · `ach <F>` (matrix) |
 | test | `teste <H> "<t>" --alcance .. --porque .. [--exploratorio]` · `roda <T> --pid --log` · `resultado <T> <res> "<note>" [--sentido ".."]` · `jobs` |
-| sources | `fonte <file\|folder\|url>` · `cita <chunk> "<claim>"` · `confere <E> "<note>" --por fonte\|medicao\|teste\|reproducao [--prova ..]` (a fact is a proven finding; the proof need not be a source) |
+| sources | `fonte <file\|folder\|url>` · `cita <chunk> "<claim>"` · `confere K.. "<note>" --por fonte\|medicao\|teste\|reproducao [--prova ..]` (proves a clue into a fact; the proof need not be a source) · `reorganiza [--aplica]` (old database → facts only proven, clues, steps relinked) |
 | change | `estado <id> <state> "<reason>"` · `edita <id> [--refuta-se]` · `liga`/`desliga <from> <type> <to>` · `atributo <N> <key> <value>` |
 | prove | `instrumento <path> "<name>" --verificador "<cmd>"` · `prova` (list) · `prova --executa [--legado]` |
 
@@ -221,11 +221,11 @@ The mod `.claude/skills/holmes/` is optional and only trims long Bash output; it
 
 ## Verified
 
-- ✅ `holmes/test_holmes.py`: 12 tests. They cover the tree and limits, runs and validity (control seen,
+- ✅ `holmes/test_holmes.py`: 13 tests. They cover the tree and limits, runs and validity (control seen,
   versioned script, exploratory), tunnel, versioned instrument, corpus in all four modes, citation, aliases,
   transitive dependencies, contradictions, ACH (analysis of competing hypotheses), hooks, reading tied to
   its basis, `--sentido`, legacy items kept out of alerts, the path extraction → candidate connection →
-  edge → reading, branches forked from a step, path, tree and one-page sheet, and the synthetic case.
+  edge → reading, branches forked from a step, path, tree and one-page sheet, facts only proven and clues promoted by proof, reorganizing an old database, and the synthetic case.
 - ✅ `holmes/aval/aval.py recuperacao`: relation discovery measured against an answer key (numbers and
   limits in `holmes/aval/README.md`).
 - ✅ Stop hook on an 80 MB transcript: 4.6 s → 0.25 s by reading only the tail, with an identical journal.

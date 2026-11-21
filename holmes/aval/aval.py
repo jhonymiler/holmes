@@ -43,7 +43,7 @@ def recuperacao(g):
     no = {}
     with H.conecta(g["caso"]) as db:
         for p in g["pistas"]:
-            no[p["id"]] = H.cria(db, "fato", p["texto"], estado="vigente", natureza="observacao", origem="fonte")
+            no[p["id"]] = H.cria(db, "fato", p["texto"], natureza="observacao", origem="fonte", por="fonte")
         txt = {k: H.texto_de(db, H.um(db, "SELECT * FROM no WHERE id=?", v)) for k, v in no.items()}
         modos = {
             "busca (antes)": lambda k: [i for i in ids_de(H.busca(db, txt[k], TOP + 1, com_corpus=False)) if i != no[k]][:TOP],

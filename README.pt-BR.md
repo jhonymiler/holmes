@@ -158,12 +158,12 @@ Modelo de dados completo, com diagramas: [MODELO.md](MODELO.md). Um caso fictíc
 | percurso | `ficha` (uma página) · `arvore [id]` · `trilha [B..]` · `ramo novo "<pergunta>" --de <id> [--passo N] --porque ".."` · `ramo usa B..` · `passo <leu\|pensou\|testou\|achou\|corrigiu\|decidiu\|proximo> ".." --porque ".."` |
 | orientar-se | `mapa [--tudo]` · `proximo` · `ver <id>` · `cadeia <id>` · `questoes` · `cronologia` · `busca "<txt>"` · `ja "<txt>"` (já testado?) · `saude` |
 | ler o todo | `leitura "<quadro>" [--sustenta E,..] [--enfraquece] [--rival H,..] [--questao Q] [--lacuna Q,..] [--motivo]` · `leitura` (mostra a atual) |
-| criar | `novo <tipo> "<título>" --pai ..` (tipos: alvo, frente, questao, hipotese, premissa, fato, entidade, decisao, fio) |
+| criar | `novo <tipo> "<título>" --pai ..` (tipos: alvo, frente, questao, hipotese, premissa, fato (exige `--por`), pista, entidade, decisao, fio) |
 | extrair | `extrai <contrato.json> [--aplica] [--so ..] [--rejeita ..]` (observação, pista, interpretação, questão, hipótese, conexão; contrato em MODELO.md) |
 | relacionar | `conexoes <id\|"texto">` (candidatas; consulta) · `conexao <de> <para> <relação> "<por quê>" [--rival] [--discriminador]` · `estado C.. confirmada\|rejeitada "<motivo>"` |
 | hipóteses | `prob <H> 0.4 "<motivo>"` · `ach <E> <H> CC\|C\|N\|I\|II` · `ach <F>` (matriz) |
 | testar | `teste <H> "<t>" --alcance .. --porque .. [--exploratorio]` · `roda <T> --pid --log` · `resultado <T> <res> "<nota>" [--sentido ".."]` · `jobs` |
-| fontes | `fonte <arquivo\|pasta\|url>` · `cita <pedaço> "<afirmação>"` · `confere <E> "<nota>" --por fonte\|medicao\|teste\|reproducao [--prova ..]` (fato é constatação provada; a prova não precisa ser fonte) |
+| fontes | `fonte <arquivo\|pasta\|url>` · `cita <pedaço> "<afirmação>"` · `confere K.. "<nota>" --por fonte\|medicao\|teste\|reproducao [--prova ..]` (prova uma pista e ela vira fato; a prova não precisa ser fonte) · `reorganiza [--aplica]` (banco antigo → só fatos provados, pistas, passos religados) |
 | mudar | `estado <id> <estado> "<motivo>"` · `edita <id> [--refuta-se]` · `liga`/`desliga <de> <tipo> <para>` · `atributo <N> <chave> <valor>` |
 | provar | `instrumento <caminho> "<nome>" --verificador "<cmd>"` · `prova` (lista) · `prova --executa [--legado]` |
 
@@ -215,10 +215,10 @@ O mod `.claude/skills/holmes/` é opcional e só poda saídas longas do Bash; el
 
 ## Verificado
 
-- ✅ `holmes/test_holmes.py`: 12 testes. Cobrem árvore e limites, execuções e validade (controle visto,
+- ✅ `holmes/test_holmes.py`: 13 testes. Cobrem árvore e limites, execuções e validade (controle visto,
   script versionado, exploratório), túnel, instrumento versionado, corpus nos quatro modos, citação,
   aliases, dependências transitivas, contradições, ACH, hooks, leitura ligada à base, `--sentido`, legado
-  fora dos alertas, o percurso extração → conexão candidata → aresta → leitura, ramos com fork de um passo, trilha, árvore e ficha, e o caso sintético.
+  fora dos alertas, o percurso extração → conexão candidata → aresta → leitura, ramos com fork de um passo, trilha, árvore e ficha, fato só provado e pista promovida por prova, reorganização de banco antigo, e o caso sintético.
 - ✅ `holmes/aval/aval.py recuperacao`: descoberta de relações medida contra gabarito (números e limites em
   `holmes/aval/README.md`).
 - ✅ Hook Stop num transcript de 80 MB: 4,6 s → 0,25 s lendo só a cauda, com diário idêntico.

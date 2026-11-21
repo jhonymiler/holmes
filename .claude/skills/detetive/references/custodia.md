@@ -50,12 +50,14 @@ not checked; C = report, agent or external, not checked). For fine analysis, use
 - The source's rating comes only from its track record. Without a record it is not "bad", it is "no basis".
 - Grade tools too: a script with a known bug is worth less than an instrument validated end to end.
 
-## Proving a fact
+## Facts and clues
 
-A fact is a proven finding, and the proof need not be a source: `confere <E> "<note>" --por fonte` (read in
-the primary source), `--por medicao --prova "<command>"` (a measurement anyone can rerun), `--por teste
---prova T..` (a test with a recorded result), `--por reproducao --prova "<command>"` (reproduced
-independently, e.g. a second implementation). An inference is never proven by `confere`.
+A fact (`fato`) is a finding already proven, and says how; the proof need not be a source:
+`--por fonte` (read in the primary source), `--por medicao --prova "<command>"` (a measurement anyone can
+rerun), `--por teste --prova T..` (a test with a recorded result), `--por reproducao --prova "<record>"`
+(reproduced independently, e.g. a second implementation or examiner). What is not yet proven is a clue
+(`novo pista`); an observation or report clue becomes a fact with `confere K.. --por ..`. An inference or
+interpretation is never a fact.
 
 ## Quoting
 

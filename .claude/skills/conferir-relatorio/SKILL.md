@@ -21,14 +21,14 @@ Everything that comes from outside (subagent, external AI, another session, thir
 6. **"Never tested" / "not in the record":** `ja "<term>"` and `busca "<term>"` with synonyms. Often the term
    came in under another role. Say which.
 7. **A fact from outside the repository** (a work, an event, a specification): without a source read, record
-   it as an external report (`novo fato --natureza relato --origem externo`: grade C, draft), never as a proven
-   fact nor as a case premise. It becomes a premise only if a line needs to assume it, declared
+   it as a clue (`novo pista --natureza relato --origem externo`: grade C), never as a fact nor as a case
+   premise. It becomes a premise only if a line needs to assume it, declared
    (`novo premissa`).
 8. **Record only what was checked:**
-   - checked against the primary source: `cita <chunk> "<t>"`, or `novo fato "<t>" --origem externo` followed
-     by `confere <E> "<where it was checked>" --por fonte`;
-   - reproduced by you (rerun, recomputed): `confere <E> "<what was rerun>" --por reproducao --prova "<command>"`;
-   - not checked: `novo fato "<t>" --natureza relato --origem externo` (stays a draft, grade C), or do not record;
+   - checked against the primary source: `cita <chunk> "<t>"`, or record it as a clue and prove it:
+     `novo pista "<t>" --origem externo --natureza relato` then `confere K.. "<where it was checked>" --por fonte`;
+   - reproduced by you (rerun, recomputed): `confere K.. "<what was rerun>" --por reproducao --prova "<command>"`;
+   - not checked: keep it as a clue (`novo pista ... --natureza relato --origem externo`, grade C), or do not record;
    - a lead without proof: `novo fio "<t>"`;
    - links: `liga <from> <type> <to>` **only after** seeing the id printed by `novo`.
 9. **Fix the document** the agent edited where it was wrong, and tell the user what was discarded and why.

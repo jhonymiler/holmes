@@ -47,11 +47,12 @@ Every fact, hypothesis and decision goes to the record, not the conversation.
 
 | Mark | Command |
 |---|---|
-| Literal source excerpt | `cita <corpus chunk> "<claim>"` (copies the text and comes out proven by source) |
-| Measured or read fact | `novo fato "<t>" --natureza observacao\|medicao --origem medido\|fonte --fonte S.. --grau A\|B\|C` |
-| Proving a fact | `confere <E> "<note>" --por fonte\|medicao\|teste\|reproducao [--prova "<command>"\|T..]` (a fact is a proven finding; the proof need not be a source) |
-| Interpretation, inference | `novo fato "<t>" --natureza interpretacao\|inferencia --origem agente` (never becomes the author's words, never "proven") |
-| Report from a third party, another AI, an old note | `novo fato "<t>" --natureza relato --origem externo` (grade C, draft until `confere`) |
+| Literal source excerpt | `cita <corpus chunk> "<claim>"` (copies the text; the fact comes out proven by the source) |
+| Fact (a finding already proven) | `novo fato "<t>" --natureza observacao\|medicao\|citacao --por fonte\|medicao\|teste\|reproducao [--prova "<command>"\|T..] --fonte S.. --grau A\|B\|C` |
+| Clue (not yet proven) | `novo pista "<t>" --natureza observacao\|medicao\|relato\|inferencia\|interpretacao --origem ..` |
+| Proving a clue | `confere K.. "<note>" --por ..` (an observation or report clue becomes a fact, same id; an inference or interpretation never does) |
+| Report from a third party, another AI, an old note | `novo pista "<t>" --natureza relato --origem externo` (grade C until proven) |
+| Dropping a clue | `estado K.. descartada "<why>"` |
 | Hypothesis | `novo hipotese "<t>" --pai <front> --prob 0.4 --refuta-se "<what would refute it>"` |
 | Premise | `novo premissa "<t>" --pai <front>` + `liga <H> depende <R>` |
 | Weight of evidence | `ach <E> <H> CC\|C\|N\|I\|II`; `ach <F>` shows the matrix and what is diagnostic |
@@ -71,7 +72,7 @@ Every fact, hypothesis and decision goes to the record, not the conversation.
 | Rival readings of the same clue | one sibling branch each, under the same question or branch; never a queue |
 | Line paused or dead | `estado B.. pausado\|morto\|concluido "<tested scope or reason>"` |
 | Line closed | `estado <id> refutada "<id of the test or fact that showed it>"` |
-| User decision | `novo decisao "<t>" --origem usuario --proibe ".." --permite ".."` (your own choice of method is a fact `--natureza inferencia`) |
+| User decision | `novo decisao "<t>" --origem usuario --proibe ".." --permite ".."` (your own choice of method is a clue `novo pista --natureza inferencia`) |
 | Loose end | `novo fio "<t>"` |
 | Conflict | `liga <E1> contradiz <E2>` (stays on the map until one is retracted) |
 | Recurring object | `novo entidade "<name>" --classe .. --alias "synonym,spelling"`; `atributo <N> <key> <value> --fato E..` |
@@ -165,7 +166,7 @@ An agent's report comes in at grade C until checked against the source (skill `c
 - Declaring the concept dead because one form of it gave 0.
 - A pattern found after looking, with no prediction or control.
 - Recording intention as a result.
-- Calling an inference a proven fact.
+- Recording an inference, an interpretation or an unproven report as a fact: it is a clue (or a hypothesis).
 - Delegating without context; or delegating verification together with the verdict.
 
 ## References

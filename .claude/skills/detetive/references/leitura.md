@@ -17,7 +17,7 @@ Rest of the material: least biasing and most objective first; irrelevant out.
 
 Read complete units of meaning (paragraph, section, whole table). A word search is not reading.
 
-- **Source and situation:** where it is, who produced it, for whom, in what context. `novo fato --origem fonte`.
+- **Source and situation:** where it is, who produced it, for whom, in what context. `novo fato --origem fonte --por fonte` if read in the source; otherwise a clue (`novo pista`).
 - **Message:** what the reader is led to understand, in your own words.
 - **Referents and function:** what does it point to? Does it identify, instruct, mark a stage?
 - **Another reading:** one that changes the meaning or the referent, not just the format.

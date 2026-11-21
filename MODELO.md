@@ -95,9 +95,10 @@ lines). Steps are searchable: `busca` finds a branch by what was done in it.
 
 ### Ontology: each investigation concept and where it lives
 
-The conceptual model is rich; the storage, economical. Only **question**, **candidate connection** and
-**branch** got their own type, because no existing object represented them without distorting the meaning (a
-question is not a hypothesis; a suggested relation cannot be an edge; a path is not a node of the plan). The
+The conceptual model is rich; the storage, economical. Only **question**, **candidate connection**,
+**branch** and **clue** got their own type, because no existing object represented them without distorting the meaning (a
+question is not a hypothesis; a suggested relation cannot be an edge; a path is not a node of the plan; what is not
+proven is not a fact). The
 rest is a type, role or relation of what already existed.
 
 | Concept | Representation | Why so |
@@ -109,10 +110,11 @@ rest is a type, role or relation of what already existed.
 | Source | `fonte` S (provenance, reliability, sha) | — |
 | Artefact | `fonte` (the file) or `entidade --classe artefato` (the object in the world) | a file is a source; the safe is an entity |
 | Observation | `fato --natureza observacao\|medicao\|citacao`, with `local` and method in the summary | it already separated nature from origin |
-| Fact | a proven finding: `fato` with `conferido` and `conferido_por` (source, measurement, test or reproduction) | the proof need not be a source |
-| Clue | **role**: an observation linked `sobre` a question, hypothesis or front, with the why in the edge's note | the same observation can be a clue for one question and nothing for another |
+| Fact | `fato` E: a finding already proven, born `vigente` with `conferido_por` (source, measurement, test or reproduction) | a fact is a finding, and says how it holds; the proof need not be a source |
+| Clue | `pista` K: what is not yet proven (an observation or measurement without proof, a report, an inference, an interpretation); proven by `confere`, an observation or report clue becomes a fact with the same id | an unproven claim is never a fact |
+| Clue (role) | an observation linked `sobre` a question, hypothesis or front, with the why in the edge's note | the same observation can be a clue for one question and nothing for another |
 | Evidence | **role**: a fact with an ACH cell or a `sustenta`/`enfraquece` edge to a hypothesis | its strength depends on the hypothesis assessed |
-| Inference / interpretation | `fato --natureza inferencia\|interpretacao` linked `sobre` what was observed | it falls without bringing down the observation; it is never "proven" |
+| Inference / interpretation | `pista --natureza inferencia\|interpretacao` linked `sobre` what was observed | it falls without bringing down the observation; it never becomes a fact (if testable, it becomes a hypothesis) |
 | Premise | `premissa` R (assumed → verified) | — |
 | Hypothesis | `hipotese` H; **exploratory** without `refuta_se`, **operational** with it | only the operational one gets a confirmatory test |
 | Prediction | `teste.previsao` timestamped before the run | — |
@@ -150,9 +152,9 @@ is not duplicated.
 | Key | Item | Becomes |
 |---|---|---|
 | `fonte` | `"S12"` | the observations' default source |
-| `observacoes` | `id, texto, natureza?, local?, metodo?, limites?, pedaco?, grau?, origem?, existente?` | `fato` (with `pedaco`, a literal quote copied and proven by source); an interpretation here is refused |
+| `observacoes` | `id, texto, natureza?, local?, metodo?, limites?, pedaco?, por?, prova?, grau?, origem?, existente?` | `fato` if proven (`pedaco` = literal quote, proven by source; or `por` + `prova`), otherwise `pista`; an interpretation here is refused |
 | `pistas` | `obs, sobre?, porque` | edge `obs sobre <Q/H/F>` (default: the objective) |
-| `interpretacoes` | `id, sobre, texto, alternativas?, confianca?` | `fato --natureza interpretacao` linked `sobre` |
+| `interpretacoes` | `id, sobre, texto, alternativas?, confianca?` | `pista --natureza interpretacao` linked `sobre` |
 | `questoes` | `id, texto, pai?, motivada_por?` | `questao` (+ `deriva` from the motives) |
 | `hipoteses` | `id, texto, pai, responde?, motivada_por?, premissas?, rivais?, prob?, refuta_se?` | `hipotese` + `responde`, `deriva`, `depende`, `rival` |
 | `conexoes` | `de, para, relacao, porque, rival?, discriminador?, motivos?` | `conexao` **only suggested** (confirmed is refused) |
@@ -193,7 +195,7 @@ is not duplicated.
 | Decisions became a dumping ground | `decisao` is only what the user determined; the agent's choice of method is a `fato` of nature inference. |
 | Huge text in the nodes | title ≤ 160, summary ≤ 800, quote ≤ 1000. The rest goes to the corpus or `notas/`. |
 | The path was lost: conclusions rediscovered, corrections overwriting the why | `ramo` + `passo` (above): every line born from a point with a why, immutable steps, forks, `trilha`/`arvore`/`ficha`. |
-| "Fact" meant "checked against a source", and an inference could become a fact | a fact is a proven finding: `confere --por fonte\|medicao\|teste\|reproducao`; an inference or interpretation is refused. |
+| "Fact" meant "checked against a source", and inferences and reports were stored as facts | a fact is a finding already proven (`novo fato --por ..`); what is not proven is a `pista`; `confere` proves a clue into a fact; `reorganiza` brings an old database to this model |
 
 ### States
 
@@ -205,7 +207,8 @@ is not duplicated.
 | hipotese | viva, apoiada, refutada, estacionada | refutada, estacionada |
 | premissa | assumida, verificada, refutada | verificada, refutada |
 | teste | planejado, rodando, feito, cancelado | cancelado (rodando/feito come from the runs) |
-| fato | rascunho, vigente, contestado, retratado | contestado, retratado |
+| fato | vigente, contestado, retratado | contestado, retratado (a fact is born proven) |
+| pista | aberta, descartada | descartada (proven, it becomes a `fato`) |
 | entidade | ativa, fundida | fundida |
 | decisao | vigente, revogada | revogada |
 | fio | aberto, fechado, estacionado | fechado, estacionado |
@@ -232,31 +235,32 @@ stateDiagram-v2
         sugerida --> confirmada: evidence (creates the edge)
         sugerida --> rejeitada: with a reason
     }
-    state "Fact (observation, measurement, quote, report)" as Fat {
-        rascunho --> vigente: proven
+    state "Clue → Fact" as Fat {
+        aberta --> descartada: with a reason
+        aberta --> vigente: proven (confere), becomes a fact
         vigente --> contestado
         vigente --> retratado
         contestado --> retratado
     }
 ```
 
-**How a fact becomes proven** (`confere <E> "<note>" --por ...`). A fact is a finding, and the proof is whatever
-makes it hold, not necessarily a source:
+**Fact or clue.** A fact is a finding already proven, and says how. Everything not yet proven is a clue:
 
 ```mermaid
 flowchart LR
-    R["fato rascunho<br/>observation · measurement · quote · report"]
-    R -- "--por fonte<br/>read in the primary source" --> V
-    R -- "--por medicao --prova cmd<br/>a measurement anyone can rerun" --> V
-    R -- "--por teste --prova T..<br/>a test with a recorded result" --> V
-    R -- "--por reproducao --prova cmd<br/>reproduced independently" --> V
-    V["fato vigente<br/>provado:&lt;how&gt;"]
-    I["inference / interpretation"] -. "refused: what proves it<br/>is a new fact, linked sustenta" .-> V
+    K["pista K (aberta)<br/>unproven observation · measurement · report"]
+    K -- "confere --por fonte<br/>read in the primary source" --> V
+    K -- "confere --por medicao --prova cmd<br/>a measurement anyone can rerun" --> V
+    K -- "confere --por teste --prova T..<br/>a test with a recorded result" --> V
+    K -- "confere --por reproducao --prova rec<br/>reproduced independently" --> V
+    V["fato E (vigente)<br/>provado:&lt;how&gt; · same id"]
+    N["novo fato --por ..<br/>proven at creation"] --> V
+    I["pista: inference / interpretation"] -. "never a fact: a hypothesis if testable;<br/>what proves it is another fact, linked sustenta" .-> H["hipotese"]
 ```
 
-`cita <chunk>` comes out `vigente` and already proven by source. A fact from `novo fato` is born `rascunho` and
-becomes `vigente` when proven. One from `extrai` is born `vigente` (an observation from a source being read;
-external reports stay `rascunho`) but only shows `provado:` after `confere`. Searches show `não-provado` until then.
+`cita <chunk>` comes out as a fact proven by source. In `extrai`, an observation becomes a fact only if proven
+(`pedaco` or `por` + `prova`); otherwise it is a clue. An old database (inferences and reports stored as facts)
+is brought to this model by `reorganiza --aplica`, which turns every unproven fact into a clue with the same id.
 
 ### Validity of a result (computed, never typed)
 
@@ -286,7 +290,7 @@ hypothesis linked to the reading whose weight changed ≥ 0.2); a result A REVAL
 instrument; (4) for the reading's decisive question and the open questions: no hypothesis → formulate one; only
 one → generate a rival; several without ACH evidence that distinguishes them → find the discriminator; with
 discrimination → test the leader (or give it a `--refuta-se`); (5) a stalled suggested connection, first the one
-linking different fronts; (6) a draft fact that supports something → prove it; (7) a live hypothesis with a
+linking different fronts; (6) an open clue that something depends on → prove it or drop it; (7) a live hypothesis with a
 criterion and no test. With none of that: read the primary source better.
 
 ### Derived alerts the `mapa` shows
@@ -296,7 +300,7 @@ criterion and no test. With none of that: read the primary source better.
 - **Broken dependency:** a live item that depends on something refuted, retracted or contested.
 - **Open contradiction:** `contradiz` between two live items.
 - **Orphan run:** "rodando" with a dead PID.
-- **Assumed premises** per front, and **draft facts** waiting for proof.
+- **Assumed premises** per front, and **open clues** waiting to be proven or dropped.
 - **Unblocked targets:** open ones whose dependencies are resolved, i.e. where to attack.
 - **Overall reading:** requested by a relevant event since the current reading; a reminder after N results.
 - **Open questions** (up to 3, with "gap" when without a hypothesis) and the count of stalled **candidate

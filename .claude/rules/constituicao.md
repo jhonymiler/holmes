@@ -40,9 +40,10 @@ labels in capitals (LEITURA, ACHADO...) are the CLI's own tokens, which are in P
 11. Every recorded claim carries a nature (observation, measurement, quote, inference, interpretation, report),
     an origin (author, source, measured, user, agent, external) and a grade. A source excerpt comes in through
     `cita`, literally. Material from a subagent, another AI, the community or an old note of yours comes in at
-    grade C until checked. A fact is a proven finding: it becomes proven by a source, a reproducible
-    measurement, a test with a result or an independent reproduction (`confere --por`). An inference or
-    interpretation is never a proven fact; what proves it is a new finding, recorded on its own and linked.
+    grade C, as a clue (`pista`), until checked. A fact (`fato`) is a finding already proven, and says how: a
+    source, a reproducible measurement, a test with a result or an independent reproduction (`--por`). What is
+    not yet proven is a clue; a clue of observation or report becomes a fact when proven (`confere`). An
+    inference or interpretation is never a fact: it is a clue, or a hypothesis if it explains something testable.
     A third party's interpretation never becomes the author's words; your own interpretation is legitimate
     and gets recorded as such.
 

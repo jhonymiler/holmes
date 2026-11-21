@@ -23,11 +23,11 @@ coincidence. Not every material has a second meaning; the literal and contextual
 | Subliminal | Wordplay, homophony, hidden word (acrostic, initials), double meaning, a number that is an index, what was changed relative to the quoted original (the diff is often the message). |
 | Absence | What should be there and is not? What did the author avoid saying? |
 
-Record every reading that matters: `novo fato "<reading>" --natureza interpretacao --origem agente`, linked to
+Record every reading that matters as a clue: `novo pista "<reading>" --natureza interpretacao`, linked to
 the clue (`liga E.. sobre <clue>`). If the reading links two clues, it is a candidate `conexao`; if it names a
 concept that shows up in several, record it as an entity with aliases (`references/extracao.md`, step D). Your
 own reading is legitimate: do not demote it for being yours, nor promote it to the author's words. An
-interpretation is never a proven fact.
+interpretation is never a fact: it is a clue, or a hypothesis if it explains something testable.
 
 ## Reading a test's output
 
