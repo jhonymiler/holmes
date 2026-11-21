@@ -1,59 +1,61 @@
-# Caso parado — exploração
+# Stuck case — exploration
 
-Quando ninguém vai entregar a resposta, esperar pista externa ou repetir variações da última
-receita é a forma mais cara de não achar nada.
+When nobody is going to hand over the answer, waiting for an external clue or repeating variations of the last
+recipe is the most expensive way of finding nothing.
 
-## Princípio
+## Principle
 
-Os portões protegem afirmações, não tentativas. Tentar é barato; declarar cobertura, linha
-encerrada ou achado é que exige F3, controle e revisão.
+The gates protect claims, not attempts. Trying is cheap; declaring coverage, a closed line or a finding is
+what requires F3, a control and review.
 
-## Dois regimes
+## Two regimes
 
-| | Exploração | Cobertura |
+| | Exploration | Coverage |
 |---|---|---|
-| Modo | LEITURA ou CIRURGIA | CIRURGIA ou VARREDURA |
-| Pode | Testar palpite; hipótese de 1%; inverter premissa central; ler por ângulo novo | O que a F3 declarar |
-| Custo | ≤ 10 min de máquina ou 1 h de leitura por tentativa | O que a F3 estimar |
-| Registro | `teste ... --exploratorio` + `resultado`, alcance real ("1 tentativa, 10 candidatos") | `teste` completo + revisão |
-| Vale como | Pista. Nunca cobertura | Cobertura |
-| Promoção | Ideia que encolhe o espaço ou prevê dado novo sobe para F3 | — |
+| Mode | LEITURA or CIRURGIA | CIRURGIA or VARREDURA |
+| May | Test a hunch; a 1% hypothesis; invert a central premise; read from a new angle | What F3 declares |
+| Cost | ≤ 10 min of machine time or 1 h of reading per attempt | What F3 estimates |
+| Record | `teste ... --exploratorio` + `resultado`, real scope ("1 attempt, 10 candidates") | Full `teste` + review |
+| Counts as | A lead. Never coverage | Coverage |
+| Promotion | An idea that shrinks the space or predicts new data moves up to F3 | — |
 
-Na dúvida, explore. Negativo de exploração não encerra nada.
+When in doubt, explore. An exploration negative closes nothing.
 
-## Regras
+## Rules
 
-- Ausência de manifestação de quem produziu o material só pesa contra uma hipótese que previa essa
-  manifestação; sem essa previsão, não pesa.
-- Não declare bloqueio por falta de fonte externa. Proponha o próximo passo com o que existe.
-- Negativo exploratório não fecha nada. Negativo válido fecha a receita no alcance e baixa a confiança no
-  tema, sem matá-lo. Diga o que ficou de fora (`--fora`).
-- Mantenha pontas soltas visíveis (`novo fio`) e ligadas (`liga`), mesmo sem evidência. Revisite os
-  fios do `mapa` antes de escolher o próximo teste.
-- Resolveu uma parte: registre por que a resposta funcionou e use isso como guia das pendentes.
-- Mostre o raciocínio: o que chamou atenção, que conexões, por que promissoras.
+- The absence of any statement by whoever produced the material only weighs against a hypothesis that predicted
+  that statement; without that prediction, it does not weigh.
+- Do not declare a block for lack of an external source. Propose the next step with what exists.
+- An exploratory negative closes nothing. A valid negative closes the recipe within its scope and lowers
+  confidence in the theme, without killing it. Say what was left out (`--fora`).
+- Keep loose ends visible (`novo fio`) and linked (`liga`), even without evidence. Revisit the map's threads
+  before choosing the next test.
+- Solved one part: record why the answer worked and use it as a guide for the pending ones.
+- Show the reasoning: what caught your eye, what connections, why they are promising.
+- Open each exploration as a branch (`ramo novo ... --porque`) so that a dead end stays visible and is not
+  walked again.
 
-## Estímulos de criatividade (caso parado; heurísticas, não cotas)
+## Creativity prompts (stuck case; heuristics, not quotas)
 
-1. **Sair do cânone:** gere hipóteses que não venham do registro, de terceiros nem de sessão
-   anterior. Liste as premissas herdadas e inverta uma por vez.
-2. **Trocar a lente:** trate o material como outra coisa (texto como dado, dado como texto, a dica
-   como ruído, o enunciado como errado). Uma tentativa barata por lente antes de descartar.
-3. **Cruzar eixos:** combine fatos medidos de frentes diferentes. O espaço promissor costuma estar
-   nos cruzamentos tratados como independentes.
-4. **Procurar a pergunta:** após receitas falhas em série, pergunte que pergunta está sendo respondida sem
-   perceber, antes de ampliar o espaço.
-5. **Aceitar o palpite:** teste primeiro, justifique depois. Não descarte por "já tentaram" sem ler
-   exatamente o que foi tentado (`ja`).
+1. **Leave the canon:** generate hypotheses that do not come from the record, third parties or an earlier
+   session. List the inherited premises and invert one at a time.
+2. **Change the lens:** treat the material as something else (text as data, data as text, the hint as noise,
+   the statement as wrong). One cheap attempt per lens before discarding.
+3. **Cross axes:** combine measured facts from different fronts. The promising space usually lies in the
+   crossings treated as independent.
+4. **Look for the question:** after a series of failed recipes, ask which question is being answered without
+   noticing, before widening the space.
+5. **Accept the hunch:** test first, justify afterwards. Do not discard as "already tried" without reading
+   exactly what was tried (`ja`).
 
-## Limites que não mudam
+## Limits that do not change
 
-- Segurança: Python com `-I` em material baixado; nada sensível sai da máquina.
-- Exploração não muda estado de linha encerrada nem apaga registro.
-- Acerto aparente passa por controle e `verificador` cego antes de virar achado.
+- Security: Python with `-I` on downloaded material; nothing sensitive leaves the machine.
+- Exploration does not change the state of a closed line nor delete a record.
+- An apparent hit goes through a control and a blind `verificador` before becoming a finding.
 
-## Anti-paralisia
+## Anti-paralysis
 
-Se a resposta a "o que testar agora?" for "nada, falta F3" ou "nada, falta a fonte X", está errada.
-Escolha a ideia mais barata e diferente das já feitas e rode como exploração. Ou ligue fios soltos,
-releia a fonte primária, pesquise referência externa. Pare só por custo real, não por cerimônia.
+If the answer to "what should we test now?" is "nothing, F3 is missing" or "nothing, source X is missing", it
+is wrong. Pick the cheapest idea that differs from those already done and run it as exploration. Or link loose
+threads, reread the primary source, research an external reference. Stop only for real cost, not ceremony.

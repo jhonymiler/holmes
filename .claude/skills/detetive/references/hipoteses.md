@@ -1,80 +1,82 @@
-# F2 — Hipóteses
+# F2 — Hypotheses
 
-## Gerar
+## Generating
 
-- Rivais de verdade, não cota. Considere, quando forem plausíveis: **H-nada** (acaso, erro de
-  transcrição), **H-mundano** (índice 0/1, encoding, fuso, unidade, off-by-one), **H-adversária**
-  (engano), **H-erro** (o produtor errou) e, para "detalhe intencional", **H-artefato** (acidente).
-  Hipótese inventada para fechar número é ruído na matriz.
-- Questão ainda sem explicação plausível fica aberta como `questao` (lacuna), sem hipótese forçada.
-- Inclua hipóteses de terceiros e de sessões anteriores, com crédito.
-- Gere antes de mergulhar no detalhe. Gerar e avaliar são passos separados.
-- Registre o teste que cada hipótese sugere, não só o da favorita.
-- Registro: `novo hipotese "<t>" --pai <frente>`; rivais ligadas com `liga <a> contradiz <b>`.
+- Real rivals, not a quota. Consider, when plausible: **H-nothing** (chance, transcription error),
+  **H-mundane** (index 0/1, encoding, time zone, unit, off-by-one), **H-adversarial** (deception), **H-error**
+  (the producer made a mistake) and, for an "intentional detail", **H-artefact** (accident). A hypothesis
+  invented to fill a number is noise in the matrix.
+- A question still without a plausible explanation stays open as a `questao` (a gap), with no forced hypothesis.
+- Include hypotheses from third parties and earlier sessions, with credit.
+- Generate before diving into detail. Generating and evaluating are separate steps.
+- Record the test each hypothesis suggests, not only the favourite's.
+- Record: `novo hipotese "<t>" --pai <front>`; rivals linked with `liga <a> contradiz <b>`. Competing readings
+  of the same clue also become sibling branches (`ramo novo ... --de <same point>`), so the path of each one
+  stays visible.
 
-## Prior pela visão de fora
+## Prior from the outside view
 
-Antes dos detalhes: "de N tentativas deste tipo, quantas acertaram?" Esse é o prior. Com muitas
-linhas refutadas, o prior de "a próxima acerta" é baixo.
+Before the details: "of N attempts of this kind, how many succeeded?" That is the prior. With many refuted
+lines, the prior that "the next one succeeds" is low.
 
-## Premissas
+## Premises
 
-Para cada premissa que a linha exige:
-- relevância 0–2 (2 = a linha cai sem ela) × suporte 0–2. Prioridade: relevância alta, suporte baixo.
-- "O que veríamos se fosse verdade, e por que não vemos?"
-- Imagine que uma fonte perfeita disse que está errada. Construa o cenário.
-- P(A e B) = P(A) × P(B | A). Só vira produto simples se as premissas forem independentes; premissas
-  que vêm da mesma fonte ou do mesmo raciocínio costumam andar juntas. Cinco independentes a 80% dão 33%.
-- Revise as premissas no início e antes de concluir.
+For each premise the line requires:
+- relevance 0–2 (2 = the line falls without it) × support 0–2. Priority: high relevance, low support.
+- "What would we see if it were true, and why don't we see it?"
+- Imagine a perfect source said it is wrong. Build the scenario.
+- P(A and B) = P(A) × P(B | A). It only becomes a simple product if the premises are independent; premises from
+  the same source or the same reasoning tend to move together. Five independent ones at 80% give 33%.
+- Review the premises at the start and before concluding.
 
-Premissas de identidade ("é o mesmo arquivo"), tempo e completude ("é o log inteiro") quebram mais.
+Premises of identity ("it is the same file"), time and completeness ("it is the whole log") break most often.
 
-## ACH — como registro, não como oráculo
+## ACH — as a record, not as an oracle
 
-ACH (análise de hipóteses concorrentes) não melhora a acurácia sozinha; serve para achar evidência
-que distingue e deixar o raciocínio auditável.
+ACH (analysis of competing hypotheses) does not improve accuracy by itself; it serves to find distinguishing
+evidence and to keep the reasoning auditable.
 
-1. Linhas = evidências, premissas e ausências. Colunas = hipóteses.
-2. Preencha por linha: "se H fosse verdadeira, qual a chance de ver isto?" — C (consistente),
-   I (inconsistente), N (neutro), ? (não sei).
-3. Linha C em todas as colunas não distingue: sai do ranking, mas fica registrada.
-4. Coluna extra: quão fácil seria forjar o item?
-5. Leia por coluna. Ranqueie por inconsistências. Só sai a refutada, com I documentado.
-6. Se discorda da matriz, falta uma linha. Acrescente; não anule em silêncio.
-7. Converta em probabilidades. Somam 1 (com "outra") só se as hipóteses forem mutuamente exclusivas;
-   leituras que podem ser verdade juntas (função narrativa e operacional) têm probabilidades próprias.
-8. Julgamento decisivo: 2 ou 3 agentes independentes estimam sem se ver; use a média.
-9. Sensibilidade: se o I decisivo estiver errado, a conclusão muda? Confira-o por outra via.
-10. Escreva antes o que, se aparecer, muda a conclusão.
+1. Rows = evidence, premises and absences. Columns = hypotheses.
+2. Fill by row: "if H were true, how likely would it be to see this?" — C (consistent), I (inconsistent),
+   N (neutral), ? (don't know).
+3. A row that is C in every column does not distinguish: it leaves the ranking but stays recorded.
+4. Extra column: how easy would it be to forge the item?
+5. Read by column. Rank by inconsistencies. Only the refuted one leaves, with the I documented.
+6. If you disagree with the matrix, a row is missing. Add it; do not override silently.
+7. Convert into probabilities. They sum to 1 (with "other") only if the hypotheses are mutually exclusive;
+   readings that can be true together (narrative and operational function) have their own probabilities.
+8. Decisive judgment: 2 or 3 independent agents estimate without seeing each other; use the average.
+9. Sensitivity: if the decisive I were wrong, would the conclusion change? Check it by another route.
+10. Write beforehand what, if it appears, changes the conclusion.
 
-## Engano
+## Deception
 
-Suspeite quando: a análise depende de um único item; a informação-chave chegou na hora certa;
-aceitá-la obriga a mudar uma premissa central; quem produziu o material vê o que você faz.
+Suspect it when: the analysis depends on a single item; the key information arrived at just the right time;
+accepting it forces a central premise to change; whoever produced the material sees what you do.
 
-- Motivo, canais, risco e custo do engano.
-- Já houve engano antes desta fonte?
-- A fonte é manipulável? Acesso direto ou de segunda mão?
-- A cadeia inteira foi checada, inclusive transcrições? Há confirmação por canal que o produtor
-  não controla?
+- Motive, channels, risk and cost of the deception.
+- Has there been deception from this source before?
+- Can the source be manipulated? Direct access or second-hand?
+- Was the whole chain checked, including transcriptions? Is there confirmation through a channel the producer
+  does not control?
 
-Engano fica como hipótese viva, nunca como explicação de bolso.
+Deception stays a live hypothesis, never a pocket explanation.
 
-## Inferência forte e premortem
+## Strong inference and premortem
 
-- Todo teste responde: que hipótese ele exclui? Teoria que explica qualquer resultado não explica nenhum.
-- Resultado novo → 2 ou 3 explicações → controle que as separa.
-- **Premortem:** antes de rodar, escreva "terminou sem achado, ou o achado era falso. Por quê?"
-  As respostas viram testes de sanidade.
-- Consenso antigo pede advogado do diabo (agente `ceticismo`). Depois, confira a taxa-base.
-- Remendo ad hoc multiplica probabilidades: cada um torna a hipótese menos provável.
+- Every test answers: which hypothesis does it exclude? A theory that explains any result explains none.
+- New result → 2 or 3 explanations → a control that separates them.
+- **Premortem:** before running, write "it ended without a finding, or the finding was false. Why?" The answers
+  become sanity tests.
+- An old consensus calls for a devil's advocate (agent `ceticismo`). Then check the base rate.
+- An ad hoc patch multiplies probabilities: each one makes the hypothesis less likely.
 
-## Antes de coletar mais
+## Before collecting more
 
-Classifique o que espera obter: mais detalhe do mesmo (só aumenta confiança), variável nova
-(raramente muda), valor novo de variável crítica ou modelo novo (os únicos que mudam a acurácia).
+Classify what you expect to obtain: more detail of the same (only raises confidence), a new variable (rarely
+changes anything), a new value of a critical variable or a new model (the only ones that change accuracy).
 
-## Em aberto
+## Open
 
-Duas hipóteses com inconsistências comparáveis: "em aberto, e eis o teste que decidiria", com
-probabilidades. Escolher a menos feia é o erro confiante mais comum.
+Two hypotheses with comparable inconsistencies: "open, and here is the test that would decide", with
+probabilities. Picking the less ugly one is the most common confident error.

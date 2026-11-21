@@ -1,68 +1,69 @@
-# F1 — Leitura
+# F1 — Reading
 
-Obrigatória antes de abrir uma família nova de testes. Na retomada, confira a leitura anterior na
-fonte; resumo de outro agente não basta.
+Mandatory before opening a new family of tests. When resuming, check the earlier reading against the source;
+another agent's summary is not enough.
 
-## Ordem de exame
+## Order of examination
 
-1. **O que já foi feito:** `ja "<termo>"`. Evita refazer.
-2. **Fonte bruta.** Escreva a leitura própria, com confiança, antes dos itens 4 e 5.
-3. **Metadados e vestígios da ferramenta** que produziu o material. Que marca ela deixaria?
-4. **Interpretações anteriores**, suas e de terceiros. Cada mudança vira linha "mudei X porque vi Y".
-5. **Soluções de terceiros e formato esperado**, por último. O que só foi visto depois delas pesa menos.
+1. **What has already been done:** `ja "<term>"`. Avoids redoing.
+2. **Raw source.** Write your own reading, with confidence, before items 4 and 5.
+3. **Metadata and traces of the tool** that produced the material. What mark would it leave?
+4. **Earlier interpretations**, yours and third parties'. Each change becomes a line "I changed X because I saw Y".
+5. **Third-party solutions and expected format**, last. What was only seen after them weighs less.
 
-Resto do material: menos enviesante e mais objetivo primeiro; irrelevante fora.
+Rest of the material: least biasing and most objective first; irrelevant out.
 
-## O que registrar por item
+## What to record per item
 
-Leia unidades de sentido completas (parágrafo, seção, tabela inteira). Busca de palavra não é leitura.
+Read complete units of meaning (paragraph, section, whole table). A word search is not reading.
 
-- **Fonte e situação:** onde está, quem produziu, para quem, em que contexto. `novo fato --origem fonte`.
-- **Mensagem:** o que o leitor é levado a entender, em palavras suas.
-- **Referentes e função:** a que aponta? Identifica, instrui, marca uma etapa?
-- **Outra leitura:** uma que muda o sentido ou o referente, não só o formato.
-- **Discriminador:** que observação separaria as leituras? Sem nenhum, registre a lacuna (`novo fio`).
-- **Ponte para a operação:** o que a fonte determina e o que você acrescentou. Conte as escolhas livres.
+- **Source and situation:** where it is, who produced it, for whom, in what context. `novo fato --origem fonte`.
+- **Message:** what the reader is led to understand, in your own words.
+- **Referents and function:** what does it point to? Does it identify, instruct, mark a stage?
+- **Another reading:** one that changes the meaning or the referent, not just the format.
+- **Discriminator:** which observation would separate the readings? With none, record the gap (`novo fio`).
+- **Bridge to the operation:** what the source determines and what you added. Count the free choices.
 
-**Condição para testar:** ponte explícita entre fonte e operação, um teste que discrimine e
-controle. Sem ponte, continue lendo: a associação de tema não substitui a ponte, mas é o começo de uma
-leitura, que se registra como hipótese (skill `leitura`, camadas e leitura de conjunto).
+**Condition for testing:** an explicit bridge between source and operation, a test that discriminates, and a
+control. Without a bridge, keep reading: a thematic association does not replace the bridge, but it is the start
+of a reading, recorded as a hypothesis (skill `leitura`, layers and overall reading).
 
-Não presuma intenção em todo detalhe: pode ser acidente (H-artefato).
+Do not presume intent in every detail: it may be an accident (H-artefact).
 
-## Dois planos
+## Two planes
 
-Todo resultado (número, saída, padrão) se lê em dois planos no mesmo passo:
+Every result (number, output, pattern) is read on two planes in the same step:
 
-1. **Estatístico:** nulo, controle, alcance.
-2. **Sentido:** o que o resultado diz no contexto da fonte. O texto do produtor costuma descrever
-   como ler o próprio material.
+1. **Statistical:** null, control, scope.
+2. **Meaning:** what the result says in the context of the source. The producer's text often describes how to
+   read its own material.
 
-Os planos conversam: sentido não se descarta só porque o p não foi calculado, e sentido percebido
-não vira evidência sem a conta de quão provável ele seria por acaso, com as escolhas livres. Registre
-os dois: `resultado ... --sentido`.
+The planes talk to each other: meaning is not discarded just because the p was not computed, and perceived
+meaning does not become evidence without the estimate of how likely it would be by chance, with the free
+choices. Record both: `resultado ... --sentido`.
 
-Registre as duas medidas: quão raro é sob acaso e quão plausível é sob a hipótese. P pequeno de
-acaso não prova a hipótese; coincidência com sentido não é descartada só por isso. Classifique:
-pista, hipótese de trabalho ou achado.
+Record both measures: how rare it is under chance and how plausible it is under the hypothesis. A small chance p
+does not prove the hypothesis; a meaningful coincidence is not discarded for that reason alone. Classify: lead,
+working hypothesis or finding.
 
-Estatística sozinha não separa sinal codificado de ruído. Negativo estatístico diz "sem estrutura
-detectável", nunca "é ruído".
+Statistics alone does not separate encoded signal from noise. A statistical negative says "no detectable
+structure", never "it is noise".
 
-## Ferramentas de leitura
+## Reading tools
 
-- **Segunda leitura independente** de todo dado extraído por ferramenta (OCR, parser, LLM).
-- **Todas as versões:** outra cópia, outra resolução, outro método de extração. Traço fino só vale
-  se aparece em todas.
-- **Surpresas:** registre o que não casou com a expectativa (`novo fio`). Várias surpresas indicam
-  que o entendimento está errado.
-- **Inventário de consumo:** cada elemento da fonte e a etapa que o explica. Elemento sem uso
-  indica solução incompleta ou chamariz.
-- **Solução de terceiros:** qual a causa rival? que dado foi omitido? a evidência admite outra conclusão?
-- **Refinar a pergunta:** o que contaria como resposta? Há premissa escondida na pergunta?
-- **Recorte declarado:** em todo script, imprima o que foi tratado como dado e como foi segmentado.
+- **An independent second reading** of every datum extracted by a tool (OCR, parser, LLM).
+- **All versions:** another copy, another resolution, another extraction method. A faint trace only counts if
+  it appears in all of them.
+- **Surprises:** record what did not match the expectation (`novo fio`). Several surprises mean the
+  understanding is wrong.
+- **Consumption inventory:** each element of the source and the step that explains it. An unused element points
+  to an incomplete solution or a decoy.
+- **Third-party solution:** what is the rival cause? what data was omitted? does the evidence admit another
+  conclusion?
+- **Refine the question:** what would count as an answer? Is there a premise hidden in the question?
+- **Declared crop:** in every script, print what was treated as data and how it was segmented.
 
-## Após negativos repetidos
+## After repeated negatives
 
-Volte aos referentes e às premissas antes de ampliar a mesma família. O negativo encerra o método
-testado, não o significado da fonte.
+Go back to the referents and premises before widening the same family. The negative closes the tested method,
+not the meaning of the source.

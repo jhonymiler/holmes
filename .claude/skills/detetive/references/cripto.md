@@ -1,66 +1,65 @@
-# Módulo opcional — casos com cifras
+# Optional module — cases with ciphers
 
-Use só quando o caso envolve texto cifrado, codificação ou dado escondido.
+Use only when the case involves ciphertext, encoding or hidden data.
 
-## Codificação ou cifra?
+## Encoding or cipher?
 
-Codificação não esconde nada: base64, hex, binário, base58, URL-encoding, ASCII decimal, Morse.
-Descasque todas as camadas antes de suspeitar de criptografia. Identifique o tipo de arquivo pelo
-cabeçalho, não pela extensão.
+Encoding hides nothing: base64, hex, binary, base58, URL-encoding, decimal ASCII, Morse. Peel every layer
+before suspecting cryptography. Identify the file type by its header, not its extension.
 
-## Diagnóstico de cifra clássica
+## Diagnosing a classical cipher
 
-- **Classe (100 letras, inglês):** vogais AEIOUY 33–47; DNRST 28–42; BCFGHLMPVW 17–31; JKQXZ 0–3.
-  Tudo na faixa → transposição; fora → substituição.
-- **IC** = Σ nᵢ(nᵢ−1)/(N(N−1)). Inglês ≈ 0,067; aleatório ≈ 0,0385. Não muda com substituição
-  simples: serve para achar transposição ignorando a substituição.
-- **Mono × poli:** distribuição com picos → um alfabeto; achatada → vários. Kasiski dá o período.
-- **Palavra provável:** só se motivada por circunstância externa. Cada palavra tentada conta como tentativa.
-- **Frequência não vê tudo:** acróstico, indexação e grade com nulos não deixam sinal estatístico.
-- **Cifra de bloco** (tamanho múltiplo de 16, entropia alta): sem a chave não há criptanálise.
-  Procure a chave no material.
-- **Esteganografia:** bits menos significativos, canais de cor, metadados, dados após o fim do
-  arquivo, espaços no fim de linha, versões diferentes da mesma imagem.
-- **Kerckhoffs:** em enigma, o autor quer que o método seja achado. Procure a dica do método.
+- **Class (100 letters, English):** vowels AEIOUY 33–47; DNRST 28–42; BCFGHLMPVW 17–31; JKQXZ 0–3. All in range
+  → transposition; out of range → substitution.
+- **IC** = Σ nᵢ(nᵢ−1)/(N(N−1)). English ≈ 0.067; random ≈ 0.0385. It does not change under simple substitution:
+  it finds transposition while ignoring substitution.
+- **Mono × poly:** a peaked distribution → one alphabet; a flat one → several. Kasiski gives the period.
+- **Probable word:** only if motivated by an external circumstance. Every word tried counts as an attempt.
+- **Frequency does not see everything:** acrostics, indexing and grids with nulls leave no statistical signal.
+- **Block cipher** (size a multiple of 16, high entropy): without the key there is no cryptanalysis. Look for
+  the key in the material.
+- **Steganography:** least significant bits, colour channels, metadata, data after the end of the file,
+  trailing spaces, different versions of the same image.
+- **Kerckhoffs:** in a puzzle, the author wants the method to be found. Look for the hint to the method.
 
-## Unicidade
+## Unicity
 
-U = H(K) / D. Inglês D ≈ 3,2 bits/letra; substituição simples U ≈ 28 letras. Abaixo de U, chaves
-falsas dão texto plausível e nenhum scorer decide. Use o D do critério que o scorer mede, não o da
-língua. H(K) inclui as escolhas do analista.
+U = H(K) / D. English D ≈ 3.2 bits/letter; simple substitution U ≈ 28 letters. Below U, false keys give
+plausible text and no scorer decides. Use the D of the criterion the scorer measures, not the language's.
+H(K) includes the analyst's choices.
 
 ## Scorers
 
-- Monogramas e IC: robustos, pouco seletivos, escores falsos em texto curto.
-- n-gramas maiores e dicionário: seletivos, pouco robustos.
-- Meça antes de confiar: sintéticos com chave conhecida, erro injetado, curva escore × erro no
-  comprimento do alvo, taxa de falsos com chaves aleatórias.
-- Nunca treine o scorer no material do caso.
+- Monograms and IC: robust, not very selective, false scores on short text.
+- Larger n-grams and dictionaries: selective, not very robust.
+- Measure before trusting: synthetics with a known key, injected error, score × error curve at the target's
+  length, false rate with random keys.
+- Never train the scorer on the case's material.
 
-## Critérios de aceitação típicos
+## Typical acceptance criteria
 
-| Critério | Falso positivo por candidato | Papel |
+| Criterion | False positive per candidate | Role |
 |---|---|---|
-| Hash ou identificador igual ao alvo | desprezível | Confirmação; erro dominante é técnico |
-| Checksum curto (4 bits) | 1/16 | Filtro |
-| Checksum de 8 bits | 1/256 | Filtro |
-| Padding PKCS#7 após AES-CBC | ≈ 1/255 | Filtro; em 10⁹ tentativas, milhões de falsos |
-| Texto "plausível" | medir no comprimento do alvo | Filtro, nunca confirmação |
+| Hash or identifier equal to the target | negligible | Confirmation; the dominant error is technical |
+| Short checksum (4 bits) | 1/16 | Filter |
+| 8-bit checksum | 1/256 | Filter |
+| PKCS#7 padding after AES-CBC | ≈ 1/255 | Filter; in 10⁹ attempts, millions of false ones |
+| "Plausible" text | measure at the target's length | Filter, never confirmation |
 
-O critério final precisa de FPR × N muito abaixo de 1. Senão, encadeie um segundo estágio independente.
+The final criterion needs FPR × N far below 1. Otherwise, chain an independent second stage.
 
-## Erros humanos
+## Human errors
 
-Senha montada à mão pode ter erro. Reparos enumeráveis: símbolo ilegível, caractere faltando,
-caractere sobrando. Tolerar 1 erro multiplica o espaço por cerca de comprimento × alfabeto. Aceite
-o erro só se um mecanismo único explica todos.
+A hand-assembled password may contain an error. Enumerable repairs: an illegible symbol, a missing character,
+an extra character. Tolerating 1 error multiplies the space by roughly length × alphabet. Accept the error only
+if a single mechanism explains all of them.
 
-## Executar uma busca
+## Running a search
 
-- Controle com poder medido em cada execução (`validacao.md`).
-- O critério precisa enxergar tudo que a hipótese pode produzir (texto legível e binário).
-- Espaço declarado = código executado.
-- Cópia local de função compartilhada é defeito. Registre o instrumento com `instrumento`.
-- Checkpoint em busca longa; log sem buffer.
-- Reprocessar saída antiga com critério mais seletivo é permitido; repetir a mesma busca, não.
-- Erro de software é sistemático: rodar de novo não acha bug; segundo método acha.
+- A control with measured power in every run (`validacao.md`).
+- The criterion must see everything the hypothesis can produce (readable text and binary).
+- Declared space = executed code.
+- A local copy of a shared function is a defect. Record the instrument with `instrumento`.
+- Checkpoint in a long search; unbuffered log.
+- Reprocessing old output with a more selective criterion is allowed; repeating the same search is not.
+- Software error is systematic: rerunning does not find bugs; a second method does.

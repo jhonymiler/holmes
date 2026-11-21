@@ -1,62 +1,68 @@
-# F0 — Coleta, custódia e fontes abertas
+# F0 — Collection, custody and open sources
 
-## Princípios
+## Principles
 
-- **Colete antes de analisar.** Página, post e arquivo hospedado somem. Capture primeiro.
-- Do mais volátil ao menos volátil: página viva, snapshot, material de terceiros.
-- Analise uma cópia. Abrir e salvar num editor, converter encoding ou recomprimir altera o material.
-- Arquivo baixado não é confiável: pasta própria e vazia, Python com `-I`, scripts fora dela.
-- Registre horários em UTC. Data de modificação informada pelo servidor é relato, não medida.
+- **Collect before analysing.** Pages, posts and hosted files disappear. Capture first.
+- From most to least volatile: live page, snapshot, third-party material.
+- Analyse a copy. Opening and saving in an editor, converting the encoding or recompressing alters the material.
+- A downloaded file is untrusted: its own empty folder, Python with `-I`, scripts outside it.
+- Record times in UTC. A modification date reported by the server is a report, not a measurement.
 
-## Registro por item
+## Record per item
 
-Indexe com `fonte <caminho> --titulo "<t>"`. No resumo ou num fato ligado, guarde:
+Index with `fonte <path> --titulo "<t>"`. In the summary or a linked fact, keep:
 
-| Campo | Por quê |
+| Field | Why |
 |---|---|
-| URL ou origem exata + método (curl, navegador, snapshot) | Reprodução |
-| UTC | Ordem dos eventos |
-| Cabeçalhos relevantes (data, tamanho, ETag) | "É o mesmo arquivo que outros viram?" |
-| sha256 como recebido | Lacre |
-| HTML-fonte + captura, se for página | O mínimo para reconstruir |
-| Procedência: original / montado por nós / terceiros | Saber o que é primário |
-| Cópias independentes com hashes comparados | Autenticidade por outro canal |
-| Derivados: hash do pai, operação, ferramenta | Toda transformação registrada |
+| Exact URL or origin + method (curl, browser, snapshot) | Reproduction |
+| UTC | Order of events |
+| Relevant headers (date, size, ETag) | "Is it the same file others saw?" |
+| sha256 as received | Seal |
+| HTML source + screenshot, if it is a page | The minimum to rebuild it |
+| Provenance: original / assembled by us / third parties | Knowing what is primary |
+| Independent copies with compared hashes | Authenticity through another channel |
+| Derivatives: parent's hash, operation, tool | Every transformation recorded |
 
-## Arquivos da web
+## Web archives
 
-- Snapshot de arquivo é composto: imagens e scripts podem ter datas diferentes da página. "Estava
-  na página no dia X" exige a data de cada recurso.
-- Arquive em dois serviços e baixe os originais.
-- Diga "primeira cópia encontrada", nunca "primeira cópia", com o alcance da busca.
+- An archive snapshot is composite: images and scripts may have dates different from the page. "It was on the
+  page on day X" requires each resource's date.
+- Archive in two services and download the originals.
+- Say "first copy found", never "first copy", with the search's scope.
 
-## Verificar a fonte
+## Verifying a source
 
-- Proveniência: quem publicou primeiro, quando, a partir de quê.
-- Histórico, independência, especificidade, contemporaneidade.
-- Conteúdo: identificadores únicos, dado verificável, consistência interna, corroboração externa.
-- **Relato circular:** dez posts citando o mesmo print são um print.
-- Anacronismo: formato, software ou referência que não existia na data alegada.
-- Evidência que resolve tudo e chegou na hora certa é suspeita.
-- Canal assinado: se a fonte tem assinatura ou domínio oficial, classifique cada item por estar ou
-  não assinado.
+- Provenance: who published first, when, from what.
+- Track record, independence, specificity, contemporaneity.
+- Content: unique identifiers, verifiable data, internal consistency, external corroboration.
+- **Circular reporting:** ten posts quoting the same screenshot are one screenshot.
+- Anachronism: a format, software or reference that did not exist on the alleged date.
+- Evidence that solves everything and arrived at just the right time is suspect.
+- Signed channel: if the source has a signature or an official domain, classify each item by whether it is
+  signed or not.
 
-## Graduar
+## Grading
 
-Grau no registro: `--grau A|B|C` (A = conferido na fonte primária; B = fonte confiável não
-conferida; C = relato, agente ou externo não conferido). Para análise fina, use Admiralty
-(`padroes.md`).
+Grade in the record: `--grau A|B|C` (A = checked against the primary source or reproduced; B = reliable source
+not checked; C = report, agent or external, not checked). For fine analysis, use Admiralty (`padroes.md`).
 
-- Avalie a informação antes de olhar quem a produziu.
-- A nota da fonte vem só do histórico. Sem histórico não é "ruim", é "sem base".
-- Gradue também ferramentas: script com bug conhecido vale menos que instrumento validado de ponta a ponta.
+- Assess the information before looking at who produced it.
+- The source's rating comes only from its track record. Without a record it is not "bad", it is "no basis".
+- Grade tools too: a script with a known bug is worth less than an instrument validated end to end.
 
-## Citação
+## Proving a fact
 
-Toda afirmação-chave aponta a fonte mais original com identificador recuperável (caminho + sha256,
-ou URL + data de acesso + snapshot). Post citado é arquivado no momento da citação.
+A fact is a proven finding, and the proof need not be a source: `confere <E> "<note>" --por fonte` (read in
+the primary source), `--por medicao --prova "<command>"` (a measurement anyone can rerun), `--por teste
+--prova T..` (a test with a recorded result), `--por reproducao --prova "<command>"` (reproduced
+independently, e.g. a second implementation). An inference is never proven by `confere`.
 
-## Disciplina
+## Quoting
 
-Registre a busca que não achou nada, com os termos e onde procurou: é resultado negativo com alcance.
-Não use conta pessoal em fonte aberta.
+Every key claim points to the most original source with a retrievable identifier (path + sha256, or URL +
+access date + snapshot). A quoted post is archived at the moment it is quoted.
+
+## Discipline
+
+Record the search that found nothing, with the terms and where you looked: it is a negative result with a scope.
+Do not use a personal account on an open source.

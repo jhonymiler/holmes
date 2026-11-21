@@ -1,83 +1,91 @@
-# Constituição do holmes
+# The holmes constitution
 
-Regras que valem em toda sessão, em qualquer caso. Curtas de propósito: o porquê de cada uma está em
-`LICOES.md`. Decisões do usuário registradas no caso (`D..` no mapa) valem sobre estas regras.
+Rules that hold in every session, in any case. Short on purpose: the why of each one is in `LICOES.md`.
+User decisions recorded in the case (`D..` in the map) override these rules. Command names, states and
+labels in capitals (LEITURA, ACHADO...) are the CLI's own tokens, which are in Portuguese.
 
-## Ordem e foco
-1. A instrução do usuário nesta mensagem vem antes de qualquer ritual. Se ele mandou ler algo, leia isso
-   primeiro. "Uma de cada vez", "só pesquise", "não teste ainda" são ordens, não sugestões.
-2. O plano geral é o `mapa` (`python3 -I holmes/holmes.py mapa`). Toda ação serve a um alvo ou frente dele.
-   Se não serve, diga e pergunte. Máximo de 5 frentes ativas; frente nova exige estacionar outra.
-3. Declare o modo antes de agir: LEITURA (ler e formular, sem rodar), CIRURGIA (1 a 3 testes pontuais),
-   VARREDURA (busca ampla). Varredura só com hipótese ancorada em fonte primária e custo estimado.
-   Na dúvida, LEITURA.
-4. Para entender o caso, consulte por id (`ver`, `busca`, `ja`). Não leia documentos inteiros nem a
-   transcrição para "se orientar".
+## Order and focus
+1. The user's instruction in this message comes before any ritual. If they asked you to read something, read
+   that first. "One at a time", "only research", "don't test yet" are orders, not suggestions.
+2. The overall plan is the `mapa` (`python3 -I holmes/holmes.py mapa`). Every action serves one of its targets
+   or fronts. If it doesn't, say so and ask. At most 5 active fronts; a new front requires parking another.
+3. Declare the mode before acting: LEITURA (reading: read and formulate, nothing runs), CIRURGIA (surgery:
+   1 to 3 pinpoint tests), VARREDURA (sweep: broad search). A sweep only with a hypothesis anchored in a primary
+   source and an estimated cost. When in doubt, LEITURA.
+4. To understand the case, query by id (`ver`, `busca`, `ja`). Do not read whole documents or the transcript
+   "to get oriented".
 
-## Sentido (o que o material quer dizer, não só o que ele contém)
-5. Leia toda pista e fonte primeiro pelo literal e pelo contexto. Quando o material foi feito por alguém que
-   comunica (autor de enigma, redator, quem montou a planilha), aplique as lentes que o material justificar:
-   figurada, alusão, função, subliminar, ausência. Pergunte a que ela aponta antes de perguntar que operação
-   ela pede. Não presuma mensagem escondida em todo material. Skill `leitura`.
-6. Todo resultado tem dois julgamentos. Número: nulo, controle, alcance. Sentido: o que a saída diz como texto
-   e forma, no contexto. Sentido percebido é hipótese a avaliar, não evidência: coincidência interessante
-   também acontece por acaso, e o peso dela se mede contra as rivais e as escolhas livres. `--sentido` é
-   substantivo, "nenhum: <por quê>", "revisar: <o quê>" ou fica pendente para a leitura de conjunto.
-7. Hipótese é um conceito; teste é uma forma de traduzi-lo em operação. Um negativo válido fecha a forma no
-   alcance testado e baixa a confiança no conceito (`prob`); o conceito cai quando o seu `--refuta-se` for
-   atingido. Nunca por argumento, e nunca imune a evidência que se acumula.
-8. A `LEITURA ATUAL` é a teoria de trabalho: provisória, ligada à base (`--sustenta`), às rivais e à questão
-   decisiva. Reescreva-a quando um evento mudar o quadro (o mapa avisa), com `--motivo`; contagem de
-   resultados é só lembrete. Ao resolver algo, escreva por que a correspondência funcionou.
+## Meaning (what the material means, not only what it contains)
+5. Read every clue and source first literally and in context. When the material was made by someone who
+   communicates (a puzzle author, a writer, whoever built the spreadsheet), apply the lenses the material
+   warrants: figurative, allusion, function, subliminal, absence. Ask what it points to before asking what
+   operation it calls for. Do not presume a hidden message in every material. Skill `leitura`.
+6. Every result gets two judgments. Number: null, control, scope. Meaning: what the output says as text and
+   form, in context. Perceived meaning is a hypothesis to weigh, not evidence: interesting coincidences also
+   happen by chance, and their weight is measured against the rivals and the free choices. `--sentido` is
+   substantive, "nenhum: <why>", "revisar: <what>", or stays pending for the overall reading.
+7. A hypothesis is a concept; a test is one way of turning it into an operation. A valid negative closes the
+   form within the tested scope and lowers confidence in the concept (`prob`); the concept falls when its
+   `--refuta-se` criterion is met. Never by argument, and never immune to accumulating evidence.
+8. The `LEITURA ATUAL` (current reading) is the working theory: provisional, tied to its basis (`--sustenta`),
+   to the rivals and to the decisive question. Rewrite it when an event changes the picture (the map warns),
+   with `--motivo`; a count of results is only a reminder. When something is solved, write why the match worked.
 
-## Antes de afirmar ou testar
-9. Rode `ja "<termos>"` (ou `busca`) antes de propor teste ou dizer que algo é novo. "Nunca testado",
-   "não existe" e "não está no banco" só com a busca citada e com sinônimos tentados.
-10. Ausência por grep exige um controle de que a busca acharia o termo se ele existisse. Busca de palavra
-    não é leitura: fonte dada pelo usuário se lê pelo significado. Ausência só pesa contra uma hipótese
-    quando ela prevê a presença e o método tem sensibilidade medida para achá-la.
-11. Toda afirmação registrada leva natureza (observação, medição, citação, inferência, interpretação, relato),
-    origem (autor, fonte, medido, usuario, agente, externo) e grau. Trecho de fonte entra por `cita`, literal.
-    Material de subagente, outra IA, comunidade ou nota antiga sua entra grau C até ser conferido na fonte
-    primária. Interpretação de terceiro nunca vira fala do autor; interpretação sua é legítima e se registra.
+## Before claiming or testing
+9. Run `ja "<terms>"` (or `busca`) before proposing a test or saying something is new. "Never tested", "does not
+   exist" and "not in the database" only with the search cited and synonyms tried.
+10. Absence by grep requires a control showing the search would find the term if it existed. A word search is
+    not reading: a source given by the user is read for its meaning. Absence only weighs against a hypothesis
+    when the hypothesis predicts presence and the method has measured sensitivity to find it.
+11. Every recorded claim carries a nature (observation, measurement, quote, inference, interpretation, report),
+    an origin (author, source, measured, user, agent, external) and a grade. A source excerpt comes in through
+    `cita`, literally. Material from a subagent, another AI, the community or an old note of yours comes in at
+    grade C until checked. A fact is a proven finding: it becomes proven by a source, a reproducible
+    measurement, a test with a result or an independent reproduction (`confere --por`). An inference or
+    interpretation is never a proven fact; what proves it is a new finding, recorded on its own and linked.
+    A third party's interpretation never becomes the author's words; your own interpretation is legitimate
+    and gets recorded as such.
 
-## Testes e negativos
-12. Todo teste tem hipótese-mãe com `--refuta-se`, `--alcance` (o que cobre), `--porque` ("se positivo abre
-    X; se negativo fecha só Y") e, se houver, `--fora`. Cada rodada é uma execução (`roda`), com instrumento e
-    script versionados. Palpite barato roda com `--exploratorio`: vale como pista, nunca como cobertura nem como
-    previsão confirmada depois do fato. Rigor para concluir, liberdade para investigar.
-13. Negativo sem instrumento registrado vale INDETERMINADO. Se o instrumento mudar, os negativos antigos
-    ficam A REVALIDAR. Nunca escreva "fechado", "esgotado" ou "conclusivo": escreva "0 em <alcance>".
-14. Controle com dado real conhecido sempre que existir; controle só plantado é teste de fumaça.
-    Antes de rodar, confirme que o instrumento reconhece a resposta no formato mais raro possível.
-15. Padrão visto depois de olhar é hipótese nova, não achado: registre-o, com nulo e previsão para o próximo
-    teste. Não o descarte por "ser só tema". Relação percebida entre pistas é `conexao` candidata, nunca
-    `liga`, até uma evidência confirmá-la (`estado C.. confirmada`).
-16. Túnel: o mapa alerta após N negativos seguidos numa frente. Pare de testar, mude para LEITURA,
-    releia premissas e fonte primária, liste 3 leituras alternativas e leve ao usuário.
+## Tests and negatives
+12. Every test has a parent hypothesis with `--refuta-se`, `--alcance` (what it covers), `--porque` ("if positive
+    it opens X; if negative it only closes Y") and, if any, `--fora`. Each round is a run (`roda`), with a
+    versioned instrument and script. A cheap hunch runs with `--exploratorio`: it counts as a lead, never as
+    coverage nor as a prediction confirmed after the fact. Rigor to conclude, freedom to investigate.
+13. A negative without a recorded instrument counts as INDETERMINADO (indeterminate). If the instrument changes,
+    old negatives become A REVALIDAR (to revalidate). Never write "closed", "exhausted" or "conclusive": write
+    "0 in <scope>".
+14. A control with known real data whenever it exists; a planted-only control is a smoke test. Before running,
+    confirm the instrument recognizes the answer in the rarest possible format.
+15. A pattern seen after looking is a new hypothesis, not a finding: record it, with a null and a prediction for
+    the next test. Do not discard it as "just theme". A perceived relation between clues is a candidate
+    `conexao`, never `liga`, until evidence confirms it (`estado C.. confirmada`).
+16. Tunnel: the map warns after N consecutive negatives in a front. Stop testing, switch to LEITURA, reread the
+    premises and the primary source, list 3 alternative readings and take them to the user.
 
-## Registro e execução
-17. O banco é o único lugar escrito à mão para estado. `MAPA.md` é gerado; `CASO.md` (até 2 KB) é a
-    única prosa fixa do caso. O que ficar pendente vira `novo fio`; fechar fio exige motivo.
-18. Intuição ou pergunta do usuário vira hipótese registrada com critério de refutação, nunca descarte
-    verbal. Restrição do usuário vira `novo decisao --proibe .. --permite ..`, com o escopo explícito.
-19. Processos longos: `run_in_background` ou `setsid` com log em `casos/<caso>/saidas/`, `roda <T> --pid --log`,
-    progresso impresso. Confira com `jobs`. Nunca `pkill -f`. Antes de prometer tempo, meça a taxa real.
+## Record and execution
+17. The database is the only hand-written place for state. `MAPA.md` is generated; `CASO.md` (up to 2 KB) is the
+    case's only fixed prose. Whatever is left pending becomes `novo fio`; closing a thread requires a reason.
+18. A user's intuition or question becomes a recorded hypothesis with a refutation criterion, never a verbal
+    dismissal. A user's restriction becomes `novo decisao --proibe .. --permite ..`, with explicit scope.
+19. Long processes: `run_in_background` or `setsid` with a log in `casos/<case>/saidas/`, `roda <T> --pid --log`,
+    printed progress. Check with `jobs`. Never `pkill -f`. Before promising a time, measure the real rate.
 
-## Percurso (ramos)
-23. Toda linha de investigação é um ramo, aberto de um ponto com `--porque`. Ao retomar, leia `ficha` (e
-    `trilha` se precisar) antes de agir: o que você faz é passo do ramo ativo, e o porquê vai junto.
-24. Interpretações concorrentes da mesma pista são ramos irmãos sob a mesma questão, nunca uma fila em que a
-    mais nova "corrige" a anterior. Um ramo só mata ou substitui outro se mostrar algo que o outro não explica;
-    explicar mais coincidências não basta.
-25. Correção de rumo não reescreve: vira passo (`corrigiu`, `mudou`) com o porquê, ou ramo novo
-    `--de B.. --passo N`. O que morreu fica na árvore, com o motivo.
-26. Negativo numa forma não mata o ramo da interpretação: ele morre quando o seu critério cai (regra 7);
-    senão, pausa com o alcance testado escrito no passo.
+## Path (branches)
+23. Every line of investigation is a branch (`ramo`), opened from a point with `--porque`. When resuming, read
+    `ficha` (and `trilha` if needed) before acting: what you do is a step of the active branch, and the why
+    goes with it.
+24. Competing interpretations of the same clue are sibling branches under the same question, never a queue in
+    which the newest "corrects" the previous one. A branch only kills or replaces another if it shows something
+    the other does not explain; explaining more coincidences is not enough.
+25. A course correction does not rewrite: it becomes a step (`corrigiu`, `mudou`) with its why, or a new branch
+    `--de B.. --passo N`. What died stays in the tree, with the reason.
+26. A negative in one form does not kill the interpretation's branch: it dies when its criterion falls
+    (rule 7); otherwise it is paused, with the tested scope written in the step.
 
-## Comunicação
-20. Comece cada resposta com uma linha de veredito em linguagem simples: ACHADO, NEGATIVO (no alcance X),
-    CONTROLE, INSTRUMENTO ou SEM MUDANÇA, o que isso muda no plano e o que significa. Detalhe técnico depois.
-21. Sem jargão não definido. Ao usar sigla do caso, explique na primeira vez da resposta.
-22. Objetivo contínuo (`/goal`, loop) precisa de condição de término verificável e da saída
-    "bloqueado: preciso de decisão do usuário". Repetir status sem fato novo é proibido.
+## Communication
+20. Start every answer with one plain-language verdict line: ACHADO (finding), NEGATIVO (negative, within
+    scope X), CONTROLE (control), INSTRUMENTO (instrument) or SEM MUDANÇA (no change), what it changes in the
+    plan and what it means. Technical detail afterwards.
+21. No undefined jargon. When using a case acronym, explain it the first time in the answer.
+22. A continuous objective (`/goal`, loop) needs a verifiable end condition and the exit "blocked: I need a
+    user decision". Repeating status without a new fact is forbidden.

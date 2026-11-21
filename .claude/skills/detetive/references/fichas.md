@@ -1,97 +1,99 @@
-# Modelos de registro por fase
+# Record templates per phase
 
-Estado e dado vão para o registro (`python3 -I holmes/holmes.py`). Prosa longa vai para um `.md`
-indexado com `fonte`. Uma ficha é o resumo (`--resumo`) do nó, ou um `.md` ligado a ele.
+State and data go to the record (`python3 -I holmes/holmes.py`). Long prose goes into a `.md` indexed with
+`fonte`. A record sheet (ficha) is the node's summary (`--resumo`), or a `.md` linked to it. Not to be confused
+with the `ficha` command, the one-page view of where the case stands.
 
-## Comandos por fase
+## Commands per phase
 
-| Fase | Comandos |
+| Phase | Commands |
 |---|---|
-| Abrir | `init <caso> "<objetivo>"`, `usa <caso>`, `novo alvo`, `novo frente` |
-| Retomar | `mapa`, depois `ver <id>` do que estiver ativo |
-| F0 | `fonte <caminho> --titulo "<t>"` |
-| F1 | `cita <pedaço> "<t>"` ou `novo fato "<t>" --natureza --origem --fonte --grau`; `novo fio`; `novo questao`; várias unidades: `extrai f.json [--aplica]` |
-| Relações | `conexoes <id\|"conceito">`; `conexao <de> <para> <relação> "<por quê>" --rival --discriminador`; `estado C.. confirmada\|rejeitada` |
-| F2 | `novo hipotese "<t>" --pai <frente> --refuta-se ..`; `liga <H> responde <Q>`; `liga <a> rival <b>` |
-| F3 | `teste <hip> "<t>" --alcance --porque --fora --controle --controle-tipo --previsao --instrumento` |
-| F4 | `instrumento <caminho> "<nome>" --verificador "<cmd>"`; `teste ... --script`; `roda <T> --pid --log`; `jobs` |
-| F5, F6 | `resultado <teste> positivo\|negativo\|inconclusivo\|falhou "<nota>" --sentido --n --controle-ok`; `ach <E> <H> <valor>` |
-| F7 | `estado <id> <estado> "<motivo>"`; `novo decisao`; `leitura ".." --sustenta --rival --questao --motivo` |
-| Consulta | `busca`, `ja`, `ver`, `cadeia`, `questoes`, `proximo`, `cronologia` |
+| Open | `init <case> "<objective>"`, `usa <case>`, `novo alvo`, `novo frente`, `ramo novo "TRUNK..." --de O1 --porque ..` |
+| Resume | `mapa`, `ficha`, `trilha` if needed, then `ver <id>` of whatever is active |
+| F0 | `fonte <path> --titulo "<t>"` |
+| F1 | `cita <chunk> "<t>"` or `novo fato "<t>" --natureza --origem --fonte --grau`; `confere <E> ".." --por ..`; `novo fio`; `novo questao`; many units: `extrai f.json [--aplica]` |
+| Relations | `conexoes <id\|"concept">`; `conexao <from> <to> <relation> "<why>" --rival --discriminador`; `estado C.. confirmada\|rejeitada` |
+| F2 | `novo hipotese "<t>" --pai <front> --refuta-se ..`; `liga <H> responde <Q>`; `liga <a> rival <b>`; rival readings as sibling branches |
+| F3 | `teste <hyp> "<t>" --alcance --porque --fora --controle --controle-tipo --previsao --instrumento` |
+| F4 | `instrumento <path> "<name>" --verificador "<cmd>"`; `teste ... --script`; `roda <T> --pid --log`; `jobs` |
+| F5, F6 | `resultado <test> positivo\|negativo\|inconclusivo\|falhou "<note>" --sentido --n --controle-ok`; `ach <E> <H> <value>` |
+| F7 | `estado <id> <state> "<reason>"`; `novo decisao`; `leitura ".." --sustenta --rival --questao --motivo`; course correction: `passo corrigiu` or `ramo novo --de B.. --passo N` |
+| Query | `busca`, `ja`, `ver`, `cadeia`, `questoes`, `proximo`, `cronologia`, `arvore`, `trilha`, `ficha` |
 
-## F1 — Leitura
-
-```
-Já feito (ja): ids lidos
-Leitura própria (antes de ver interpretações): fonte · mensagem · referentes · confiança
-Outra leitura (muda sentido ou referente)
-Discriminador: o que separaria as leituras
-Ponte para a operação + escolhas livres restantes
-Depois das referências: "mudei X porque vi Y"
-Segunda leitura de dado extraído por ferramenta
-Inventário de consumo: elemento → etapa que o explica
-```
-
-## F2 — Hipóteses
+## F1 — Reading
 
 ```
-Hipóteses: H-nada, H-mundano, H-adversária, H-erro, H-artefato, de terceiros
-Prior pela visão de fora: k de N tentativas do tipo acertaram
-Premissas: premissa | relevância 0-2 | suporte 0-2 | o que a derrubaria
-Matriz ACH (preenchida por linha) + coluna "fácil de forjar?"
-Status: viva | refutada (por qual fato)
-Probabilidades (somam 1, com "outra", só entre rivais exclusivas)
-Marcos que mudariam a conclusão
+Already done (ja): ids read
+Own reading (before seeing interpretations): source · message · referents · confidence
+Another reading (changes the meaning or the referent)
+Discriminator: what would separate the readings
+Bridge to the operation + remaining free choices
+After the references: "I changed X because I saw Y"
+Second reading of data extracted by a tool
+Consumption inventory: element → the step that explains it
 ```
 
-## F3 — Pré-avaliação (vai nos campos do `teste`)
+## F2 — Hypotheses
 
 ```
-titulo:      receita em uma linha
-alcance:     espaço exato que será coberto
-fora:        o que fica de fora
-exclui:      que hipótese o resultado exclui (no resumo)
-resultados:  acerto / sinal fraco / nada → P|H, P|H-nada, LR
-previsao:    P(evento) = 0,0x
-controle:    tipo (dado real, dupla implementação, taxa, sabotagem) e poder medido
-criterio:    FPR, sensibilidade, alarmes esperados = FPR × N
-escolhas:    fixadas antes (início, índice, formato, recorte)
-custo:       espaço ÷ taxa medida
-ja:          execuções anteriores da mesma receita, ou "nenhuma"
-premortem:   por que terminaria sem achado ou com achado falso
+Hypotheses: H-nothing, H-mundane, H-adversarial, H-error, H-artefact, third parties'
+Prior from the outside view: k of N attempts of the kind succeeded
+Premises: premise | relevance 0-2 | support 0-2 | what would break it
+ACH matrix (filled by row) + "easy to forge?" column
+Status: alive | refuted (by which fact)
+Probabilities (sum to 1, with "other", only among exclusive rivals)
+Milestones that would change the conclusion
 ```
 
-## F4 — Execução
-
-O script grava receita, hash do script, instrumento, N, taxa, controle, acertos e log. Revisão do
-`revisor`: espaço declarado = espaço executado, controle com poder, instrumento compartilhado sem
-cópia local, taxa medida no lugar certo. Sem revisão, não vale como cobertura.
-
-## F5 — Avaliação
+## F3 — Pre-assessment (goes into the `teste` fields)
 
 ```
-Proposições: as da F2? sim/não
-Melhor escore vs máximo de N sob ruído
-Controle com a mesma liberdade · variações
-Discrepâncias: item | explicação | evidência independente? → veredito
-Critérios de aceitação 1–7
-Nível: operação | fonte | atividade | resolução
-Conclusão: probabilidade · confiança · LR verbal · mudança
+titulo:      the recipe in one line
+alcance:     the exact space that will be covered
+fora:        what is left out
+excludes:    which hypothesis the result excludes (in the summary)
+results:     hit / weak signal / nothing → P|H, P|H-nothing, LR
+previsao:    P(event) = 0.0x
+controle:    type (real data, double implementation, rate, sabotage) and measured power
+criterion:   FPR, sensitivity, expected alarms = FPR × N
+choices:     fixed beforehand (start, index, format, crop)
+cost:        space ÷ measured rate
+ja:          earlier runs of the same recipe, or "none"
+premortem:   why it would end without a finding or with a false finding
 ```
 
-## F6 — Verificação (escrita pelo verificador)
+## F4 — Execution
+
+The script records the recipe, the script's hash, the instrument, N, rate, control, hits and log. Review by the
+`revisor`: declared space = executed space, control with power, shared instrument without a local copy, rate
+measured in the right place. Without review, it does not count as coverage.
+
+## F5 — Evaluation
 
 ```
-Recebido: dados + critério + K candidatos (sem saber o suspeito)
-Reprodução: receita seguida passo a passo → resultado obtido
-Veredito por candidato
-Probabilidade independente (soma 1 entre rivais exclusivas)
-Discordâncias
+Propositions: those of F2? yes/no
+Best score vs maximum of N under noise
+Control with the same freedom · variations
+Discrepancies: item | explanation | independent evidence? → verdict
+Acceptance criteria 1–7
+Level: operation | source | activity | resolution
+Conclusion: probability · confidence · verbal LR · change
 ```
 
-## F7 — Revisão
+## F6 — Verification (written by the verifier)
 
-- Decisão: opções consideradas, escolhida, rejeitadas e por quê (`novo decisao`).
-- Retratação: `estado <id> retratado "<motivo>"`; abra `ver <id>` e reavalie cada ligado.
-- Revisão do zero: estimativa nova antes de ver a antiga, a antiga, a diferença, surpresas relidas.
-- Negativo repetido: tabela É / NÃO É. "Se X é a causa, por que aparece aqui e não ali?"
+```
+Received: data + criterion + K candidates (without knowing the suspect)
+Reproduction: recipe followed step by step → result obtained
+Verdict per candidate
+Independent probability (sums to 1 among exclusive rivals)
+Disagreements
+```
+
+## F7 — Revision
+
+- Decision: options considered, chosen, rejected and why (`novo decisao`).
+- Retraction: `estado <id> retratado "<reason>"`; open `ver <id>` and reassess each linked item.
+- From-scratch review: a new estimate before seeing the old one, the old one, the difference, surprises reread.
+- Repeated negative: an IS / IS NOT table. "If X is the cause, why does it show up here and not there?"
+- Change of leading hypothesis: the old one becomes a paused or dead branch with the reason, never erased.

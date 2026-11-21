@@ -1,71 +1,71 @@
-# Escalas de conclusão
+# Conclusion scales
 
-## Probabilidade (ICD 203) — sempre com o número
+## Probability (ICD 203) — always with the number
 
-| quase nenhuma chance | muito improvável | improvável | chances iguais | provável | muito provável | quase certo |
+| almost no chance | very unlikely | unlikely | roughly even chance | likely | very likely | almost certain |
 |---|---|---|---|---|---|---|
 | 1–5% | 5–20% | 20–45% | 45–55% | 55–80% | 80–95% | 95–99% |
 
-- Não misture escalas.
-- "Possível" sem modificador só para o que importa e não se consegue estimar.
-- Sem base para número: diga "premissa de planejamento", não finja estimativa.
+- Do not mix scales.
+- "Possible" without a modifier only for what matters and cannot be estimated.
+- No basis for a number: say "planning assumption", do not fake an estimate.
 
-## Confiança na base — em frase separada
+## Confidence in the basis — in a separate sentence
 
-| Confiança | Critérios |
+| Confidence | Criteria |
 |---|---|
-| Alta | Sem premissa pivô nem lacuna crítica; fontes independentes concordam; baixo risco de engano; evidência inconsistente com a alternativa. Não é certeza. |
-| Moderada | Premissas importantes preenchem lacunas; pouca corroboração; alguma inconsistência; alternativa plausível aberta. |
-| Baixa | Premissas-chave preenchem lacunas críticas; informação fragmentada; alto risco de engano; o relato sustenta uma alternativa. |
+| High | No pivotal premise or critical gap; independent sources agree; low risk of deception; evidence inconsistent with the alternative. It is not certainty. |
+| Moderate | Important premises fill gaps; little corroboration; some inconsistency; a plausible alternative remains open. |
+| Low | Key premises fill critical gaps; fragmented information; high risk of deception; the report supports an alternative. |
 
-Acrescente uma frase: de onde vem a incerteza e como a confiança aumentaria.
+Add a sentence: where the uncertainty comes from and how confidence would increase.
 
-## Força da evidência (LR verbal)
+## Strength of evidence (verbal LR)
 
-| LR | Suporte para H frente à alternativa |
+| LR | Support for H against the alternative |
 |---|---|
-| 1 | Não ajuda |
-| 2–10 | Fraco |
-| 10–100 | Moderado |
-| 100–1.000 | Moderadamente forte |
-| 1.000–10.000 | Forte |
-| 10.000–1.000.000 | Muito forte |
-| ≥ 1.000.000 | Extremamente forte |
+| 1 | Does not help |
+| 2–10 | Weak |
+| 10–100 | Moderate |
+| 100–1,000 | Moderately strong |
+| 1,000–10,000 | Strong |
+| 10,000–1,000,000 | Very strong |
+| ≥ 1,000,000 | Extremely strong |
 
-O inverso vale para a alternativa. "Suporte fraco" não é suporte à alternativa. A palavra vem do
-LR, não o contrário.
+The inverse holds for the alternative. "Weak support" is not support for the alternative. The word comes from
+the LR, not the other way round.
 
-## Fonte × informação (Admiralty)
+## Source × information (Admiralty)
 
-| Fonte | Definição | Info | Definição |
+| Source | Definition | Info | Definition |
 |---|---|---|---|
-| A | Sem dúvida; histórico confiável | 1 | Confirmada por fontes independentes |
-| B | Dúvida menor; histórico bom | 2 | Não confirmada; lógica; consistente |
-| C | Dúvida; já acertou | 3 | Não confirmada; razoável; concorda em parte |
-| D | Dúvida séria; já acertou | 4 | Não confirmada; possível mas pouco lógica |
-| E | Histórico inválido | 5 | Ilógica; contradita |
-| F | Sem histórico | 6 | Sem base para avaliar |
+| A | No doubt; reliable track record | 1 | Confirmed by independent sources |
+| B | Minor doubt; good record | 2 | Not confirmed; logical; consistent |
+| C | Doubt; has been right before | 3 | Not confirmed; reasonable; partly agrees |
+| D | Serious doubt; has been right before | 4 | Not confirmed; possible but illogical |
+| E | Invalid track record | 5 | Illogical; contradicted |
+| F | No track record | 6 | No basis to assess |
 
-Eixos independentes: B5 e E1 existem. Mapa para o registro: A1–B2 → `--grau A` se conferido na
-fonte primária; B2–C3 → `--grau B`; o resto → `--grau C`.
+Independent axes: B5 and E1 exist. Mapping to the record: A1–B2 → `--grau A` if checked against the primary
+source; B2–C3 → `--grau B`; the rest → `--grau C`.
 
-## Formato de um julgamento-chave
+## Format of a key judgment
 
-> **H** — provável (55–80%).
-> Confiança moderada: base X; aumentaria com o teste T.
-> Evidência mais forte: E (LR ~10³, forte). Nível: fonte.
-> O que refutaria: R. Mudança desde o último julgamento: … (causa).
+> **H** — likely (55–80%).
+> Moderate confidence: basis X; would increase with test T.
+> Strongest evidence: E (LR ~10³, strong). Level: source.
+> What would refute it: R. Change since the last judgment: … (cause).
 
-## Linguagem proibida
+## Forbidden language
 
-- Certeza: "100%", "definitivo", "só pode ser", "exclui todas as outras".
-- "Parece", "sugere", "indica", "aparentemente" sem motivo e peso.
-- Dupla qualificação ("acreditamos ser provável").
-- "Não há evidência de X" sem dizer quão provável seria ver a evidência se X fosse verdade.
-- Probabilidade e confiança na mesma frase.
+- Certainty: "100%", "definitive", "it can only be", "excludes all others".
+- "Seems", "suggests", "indicates", "apparently" without a reason and weight.
+- Double qualification ("we believe it is likely").
+- "There is no evidence of X" without saying how likely it would be to see the evidence if X were true.
+- Probability and confidence in the same sentence.
 
-## Teste da contracapa
+## The back-cover test
 
-A evidência pode ser toda verdadeira e a conclusão falsa? Se você imagina como, a conclusão está
-forte demais. Enfraqueça até esse cenário ficar implausível. Pergunte: como eu saberia que este
-julgamento é falso? Sem resposta, ele é vazio.
+Can the evidence be all true and the conclusion false? If you can imagine how, the conclusion is too strong.
+Weaken it until that scenario becomes implausible. Ask: how would I know this judgment is false? With no
+answer, it is empty.

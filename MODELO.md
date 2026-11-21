@@ -1,296 +1,324 @@
-# Modelo de dados do holmes 2.0
+# holmes 2.0 data model
 
-Dois bancos SQLite com papéis diferentes:
+Two SQLite databases with different roles. Type, state and command names are the CLI's own tokens, in
+Portuguese (`fato` = fact, `ramo` = branch, `passo` = step...).
 
-| Banco | Onde | Guarda | Cresce? |
+| Database | Where | Holds | Grows? |
 |---|---|---|---|
-| **caso.db** | `casos/<caso>/caso.db` | o *raciocínio*: o que se quer, o que se acha, o que se testou, o que se sabe e de onde | devagar; itens curtos, com limite |
-| **corpus.db** | `corpus/corpus.db` | o *material*: chats, documentos, livros, páginas, em pedaços pesquisáveis | muito; nunca é injetado, só consultado |
+| **caso.db** | `casos/<case>/caso.db` | the *reasoning*: what is wanted, what is found, what was tested, what is known and where from | slowly; short items, with limits |
+| **corpus.db** | `corpus/corpus.db` | the *material*: chats, documents, books, pages, in searchable chunks | a lot; never injected, only queried |
 
 > [!TIP]
-> O caso aponta para o corpus (fonte → documento, citação → pedaço), e o corpus não sabe nada do caso. O
-> material pode ser reindexado ou trocado de motor de busca sem tocar no raciocínio.
+> The case points to the corpus (source → document, quote → chunk), and the corpus knows nothing about the case.
+> The material can be reindexed or moved to another search engine without touching the reasoning.
 
-## caso.db: o grafo do raciocínio
+## caso.db: the reasoning graph
 
-A árvore é o plano: cada nível responde ao de cima.
+The tree is the plan: each level answers to the one above.
 
 ```mermaid
 flowchart TD
-    O["🎯 <b>Objetivo O</b><br/>1 por caso"]
-    A["<b>Alvo A</b><br/>sub-problema · solução + prova executável"]
-    F["<b>Frente F</b><br/>linha de investigação · ≤ 5 ativas"]
-    R["<b>Premissa R</b><br/>assumida → verificada"]
-    H["<b>Hipótese H</b><br/>prob + refuta-se se · ≤ 7 vivas por frente"]
-    T["<b>Teste T</b><br/>alcance · fora · porquê · previsão · controle<br/>exploratório ou confirmatório"]
-    X["<b>Execução X</b><br/>instrumento@versão · script@sha · pid · log · n<br/>resultado + sentido"]
+    O["🎯 <b>Objective O</b><br/>1 per case"]
+    A["<b>Target A</b><br/>sub-problem · solution + executable proof"]
+    F["<b>Front F</b><br/>line of investigation · ≤ 5 active"]
+    R["<b>Premise R</b><br/>assumed → verified"]
+    H["<b>Hypothesis H</b><br/>prob + refuted if · ≤ 7 alive per front"]
+    T["<b>Test T</b><br/>scope · outside · why · prediction · control<br/>exploratory or confirmatory"]
+    X["<b>Run X</b><br/>instrument@version · script@sha · pid · log · n<br/>result + meaning"]
 
     O --> A
-    A -. depende .-> A
+    A -. depends .-> A
     A --> F
     F --> R
     F --> H
     H --> T
     T --> X
-    H -. depende .-> R
+    H -. depends .-> R
 ```
 
-Ao lado da árvore ficam o que se sabe, de onde veio e o que ainda é pergunta:
+Next to the tree sit what is known, where it came from and what is still a question:
 
 ```mermaid
 flowchart LR
-    E["<b>Fato E</b><br/>natureza · grau · conferido · prova"]
-    S["<b>Fonte S</b><br/>procedência · sha"]
-    CO[("corpus<br/>documento / pedaço")]
-    N["<b>Entidade N</b><br/>pessoa, artefato, lugar, conceito, evento<br/>aliases + atributos sustentados por fato"]
-    Q["<b>Questão Q</b><br/>pergunta; sem hipótese = lacuna"]
-    H["<b>Hipótese H</b>"]
-    C{{"<b>Conexão candidata C</b><br/>de · para · relação · por quê · rival · discriminador<br/>fora do grafo até ser confirmada"}}
-    L["📖 <b>Leitura L</b><br/>teoria de trabalho vigente"]
+    E["<b>Fact E</b><br/>nature · grade · proven by · proof"]
+    S["<b>Source S</b><br/>provenance · sha"]
+    CO[("corpus<br/>document / chunk")]
+    N["<b>Entity N</b><br/>person, artefact, place, concept, event<br/>aliases + attributes backed by a fact"]
+    Q["<b>Question Q</b><br/>question; without a hypothesis = gap"]
+    H["<b>Hypothesis H</b>"]
+    C{{"<b>Candidate connection C</b><br/>from · to · relation · why · rival · discriminator<br/>outside the graph until confirmed"}}
+    L["📖 <b>Reading L</b><br/>current working theory"]
 
-    E -- cita --> S --> CO
-    E -. atributo .-> N
-    H -- responde --> Q
+    E -- quotes --> S --> CO
+    E -. attribute .-> N
+    H -- answers --> Q
     C == "estado C confirmada" ==> E
-    L -- depende --> E
-    E -- enfraquece --> L
+    L -- depends --> E
+    E -- weakens --> L
     L -- rival --> H
-    L -- sobre --> Q
+    L -- about --> Q
 ```
 
-Também ficam fora da árvore: **decisão do usuário D** (proíbe / permite), **fio P** (pendência) e
-**instrumento I** (versões por sha + verificador). Todo nó tem `legado`: 1 = herdado de outro sistema,
-fora dos alertas do mapa até ser mexido.
+Also outside the tree: **user decision D** (forbids / allows), **thread P** (a pending item) and **instrument I**
+(versions by sha + verifier). Every node has `legado`: 1 = inherited from another system, kept out of the map's
+alerts until touched.
 
-| Arestas (sempre manuais ou por confirmação de C) | ACH |
+| Edges (always manual or by confirming a C) | ACH |
 |---|---|
-| sustenta · enfraquece · contradiz · refuta · depende · duplica · substitui · sobre · deriva · responde · rival | matriz fato × hipótese com CC / C / N / I / II |
+| sustenta · enfraquece · contradiz · refuta · depende · duplica · substitui · sobre · deriva · responde · rival | fact × hypothesis matrix with CC / C / N / I / II |
 
-### Ramos e passos: o percurso do raciocínio
+### Branches and steps: the path of the reasoning
 
-A árvore acima diz **o que** se investiga. O **ramo B** guarda **como se chegou** a cada coisa: uma linha de
-raciocínio que nasce de um ponto (questão, hipótese, alvo ou um passo de outro ramo) com o porquê de existir,
-e acumula **passos** em ordem, como commits. Passo não se edita: correção de rumo é passo novo (`corrigiu`,
-`mudou`) ou ramo novo nascido de um passo anterior (`ramo novo .. --de B.. --passo N`), como um fork.
+The tree above says **what** is being investigated. The **branch B** keeps **how each thing was reached**: a
+line of reasoning born from a point (a question, a hypothesis, a target or a step of another branch) with the
+why of its existence, accumulating **steps** in order, like commits. A step is not edited: a course correction
+is a new step (`corrigiu`, `mudou`) or a new branch born from an earlier step (`ramo novo .. --de B.. --passo N`),
+like a fork. A worked example: [EXEMPLO.md](EXEMPLO.md).
 
 ```mermaid
 flowchart LR
-    Q["Questão Q"] --> B1["Ramo B1<br/>1 abriu · 2 registrou E · 3 testou T"]
-    B1 -- "fork do passo 2" --> B2["Ramo B2 ▶ ativo<br/>1 abriu · 2 pensou · 3 proximo"]
-    Q --> B3["Ramo B3 [morto]<br/>motivo no passo mudou"]
+    Q["Question Q"] --> B1["Branch B1<br/>1 abriu · 2 registrou E · 3 testou T"]
+    B1 -- "fork from step 2" --> B2["Branch B2 ▶ active<br/>1 abriu · 2 pensou · 3 proximo"]
+    Q --> B3["Branch B3 [morto]<br/>reason in the mudou step"]
 ```
 
-| Peça | O que guarda |
+| Piece | What it keeps |
 |---|---|
-| `ramo` (nó B, `pai` = ponto de origem) | pergunta da linha · estado ativo/pausado/morto/fundido/concluido · `de_passo` quando nasce de um passo |
-| `passo` (tabela) | ramo · tipo · texto · **porquê** · nós gerados · quando. Manuais: leu, pensou, testou, achou, corrigiu, decidiu, proximo (exigem `--porque`). Automáticos: abriu, bifurcou, registrou, mudou, testou |
-| ramo ativo (`.holmes/ramo-<caso>`) | todo `novo`, `teste`, `resultado` e `estado` vira passo dele, e o nó criado leva `no.ramo` |
+| `ramo` (node B, `pai` = point of origin) | the line's question · state ativo/pausado/morto/fundido/concluido · `de_passo` when born from a step |
+| `passo` (table) | branch · type · text · **why** · nodes produced · when. Manual: leu, pensou, testou, achou, corrigiu, decidiu, proximo (require `--porque`). Automatic: abriu, bifurcou, registrou, mudou, testou |
+| active branch (`.holmes/ramo-<case>`) | every `novo`, `teste`, `resultado` and `estado` becomes a step of it, and the node created carries `no.ramo` |
 
-Consultas: `arvore [id]` (tronco + todos os ramos, nunca um galho sem o caminho até ele), `trilha [B..]` (da raiz ao
-ramo, com cada passo e porquê; dos ancestrais, só os passos até o ponto do fork), `ficha` (uma página: imediato,
-últimos passos, próxima experiência, o que já foi percorrido ali, o que está resolvido, outras linhas abertas).
+Queries: `arvore [id]` (trunk + every branch, never a twig without the path to it), `trilha [B..]` (from the root
+to the branch, with each step and its why; from the ancestors, only the steps up to the fork point), `ficha` (one
+page: immediate goal, latest steps, next experiment, what was already walked there, what is solved, other open
+lines). Steps are searchable: `busca` finds a branch by what was done in it.
 
-### Ontologia: cada conceito da investigação e onde ele mora
+### Ontology: each investigation concept and where it lives
 
-O modelo conceitual é rico; o armazenamento, econômico. Só **questão** e **conexão candidata** ganharam tipo
-próprio, porque nenhum objeto existente as representava sem deformar o sentido (uma pergunta não é hipótese; uma
-relação sugerida não pode ser aresta). O resto é tipo, papel ou relação do que já existia.
+The conceptual model is rich; the storage, economical. Only **question**, **candidate connection** and
+**branch** got their own type, because no existing object represented them without distorting the meaning (a
+question is not a hypothesis; a suggested relation cannot be an edge; a path is not a node of the plan). The
+rest is a type, role or relation of what already existed.
 
-| Conceito | Representação | Por que assim |
+| Concept | Representation | Why so |
 |---|---|---|
-| Objetivo | `objetivo` (1 por caso) | — |
-| Questão investigativa | `questao` Q | nem toda pergunta já tem hipótese; a que não tem é **lacuna** |
-| Linha de investigação | `frente` F | já agrupava questões e hipóteses |
-| Fonte | `fonte` S (procedência, confiabilidade, sha) | — |
-| Artefato | `fonte` (o arquivo) ou `entidade --classe artefato` (o objeto do mundo) | um arquivo é fonte; o cofre é entidade |
-| Observação | `fato --natureza observacao\|medicao\|citacao`, com `local` e método no resumo | já separava natureza de origem |
-| Fato | `fato` vigente e conferido | estado diz se a sustentação vale |
-| Pista | **papel**: observação ligada `sobre` uma questão, hipótese ou frente, com o porquê na nota da aresta | a mesma observação pode ser pista para uma questão e nada para outra |
-| Evidência | **papel**: fato com célula ACH ou aresta `sustenta`/`enfraquece` para uma hipótese | força depende da hipótese avaliada |
-| Inferência / interpretação | `fato --natureza inferencia\|interpretacao` ligado `sobre` o observado | cai sem derrubar a observação |
-| Premissa | `premissa` R (assumida → verificada) | — |
-| Hipótese | `hipotese` H; **exploratória** sem `refuta_se`, **operacional** com ele | só a operacional recebe teste confirmatório |
-| Previsão | `teste.previsao` com hora anterior à execução | — |
-| Teste / execução / resultado | `teste` T / `execucao` X / resultado + `sentido` | — |
-| Achado | positivo sem selo de validade e verificado (F6) | conclusão autorizada, não só observada |
-| Lacuna | questão aberta sem hipótese (`questoes`, `proximo`) | — |
-| Contradição | aresta `contradiz` | — |
-| Acontecimento do mundo | `entidade --classe evento` + `atributo quando`; `cronologia` | o `evento` do banco é auditoria, não o mundo |
-| Síntese / teoria de trabalho | `leitura` L com base, contra, rivais, questão decisiva e lacunas | histórico pelas arestas `substitui` |
-| Conexão candidata | `conexao` C: sugerida → confirmada (vira aresta) ou rejeitada (fica, para não ser redescoberta) | sugestão nunca é conhecimento |
+| Objective | `objetivo` (1 per case) | — |
+| Investigative question | `questao` Q | not every question already has a hypothesis; one without is a **gap** |
+| Line of investigation (plan) | `frente` F | it already grouped questions and hypotheses |
+| Line of reasoning (path) | `ramo` B + `passo` | where it came from, what was done, why it turned |
+| Source | `fonte` S (provenance, reliability, sha) | — |
+| Artefact | `fonte` (the file) or `entidade --classe artefato` (the object in the world) | a file is a source; the safe is an entity |
+| Observation | `fato --natureza observacao\|medicao\|citacao`, with `local` and method in the summary | it already separated nature from origin |
+| Fact | a proven finding: `fato` with `conferido` and `conferido_por` (source, measurement, test or reproduction) | the proof need not be a source |
+| Clue | **role**: an observation linked `sobre` a question, hypothesis or front, with the why in the edge's note | the same observation can be a clue for one question and nothing for another |
+| Evidence | **role**: a fact with an ACH cell or a `sustenta`/`enfraquece` edge to a hypothesis | its strength depends on the hypothesis assessed |
+| Inference / interpretation | `fato --natureza inferencia\|interpretacao` linked `sobre` what was observed | it falls without bringing down the observation; it is never "proven" |
+| Premise | `premissa` R (assumed → verified) | — |
+| Hypothesis | `hipotese` H; **exploratory** without `refuta_se`, **operational** with it | only the operational one gets a confirmatory test |
+| Prediction | `teste.previsao` timestamped before the run | — |
+| Test / run / result | `teste` T / `execucao` X / result + `sentido` | — |
+| Finding | a positive without a validity flag and verified (F6) | an authorized conclusion, not just an observed one |
+| Gap | an open question without a hypothesis (`questoes`, `proximo`) | — |
+| Contradiction | `contradiz` edge | — |
+| Event in the world | `entidade --classe evento` + `atributo quando`; `cronologia` | the database's `evento` table is auditing, not the world |
+| Synthesis / working theory | `leitura` L with basis, against, rivals, decisive question and gaps | history through `substitui` edges |
+| Candidate connection | `conexao` C: suggested → confirmed (becomes an edge) or rejected (stays, so it is not rediscovered) | a suggestion is never knowledge |
 
-Três visões do mesmo banco, por consulta: **plano** (`mapa`, `proximo`, `questoes`), **conhecimento** (`ver`,
-`cadeia`, `cronologia`, `busca`) e **explicações** (`leitura`, `ach`, `conexoes`, `cadeia` de uma hipótese).
+Four views of the same database, by query: **plan** (`mapa`, `proximo`, `questoes`), **knowledge** (`ver`,
+`cadeia`, `cronologia`, `busca`), **explanations** (`leitura`, `ach`, `conexoes`, `cadeia` of a hypothesis) and
+**path** (`arvore`, `trilha`, `ficha`).
 
-### Descoberta de relações
+### Discovering relations
 
-`conexoes <id|"texto">` é consulta: devolve até 8 candidatas e grava nada. Canais, do mais ao menos forte:
-**ponte** (o texto cita um nome de uma entidade e o outro item cita outro nome ou alias da mesma entidade, o
-caminho para relação sem palavra comum), **número** (mesmo número ou sequência hex), **grafo** (vizinho comum),
-**termos** (palavras de 4+ letras em comum, sem palavras vazias) e **material** do corpus (híbrido se houver
-vetores, senão BM25). Exclui o que já está ligado e o que já foi rejeitado. O agente julga; a promissora vira
-`conexao` (sugerida); só `estado C.. confirmada "<evidência>"` cria a aresta. Conceito abstrato que liga pistas
-("complementaridade": duas metades, yin-yang) é registrado como entidade com aliases e passa a ligar o que vier.
-Medição no caso sintético: `holmes/aval/README.md`.
+`conexoes <id|"text">` is a query: it returns up to 8 candidates and records nothing. Channels, from strongest to
+weakest: **bridge** (the text cites one name of an entity and the other item cites another name or alias of the
+same entity, the path to a relation with no shared word), **number** (the same number or hex sequence),
+**graph** (a common neighbour), **terms** (shared words of 4+ letters, without stop words) and corpus
+**material** (hybrid if there are vectors, otherwise BM25). It excludes what is already linked and what was
+already rejected. The agent judges; the promising one becomes a `conexao` (suggested); only
+`estado C.. confirmada "<evidence>"` creates the edge. An abstract concept that links clues ("complementarity":
+two halves, yin-yang) is recorded as an entity with aliases and starts linking whatever comes. Measurement on
+the synthetic case: `holmes/aval/README.md`.
 
-### Contrato de extração (`extrai <arquivo.json>`)
+### Extraction contract (`extrai <file.json>`)
 
-JSON com as chaves abaixo, todas opcionais (extrair uma observação só é válido). Ids locais (`o1`, `q1`, `h1`)
-viram ids do caso; ids do caso (`E42`, `ext:42`) são reusados. Sem `--aplica` mostra o plano; com ele, grava
-numa transação (um erro desfaz o lote). `--so`/`--rejeita` escolhem itens. Texto igual a um item existente não
-é duplicado.
+JSON with the keys below, all optional (extracting a single observation is valid). Local ids (`o1`, `q1`, `h1`)
+become case ids; case ids (`E42`, `ext:42`) are reused. Without `--aplica` it shows the plan; with it, it records
+in one transaction (an error undoes the batch). `--so`/`--rejeita` pick items. Text identical to an existing item
+is not duplicated.
 
-| Chave | Item | Vira |
+| Key | Item | Becomes |
 |---|---|---|
-| `fonte` | `"S12"` | fonte padrão das observações |
-| `observacoes` | `id, texto, natureza?, local?, metodo?, limites?, pedaco?, grau?, origem?, existente?` | `fato` (com `pedaco`, citação literal copiada e conferida); interpretação aqui é recusada |
-| `pistas` | `obs, sobre?, porque` | aresta `obs sobre <Q/H/F>` (padrão: o objetivo) |
-| `interpretacoes` | `id, sobre, texto, alternativas?, confianca?` | `fato --natureza interpretacao` ligado `sobre` |
-| `questoes` | `id, texto, pai?, motivada_por?` | `questao` (+ `deriva` dos motivos) |
+| `fonte` | `"S12"` | the observations' default source |
+| `observacoes` | `id, texto, natureza?, local?, metodo?, limites?, pedaco?, grau?, origem?, existente?` | `fato` (with `pedaco`, a literal quote copied and proven by source); an interpretation here is refused |
+| `pistas` | `obs, sobre?, porque` | edge `obs sobre <Q/H/F>` (default: the objective) |
+| `interpretacoes` | `id, sobre, texto, alternativas?, confianca?` | `fato --natureza interpretacao` linked `sobre` |
+| `questoes` | `id, texto, pai?, motivada_por?` | `questao` (+ `deriva` from the motives) |
 | `hipoteses` | `id, texto, pai, responde?, motivada_por?, premissas?, rivais?, prob?, refuta_se?` | `hipotese` + `responde`, `deriva`, `depende`, `rival` |
-| `conexoes` | `de, para, relacao, porque, rival?, discriminador?, motivos?` | `conexao` **só sugerida** (confirmada é recusada) |
-| `discriminadores` | `entre: [h1, h2], observacao` | `fio` ligado `sobre` as hipóteses |
-| `impacto` | `plano?, leitura?` | mostrado, nunca aplicado sozinho (a síntese é deliberada) |
+| `conexoes` | `de, para, relacao, porque, rival?, discriminador?, motivos?` | `conexao` **only suggested** (confirmed is refused) |
+| `discriminadores` | `entre: [h1, h2], observacao` | `fio` linked `sobre` the hypotheses |
+| `impacto` | `plano?, leitura?` | shown, never applied by itself (synthesis is deliberate) |
 
-### Por que cada parte existe (lição → campo)
+### Why each part exists (lesson → field)
 
-| Lição do v1 | Como o modelo responde |
+| v1 lesson | How the model answers |
 |---|---|
-| Sem âncora do plano | A árvore objetivo→alvo→frente→hipótese→teste *é* o plano; `mapa` só a percorre. |
-| Atacava tudo ao mesmo tempo ("todas as partes de uma vez") | `alvo` com `depende` entre alvos; o mapa mostra quais estão desbloqueados. |
-| Teste escrito ≠ executado ≠ fechado | `teste` é a receita; `execucao` é cada rodada. O resultado do teste é o da última execução válida. Rodar de novo após consertar o instrumento não apaga a anterior. |
-| 78% dos negativos sem instrumento; instrumento mudou e ninguém soube | `execucao` grava `instrumento@versão` (sha) e `script@sha`. Negativo sem instrumento = INDETERMINADO; versão antiga = A REVALIDAR; `controle_ok=0` = INVÁLIDO. |
-| "Fechado/exaustivo" sem escopo | `alcance` obrigatório, `fora` opcional; o texto padrão do negativo é "0 em <alcance>". |
-| Esqueceu o porquê do teste | `porque` obrigatório: "se positivo abre X; se negativo fecha Y". |
-| Padrão achado depois de olhar | `previsao` com carimbo de hora anterior à primeira execução; o `ver` mostra se a previsão veio antes ou depois. |
-| Controle plantado com o mesmo bug | `controle_tipo`: real, plantado, sabotagem ou nenhum. O mapa conta negativos sem controle real. |
-| Interpretação de terceiro virou fala do autor | `fato.natureza` (observação, medição, citação, inferência, interpretação, relato) separada de `origem` (autor, fonte, medido, usuário, agente, externo) e de `grau` A/B/C. |
-| Citação errada, número "lembrado" | `cita <pedaço>` copia o texto literal do corpus para o fato; `conferido` guarda quando foi checado na fonte; `rascunho` até conferir. |
-| Premissa virou fato | `premissa` é tipo próprio, nasce `assumida`; o mapa lista as assumidas por frente. |
-| Refutação não chegava aos dependentes | arestas `depende`/`sustenta`; o mapa e o `ver` alertam quando algo depende de item refutado, retratado ou contestado. |
-| Contradições ignoradas (3 localizações do mesmo conceito) | aresta `contradiz` entre dois itens vivos aparece no mapa até um ser retratado ou a aresta ser desfeita. |
-| Busca por palavra perdia sinônimos ("chave/fechadura" × "tumblers/lock") | `entidade` com `aliases`: a busca expande o termo pelos aliases da entidade. |
-| Mesma fórmula reconstruída 3 vezes; índices 0/1-base trocados | `atributo` da entidade (chave → valor), cada um apontando o fato que o sustenta; histórico no evento. |
-| "Provado" que ninguém conseguia re-provar | `prova` (comando que sai 0) em fato, alvo e instrumento (`verificador`); `prova` lista os comandos e só os executa com `--executa` (são shell vindo do banco; os herdados, só com `--legado`). |
-| Hipótese "viva" para sempre, sem peso | `hipotese.prob` com histórico (cada mudança é evento) e `refuta_se`; ACH mostra qual evidência distingue as rivais. |
-| Ordens do usuário esquecidas ou aplicadas demais | `decisao` com `proibe` e `permite` explícitos; o mapa lista as vigentes. |
-| Fios colhidos por regex (456 abertos) | `fio` só por comando, com pai opcional; fechar exige motivo. |
-| Arestas automáticas = 61% do grafo | Nenhuma aresta automática. Similaridade é consulta (`busca`), não dado. |
-| Ids colidindo entre sessões | AUTOINCREMENT do SQLite em WAL; o prefixo é só exibição e é conferido na leitura (H12 que é teste dá erro). |
-| Leitura mecânica: pista testada como string, livro varrido por termo, saída julgada só por p | `leitura` (quadro de conjunto no topo do mapa) e `execucao.sentido` em quatro estados (substantivo, nenhum, revisar, pendente), sem obrigar texto vazio. A leitura de conjunto é pedida por **evento** (positivo, conexão confirmada, questão respondida, hipótese refutada ou apoiada, fato retratado); a contagem de `HOLMES_LEITURA` resultados é só lembrete. |
-| Um 0 matava a ideia inteira | hipótese = conceito, teste = uma forma dele. `teste` recusa hipótese sem `refuta_se` (exceto `--exploratorio`); o conceito só cai quando ele é atingido, mas negativos válidos acumulados baixam a `prob`. |
-| Pistas sem relação aparente nunca se encontravam | `conexoes` (consulta por cinco canais) + `conexao` candidata, confirmada só com evidência. |
-| Pergunta sem hipótese não tinha onde morar | `questao`; sem hipótese ela aparece como lacuna em `questoes` e `proximo`. |
-| A teoria de trabalho era um parágrafo solto | `leitura --sustenta --enfraquece --rival --questao --lacuna --motivo`; base que cai torna a leitura dependente quebrada. |
-| O agente não sabia o que fazer em seguida | `proximo`: recomendação explicada por critérios verificáveis (abaixo). |
-| Dívida migrada afogava o sinal novo (122 alertas) | `no.legado`: herdado fica fora dos alertas, numa linha de contagem; `toca` (qualquer mudança) zera a marca. |
-| Decisões viraram depósito | `decisao` é só o que o usuário determinou; escolha de método do agente é `fato` de natureza inferência. |
-| Texto gigante nos nós | título ≤ 160, resumo ≤ 800, citação ≤ 1000. O resto fica no corpus ou em `notas/`. |
+| No anchor for the plan | The objective→target→front→hypothesis→test tree *is* the plan; `mapa` only walks it. |
+| Attacked everything at once ("all the parts together") | `alvo` with `depende` between targets; the map shows which are unblocked. |
+| Test written ≠ run ≠ closed | `teste` is the recipe; `execucao` is each round. A test's result is that of its last valid run. Rerunning after fixing the instrument does not erase the previous one. |
+| 78% of negatives without an instrument; the instrument changed and nobody knew | `execucao` records `instrument@version` (sha) and `script@sha`. Negative without an instrument = INDETERMINADO; old version = A REVALIDAR; `controle_ok=0` = INVÁLIDO. |
+| "Closed/exhaustive" without a scope | `alcance` mandatory, `fora` optional; the default text of a negative is "0 in <scope>". |
+| Forgot why the test was run | `porque` mandatory: "if positive it opens X; if negative it closes Y". |
+| Pattern found after looking | `previsao` timestamped before the first run; `ver` shows whether the prediction came before or after. |
+| Planted control with the same bug | `controle_tipo`: real, planted, sabotage or none. The map counts negatives without a real control. |
+| A third party's interpretation became the author's words | `fato.natureza` (observation, measurement, quote, inference, interpretation, report) separate from `origem` (author, source, measured, user, agent, external) and from `grau` A/B/C. |
+| Wrong quote, "remembered" number | `cita <chunk>` copies the corpus' literal text into the fact; `conferido` + `conferido_por` keep when and how it was proven (source, measurement, test, reproduction); `rascunho` until proven. |
+| Premise became a fact | `premissa` is its own type, born `assumida`; the map lists the assumed ones per front. |
+| Refutation did not reach the dependants | `depende`/`sustenta` edges; the map and `ver` warn when something depends on a refuted, retracted or contested item. |
+| Word search missed synonyms ("key/lock" × "tumblers/lock") | `entidade` with `aliases`: the search expands the term by the entity's aliases. |
+| The same formula rebuilt 3 times; 0/1-based indexes swapped | the entity's `atributo` (key → value), each one pointing to the fact that backs it; history in the event table. |
+| "Proven" that nobody could re-prove | `prova` (a command that exits 0) on fact, target and instrument (`verificador`); `prova` lists the commands and only runs them with `--executa` (they are shell coming from the database; the inherited ones only with `--legado`). |
+| Hypothesis "alive" forever, without weight | `hipotese.prob` with history (each change is an event) and `refuta_se`; ACH shows which evidence distinguishes the rivals. |
+| User orders forgotten or over-applied | `decisao` with explicit `proibe` and `permite`; the map lists the current ones. |
+| Threads harvested by regex (456 open) | `fio` only by command, with an optional parent; closing requires a reason. |
+| Automatic edges = 61% of the graph | No automatic edges. Similarity is a query (`busca`), not data. |
+| Ids colliding between sessions | SQLite AUTOINCREMENT in WAL; the prefix is display only and is checked on reading (an H12 that is a test raises an error). |
+| Mechanical reading: clue tested as a string, book swept by term, output judged only by p | `leitura` (the overall picture at the top of the map) and `execucao.sentido` in four states (substantive, none, revisit, pending), without forcing empty text. The overall reading is requested by **event** (positive, connection confirmed, question answered, hypothesis refuted or supported, fact retracted); the `HOLMES_LEITURA` result count is only a reminder. |
+| One 0 killed the whole idea | hypothesis = concept, test = one form of it. `teste` refuses a hypothesis without `refuta_se` (except `--exploratorio`); the concept only falls when that is met, but accumulated valid negatives lower the `prob`. |
+| Clues with no apparent relation never met | `conexoes` (a query over five channels) + candidate `conexao`, confirmed only with evidence. |
+| A question without a hypothesis had nowhere to live | `questao`; without a hypothesis it shows up as a gap in `questoes` and `proximo`. |
+| The working theory was a loose paragraph | `leitura --sustenta --enfraquece --rival --questao --lacuna --motivo`; a basis that falls makes the reading a broken dependant. |
+| The agent did not know what to do next | `proximo`: a recommendation explained by verifiable criteria (below). |
+| Migrated debt drowned the new signal (122 alerts) | `no.legado`: the inherited stays out of the alerts, on one count line; `toca` (any change) clears the mark. |
+| Decisions became a dumping ground | `decisao` is only what the user determined; the agent's choice of method is a `fato` of nature inference. |
+| Huge text in the nodes | title ≤ 160, summary ≤ 800, quote ≤ 1000. The rest goes to the corpus or `notas/`. |
+| The path was lost: conclusions rediscovered, corrections overwriting the why | `ramo` + `passo` (above): every line born from a point with a why, immutable steps, forks, `trilha`/`arvore`/`ficha`. |
+| "Fact" meant "checked against a source", and an inference could become a fact | a fact is a proven finding: `confere --por fonte\|medicao\|teste\|reproducao`; an inference or interpretation is refused. |
 
-### Estados
+### States
 
-| Tipo | Estados (o 1º é o inicial) | Mudança que exige motivo |
+| Type | States (the 1st is the initial one) | Change that requires a reason |
 |---|---|---|
 | objetivo | aberto, atingido, abandonado | atingido, abandonado |
-| alvo | aberto, resolvido, bloqueado | resolvido (com `--solucao`), bloqueado |
-| frente | ativa, estacionada, fechada, descartada | todas menos ativa |
-| hipótese | viva, apoiada, refutada, estacionada | refutada, estacionada |
+| alvo | aberto, resolvido, bloqueado | resolvido (with `--solucao`), bloqueado |
+| frente | ativa, estacionada, fechada, descartada | all but ativa |
+| hipotese | viva, apoiada, refutada, estacionada | refutada, estacionada |
 | premissa | assumida, verificada, refutada | verificada, refutada |
-| teste | planejado, rodando, feito, cancelado | cancelado (rodando/feito vêm das execuções) |
+| teste | planejado, rodando, feito, cancelado | cancelado (rodando/feito come from the runs) |
 | fato | rascunho, vigente, contestado, retratado | contestado, retratado |
 | entidade | ativa, fundida | fundida |
-| decisão | vigente, revogada | revogada |
+| decisao | vigente, revogada | revogada |
 | fio | aberto, fechado, estacionado | fechado, estacionado |
 | fonte | catalogada, indexada | — |
 | instrumento | vigente, obsoleto | obsoleto |
-| leitura | vigente, substituida | — (a nova substitui a anterior e exige `--motivo`) |
-| questão | aberta, respondida, reformulada, estacionada | respondida, reformulada, estacionada |
-| conexão | sugerida, confirmada, rejeitada | confirmada (cria a aresta), rejeitada |
-| ramo | ativo, pausado, morto, fundido, concluido | todas menos ativo (o motivo vira o porquê do passo `mudou`) |
+| leitura | vigente, substituida | — (the new one replaces the previous and requires `--motivo`) |
+| questao | aberta, respondida, reformulada, estacionada | respondida, reformulada, estacionada |
+| conexao | sugerida, confirmada, rejeitada | confirmada (creates the edge), rejeitada |
+| ramo | ativo, pausado, morto, fundido, concluido | all but ativo (the reason becomes the why of the `mudou` step) |
 
-Os três ciclos que mais pesam no raciocínio:
+The cycles that weigh most on the reasoning:
 
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "Hipótese" as Hip {
-        viva --> apoiada: evidência a favor
-        viva --> refutada: refuta-se atingido
-        viva --> estacionada: com motivo
+    state "Hypothesis" as Hip {
+        viva --> apoiada: evidence in favour
+        viva --> refutada: refuta-se met
+        viva --> estacionada: with a reason
         apoiada --> refutada
         estacionada --> viva
     }
-    state "Conexão candidata" as Con {
-        sugerida --> confirmada: evidência (cria a aresta)
-        sugerida --> rejeitada: com motivo
+    state "Candidate connection" as Con {
+        sugerida --> confirmada: evidence (creates the edge)
+        sugerida --> rejeitada: with a reason
     }
-    state "Fato" as Fat {
-        rascunho --> vigente: confere na fonte
+    state "Fact (observation, measurement, quote, report)" as Fat {
+        rascunho --> vigente: proven
         vigente --> contestado
         vigente --> retratado
         contestado --> retratado
     }
 ```
 
-### Validade de um resultado (calculada, nunca digitada)
-
-> [!IMPORTANT]
-> O selo de validade é calculado pelo banco a cada consulta. Ninguém escreve "válido" à mão.
-
-Separa quatro coisas: a execução aconteceu; o resultado foi observado; o controle passou (visto, não declarado);
-a conclusão está autorizada. Vale para negativo e positivo; a primeira linha que bater é o selo.
-
-| Situação da execução | Como aparece |
-|---|---|
-| `controle_ok = 0` | INVÁLIDO (o controle falhou) |
-| teste `--exploratorio` | exploratório: pista, não fecha nem confirma |
-| negativo sem instrumento registrado | INDETERMINADO |
-| negativo, e o instrumento mudou de versão depois | A REVALIDAR |
-| `--script` dado, mas o arquivo não existia ao rodar | script não versionado |
-| sem controle, ou só plantado | sem controle real |
-| controle real declarado, mas `--controle-ok` não informado | controle não confirmado |
-| tudo certo | sem aviso |
-
-### Próximo passo (`proximo`, e as 2 primeiras linhas no mapa)
-
-Recomendação explicada, não ranking numérico. Critérios na ordem, do que mais muda o rumo ao que menos muda, só
-sobre itens do 2.0 (o legado não dirige): (1) túnel numa frente → LEITURA; (2) a leitura vigente perdeu base; (3)
-evento relevante desde a leitura (inclui contradição registrada e hipótese ligada à leitura que mudou
-≥ 0,2 de peso); resultado A REVALIDAR → rodar de novo com o instrumento atual; (4) para a questão decisiva da leitura e as questões abertas: sem hipótese →
-formular; uma só → gerar rival; várias sem evidência que as distinga na ACH → achar o discriminador; com
-discriminação → teste da líder (ou dar `--refuta-se`); (5) conexão sugerida parada, primeiro a que liga frentes
-diferentes; (6) fato em rascunho que sustenta algo → conferir; (7) hipótese viva com critério e sem teste. Sem
-nada disso: ler melhor a fonte primária.
-
-### Alertas derivados que o `mapa` mostra
-- **Túnel:** N negativos seguidos numa frente desde a última hipótese nova ou o último positivo. Conta os
-  indeterminados (esforço sem avanço) e informa à parte quantos foram válidos (instrumento e controle vistos):
-  só esses sustentam conclusão.
-- **Dependência quebrada:** item vivo que depende de algo refutado, retratado ou contestado.
-- **Contradição aberta:** `contradiz` entre dois itens vivos.
-- **Execução órfã:** "rodando" com PID morto.
-- **Premissas assumidas** por frente, e **fatos em rascunho** à espera de conferência.
-- **Alvos desbloqueados:** abertos cujas dependências estão resolvidas, ou seja, onde atacar.
-- **Leitura de conjunto:** pedida por evento relevante desde a leitura vigente; lembrete após N resultados.
-- **Questões abertas** (até 3, com "lacuna" quando sem hipótese) e a contagem de **conexões candidatas** paradas.
-- **Herdado:** contradições, dependências e negativos de itens com `legado=1` viram uma linha de contagem.
-
-## corpus.db: o material
+**How a fact becomes proven** (`confere <E> "<note>" --por ...`). A fact is a finding, and the proof is whatever
+makes it hold, not necessarily a source:
 
 ```mermaid
 flowchart LR
-    COL["<b>coleção</b>"] --> DOC["<b>documento</b><br/>ref · sha · tipo texto/chat/pdf/html · meta"]
-    COL --> PED["<b>pedaço</b><br/>seção/página/msg/janela · ordem · ts · autor · msg_id<br/>texto CRU"]
-    PED --> BM["índice BM25 sem acento<br/>busca por palavra, ranqueada"]
-    PED --> LIT["busca literal<br/>substring no texto cru"]
-    PED --> VET["vetor (opcional)<br/>busca híbrida por fusão de ranks"]
+    R["fato rascunho<br/>observation · measurement · quote · report"]
+    R -- "--por fonte<br/>read in the primary source" --> V
+    R -- "--por medicao --prova cmd<br/>a measurement anyone can rerun" --> V
+    R -- "--por teste --prova T..<br/>a test with a recorded result" --> V
+    R -- "--por reproducao --prova cmd<br/>reproduced independently" --> V
+    V["fato vigente<br/>provado:&lt;how&gt;"]
+    I["inference / interpretation"] -. "refused: what proves it<br/>is a new fact, linked sustenta" .-> V
 ```
 
-- **Chat** (export JSON do Telegram Desktop ou JSONL `{id, ts, autor, texto}`): um pedaço por mensagem
-  mais janelas de 8 mensagens para busca por contexto; `janela <msg>` devolve a conversa ao redor.
-- **Texto** (md, txt, html, json, csv): parágrafos agrupados em ~1.200 caracteres.
-- **PDF/livro**: uma página por pedaço (precisa do `pdftotext`).
-- **Vetores**: qualquer servidor compatível com Ollama (`HOLMES_EMBED_URL`, `HOLMES_EMBED_MODELO`).
-  Sem ele, a busca funciona só com BM25 e literal. No v1, o BM25 sozinho já teve recall@5 de 100%.
-- O texto é guardado cru. Nada é achatado, porque achatar quebras de linha escondeu um padrão vertical
-  no v1.
+`cita <chunk>` comes out `vigente` and already proven by source. A fact from `novo fato` is born `rascunho` and
+becomes `vigente` when proven. One from `extrai` is born `vigente` (an observation from a source being read;
+external reports stay `rascunho`) but only shows `provado:` after `confere`. Searches show `não-provado` until then.
+
+### Validity of a result (computed, never typed)
+
+> [!IMPORTANT]
+> The validity flag is computed by the database at every query. Nobody writes "valid" by hand.
+
+It separates four things: the run happened; the result was observed; the control passed (seen, not declared);
+the conclusion is authorized. It applies to negatives and positives; the first matching line is the flag.
+
+| Run situation | How it shows |
+|---|---|
+| `controle_ok = 0` | INVÁLIDO (the control failed) |
+| `--exploratorio` test | exploratory: a lead, neither closes nor confirms |
+| negative without a recorded instrument | INDETERMINADO |
+| negative, and the instrument changed version afterwards | A REVALIDAR |
+| `--script` given, but the file did not exist when running | unversioned script |
+| no control, or only planted | no real control |
+| real control declared, but `--controle-ok` not given | control not confirmed |
+| all good | no warning |
+
+### Next step (`proximo`, and the map's first 2 lines)
+
+An explained recommendation, not a numerical ranking. Criteria in order, from what changes course most to what
+changes it least, only over 2.0 items (the inherited does not steer): (1) a tunnel in a front → LEITURA; (2) the
+current reading lost its basis; (3) a relevant event since the reading (includes a recorded contradiction and a
+hypothesis linked to the reading whose weight changed ≥ 0.2); a result A REVALIDAR → rerun with the current
+instrument; (4) for the reading's decisive question and the open questions: no hypothesis → formulate one; only
+one → generate a rival; several without ACH evidence that distinguishes them → find the discriminator; with
+discrimination → test the leader (or give it a `--refuta-se`); (5) a stalled suggested connection, first the one
+linking different fronts; (6) a draft fact that supports something → prove it; (7) a live hypothesis with a
+criterion and no test. With none of that: read the primary source better.
+
+### Derived alerts the `mapa` shows
+- **Tunnel:** N consecutive negatives in a front since the last new hypothesis or the last positive. It counts the
+  indeterminate ones (effort without progress) and reports separately how many were valid (instrument and
+  control seen): only those support a conclusion.
+- **Broken dependency:** a live item that depends on something refuted, retracted or contested.
+- **Open contradiction:** `contradiz` between two live items.
+- **Orphan run:** "rodando" with a dead PID.
+- **Assumed premises** per front, and **draft facts** waiting for proof.
+- **Unblocked targets:** open ones whose dependencies are resolved, i.e. where to attack.
+- **Overall reading:** requested by a relevant event since the current reading; a reminder after N results.
+- **Open questions** (up to 3, with "gap" when without a hypothesis) and the count of stalled **candidate
+  connections**.
+- **Active branch:** the line of reasoning in progress and its last two steps.
+- **Inherited:** contradictions, dependencies and negatives of items with `legado=1` become one count line.
+
+## corpus.db: the material
+
+```mermaid
+flowchart LR
+    COL["<b>collection</b>"] --> DOC["<b>document</b><br/>ref · sha · type text/chat/pdf/html · meta"]
+    COL --> PED["<b>chunk</b><br/>section/page/msg/window · order · ts · author · msg_id<br/>RAW text"]
+    PED --> BM["accent-insensitive BM25 index<br/>ranked word search"]
+    PED --> LIT["literal search<br/>substring in the raw text"]
+    PED --> VET["vector (optional)<br/>hybrid search by rank fusion"]
+```
+
+- **Chat** (Telegram Desktop JSON export or JSONL `{id, ts, autor, texto}`): one chunk per message plus windows of
+  8 messages for context search; `janela <msg>` returns the surrounding conversation.
+- **Text** (md, txt, html, json, csv): paragraphs grouped into ~1,200 characters.
+- **PDF/book**: one page per chunk (requires `pdftotext`).
+- **Vectors**: any Ollama-compatible server (`HOLMES_EMBED_URL`, `HOLMES_EMBED_MODELO`). Without it, search works
+  with BM25 and literal only. In v1, BM25 alone already reached recall@5 of 100%.
+- Text is stored raw. Nothing is flattened, because flattening line breaks hid a vertical pattern in v1.

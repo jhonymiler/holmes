@@ -23,8 +23,9 @@ a conclusion is costly:
 | 🕵️ **Inquiries** | timelines, entities, contradictions between accounts |
 
 > [!NOTE]
-> The method, rules, skills, agents and CLI are written in Portuguese (commands such as `mapa`, `hipotese`,
-> `teste`). Claude reads them fine and works with you in English.
+> The documentation, rules, skills and agents are in English. The CLI itself speaks Portuguese: commands such
+> as `mapa`, `hipotese`, `teste`, `ramo`, its states and its output labels. Claude reads both and works with you
+> in English. A Portuguese README is in [README.pt-BR.md](README.pt-BR.md).
 
 ## The problem it solves
 
@@ -37,7 +38,7 @@ An AI agent in a long investigation fails in the same ways every time:
 - 📜 it reads a clue **literally** when it meant something else.
 
 holmes was designed around these failures, observed across 64 real sessions of an investigation that lasted
-several weeks ([LICOES.md](LICOES.md), in Portuguese).
+several weeks ([LICOES.md](LICOES.md)).
 
 ## How it works
 
@@ -60,6 +61,11 @@ flowchart LR
   decisions, open threads. Every session opens with a `mapa` (map) of at most 3.5 KB generated from the
   database. Everything else is pulled by id when needed, so the case fits in the context window however big
   it grows.
+- **The path is a tree.** Each line of reasoning is a *branch* born from a point (a question, a hypothesis,
+  a step of another branch) that accumulates *steps* with their why, like commits. You can go back to a step
+  and take another direction (a fork) without erasing anything; `trilha` rebuilds the path from the root to
+  any branch, and `ficha` says on one page where we are and why. Annotated example:
+  [EXEMPLO.md](EXEMPLO.md).
 - **Material lives in a searchable corpus.** Chats, documents, books and pages are split into chunks and
   indexed (BM25, literal, vector or hybrid). The agent searches and quotes the literal passage instead of
   opening huge files.
@@ -119,7 +125,7 @@ Code at the root. The first time, Claude Code asks you to trust the folder so th
 ```
 CLAUDE.md                        project instructions template (machine facts go only here)
 .claude/settings.json            holmes hooks (work in the CLI, VS Code and the app)
-.claude/rules/constituicao.md    22 rules for every session
+.claude/rules/constituicao.md    26 rules for every session
 .claude/skills/detetive/         the method (SKILL.md + references/ on demand)
 .claude/skills/leitura/          reading for meaning: layers, test output, overall reading
 .claude/skills/conferir-relatorio/  check a subagent/AI report against the primary source
@@ -145,7 +151,7 @@ Optional: `numpy` speeds up vector search; `pdftotext` indexes PDFs.
 | Query | `mapa`, `ver`, `busca`, `ja`, `ach`, `saude` | `corpus.py busca` (bm25, literal, vector, hybrid), `janela`, `ver` |
 | Link | `fonte` registers the file and indexes it; `cita <chunk>` copies the literal passage into a fact | — |
 
-Full data model, with diagrams: [MODELO.md](MODELO.md).
+Full data model, with diagrams: [MODELO.md](MODELO.md). A fictional case from start to finish, with flowcharts and the real output of each command: [EXEMPLO.md](EXEMPLO.md).
 
 ## Reference
 
@@ -163,7 +169,7 @@ Full data model, with diagrams: [MODELO.md](MODELO.md).
 | relate | `conexoes <id\|"text">` (candidates; query) · `conexao <from> <to> <relation> "<why>" [--rival] [--discriminador]` · `estado C.. confirmada\|rejeitada "<reason>"` |
 | hypotheses | `prob <H> 0.4 "<reason>"` · `ach <E> <H> CC\|C\|N\|I\|II` · `ach <F>` (matrix) |
 | test | `teste <H> "<t>" --alcance .. --porque .. [--exploratorio]` · `roda <T> --pid --log` · `resultado <T> <res> "<note>" [--sentido ".."]` · `jobs` |
-| sources | `fonte <file\|folder\|url>` · `cita <chunk> "<claim>"` · `confere <E> "<where>"` |
+| sources | `fonte <file\|folder\|url>` · `cita <chunk> "<claim>"` · `confere <E> "<note>" --por fonte\|medicao\|teste\|reproducao [--prova ..]` (a fact is a proven finding; the proof need not be a source) |
 | change | `estado <id> <state> "<reason>"` · `edita <id> [--refuta-se]` · `liga`/`desliga <from> <type> <to>` · `atributo <N> <key> <value>` |
 | prove | `instrumento <path> "<name>" --verificador "<cmd>"` · `prova` (list) · `prova --executa [--legado]` |
 

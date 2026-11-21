@@ -1,172 +1,187 @@
 ---
 name: detetive
-description: "Método de investigação para qualquer caso com evidência fragmentada, hipóteses concorrentes ou risco de conclusão precipitada: enigma, auditoria, pesquisa, perícia de dados. Use ao abrir ou retomar um caso, gerar hipóteses, planejar ou avaliar um teste, julgar se um padrão é real ou coordenar o time de agentes. Gatilhos: investigar, caso, hipótese, pista, evidência, teste, padrão, auditoria, perícia, retomar."
+description: "Investigation method for any case with fragmented evidence, competing hypotheses or risk of jumping to conclusions: puzzle, audit, research, data forensics. Use when opening or resuming a case, generating hypotheses, planning or judging a test, deciding whether a pattern is real, or coordinating the agent team. Triggers: investigate, case, hypothesis, clue, evidence, test, pattern, audit, forensics, resume, investigar, caso, hipótese, pista, evidência, teste, padrão, auditoria, perícia, retomar."
 ---
 
-# Detetive
+# Detective
 
-Protocolo curto. Detalhes em `references/`, carregados só quando o passo pede.
+A short protocol. Details live in `references/`, loaded only when a step calls for them. Command names and
+states are the CLI's own tokens, in Portuguese.
 
-## Mapa primeiro
+## Map first
 
-Antes de qualquer outra ação, e de novo a cada decisão: `python3 -I holmes/holmes.py mapa`.
-O mapa é o plano geral. Se a ação não serve a um alvo ou frente do mapa, não faça.
-Antes de testar ou afirmar algo novo: `ja "<termo>"`. Achado anterior: `ver <id>` e leia inteiro.
-A `LEITURA ATUAL` do mapa é a história que o caso parece contar: todo teste deve fazer sentido nela.
+Before any other action, and again at every decision: `python3 -I holmes/holmes.py mapa`.
+The map is the overall plan. If an action does not serve one of its targets or fronts, do not do it.
+Before testing or claiming something new: `ja "<term>"`. A previous finding: `ver <id>`, and read all of it.
+The map's `LEITURA ATUAL` is the story the case seems to tell: every test must make sense within it.
+When resuming: `ficha` (where we are and why) and, if needed, `trilha` (the whole path to the active branch).
+Every action is a step of a branch; with no active branch, pick one (`arvore`, `ramo usa B..`) or open one.
 
-## Sentido antes de mecânica
+## Meaning before mechanics
 
-Pista e fonte se leem em camadas (literal, figurada, alusão, função, subliminar, ausência) antes de
-virar operação. Todo resultado tem dois julgamentos: número (nulo, controle, alcance) e sentido (o que a
-saída diz no contexto). Hipótese é conceito; teste é uma forma dele; um 0 fecha a forma. → skill `leitura`
+Clues and sources are read in layers (literal, figurative, allusion, function, subliminal, absence) before
+becoming an operation. Every result gets two judgments: number (null, control, scope) and meaning (what the
+output says in context). A hypothesis is a concept; a test is one form of it; a 0 closes the form. → skill
+`leitura`
 
-## Quatro leis
+## Four laws
 
-1. Parecer verdade não é evidência. O observado não é o que se acha que aconteceu.
-2. Evidência compatível com todas as hipóteses não distingue nenhuma.
-3. Numa cadeia, a probabilidade é o produto dos elos. Cada detalhe a mais torna a história menos provável.
-4. Um acerto vale pela liberdade gasta para obtê-lo. Tentativas e escolhas de análise entram na conta.
+1. Looking true is not evidence. What was observed is not what one thinks happened.
+2. Evidence compatible with every hypothesis distinguishes none.
+3. In a chain, probability is the product of the links. Each extra detail makes the story less likely.
+4. A hit is worth the freedom spent to get it. Attempts and analysis choices count.
 
-## Modo de trabalho (declare antes de agir)
+## Working mode (declare it before acting)
 
-| Modo | Faz | Não faz |
+| Mode | Does | Does not |
 |---|---|---|
-| LEITURA | Lê fonte, formula hipótese, registra fatos e fios | Rodar teste |
-| CIRURGIA | 1 a 3 testes pontuais, cada um ligado a uma hipótese | Ampliar o espaço |
-| VARREDURA | Busca ampla | Começar sem hipótese ancorada em fonte primária e sem custo estimado |
+| LEITURA (reading) | Reads sources, formulates hypotheses, records facts and threads | Run tests |
+| CIRURGIA (surgery) | 1 to 3 pinpoint tests, each tied to a hypothesis | Widen the space |
+| VARREDURA (sweep) | Broad search | Start without a hypothesis anchored in a primary source and an estimated cost |
 
-Na dúvida, LEITURA. Mude de modo de forma explícita.
+When in doubt, LEITURA. Change modes explicitly.
 
-## Registro
+## Record
 
-Todo fato, hipótese e decisão vai para o registro, não para a conversa.
+Every fact, hypothesis and decision goes to the record, not the conversation.
 
-| Marca | Comando |
+| Mark | Command |
 |---|---|
-| Trecho literal da fonte | `cita <pedaço do corpus> "<afirmação>"` (copia o texto e já sai conferido) |
-| Fato medido ou lido | `novo fato "<t>" --natureza observacao\|medicao --origem medido\|fonte --fonte S.. --grau A\|B\|C` |
-| Interpretação, inferência | `novo fato "<t>" --natureza interpretacao\|inferencia --origem agente` (nunca vira fala do autor) |
-| Relato de terceiro, outra IA, nota antiga | `novo fato "<t>" --natureza relato --origem externo` (grau C, rascunho até `confere`) |
-| Hipótese | `novo hipotese "<t>" --pai <frente> --prob 0.4 --refuta-se "<o que a derruba>"` |
-| Premissa | `novo premissa "<t>" --pai <frente>` + `liga <H> depende <R>` |
-| Peso da evidência | `ach <E> <H> CC\|C\|N\|I\|II`; `ach <F>` mostra a matriz e o que é diagnóstico |
-| Teste | `teste <hip> "<t>" --alcance .. --porque "se + abre X; se − fecha Y" --previsao --controle --controle-tipo real --instrumento I..` |
-| Rodar | `roda <T> --pid <pid> --log <arquivo>` (longo) ou direto `resultado` (rápido) |
-| Palpite barato | `teste <hip> "<t>" --alcance .. --porque .. --exploratorio` (vale como pista; não precisa de `--refuta-se`) |
-| Resultado | `resultado <T> positivo\|negativo\|inconclusivo\|falhou "<nota>" [--sentido "<o que diz>"\|"nenhum: <por quê>"] --n <tamanho> --controle-ok sim\|nao` |
-| Questão | `novo questao "<pergunta>" --pai <frente\|alvo\|O>`; hipótese que a responde: `liga <H> responde <Q>`; `questoes` |
-| Relação possível | `conexoes <id\|"conceito">` (consulta) → `conexao <de> <para> <relação> "<por quê>" --rival .. --discriminador ..` → `estado C.. confirmada\|rejeitada "<evidência>"` |
-| Fonte com várias unidades | contrato JSON → `extrai f.json` (plano) → `--aplica` (`references/extracao.md`) |
-| Teoria de trabalho | `leitura "<quadro>" --sustenta E.. --rival H.. --questao Q.. --lacuna Q.. --motivo "<o que mudou>"` |
-| Critério de hipótese | `edita <H> --refuta-se "<o que a derruba>"` (teste confirmatório exige) |
-| Orientar-se | `proximo` (o que fazer e por quê) · `cadeia <id>` (no que algo se apoia) · `cronologia` |
-| Linha encerrada | `estado <id> refutada "<id do teste ou fato que mostrou>"` |
-| Decisão do usuário | `novo decisao "<t>" --origem usuario --proibe ".." --permite ".."` (escolha de método sua é fato `--natureza inferencia`) |
-| Ponta solta | `novo fio "<t>"` |
-| Conflito | `liga <E1> contradiz <E2>` (fica no mapa até um ser retratado) |
-| Objeto recorrente | `novo entidade "<nome>" --classe .. --alias "sinônimo,grafia"`; `atributo <N> <chave> <valor> --fato E..` |
+| Literal source excerpt | `cita <corpus chunk> "<claim>"` (copies the text and comes out proven by source) |
+| Measured or read fact | `novo fato "<t>" --natureza observacao\|medicao --origem medido\|fonte --fonte S.. --grau A\|B\|C` |
+| Proving a fact | `confere <E> "<note>" --por fonte\|medicao\|teste\|reproducao [--prova "<command>"\|T..]` (a fact is a proven finding; the proof need not be a source) |
+| Interpretation, inference | `novo fato "<t>" --natureza interpretacao\|inferencia --origem agente` (never becomes the author's words, never "proven") |
+| Report from a third party, another AI, an old note | `novo fato "<t>" --natureza relato --origem externo` (grade C, draft until `confere`) |
+| Hypothesis | `novo hipotese "<t>" --pai <front> --prob 0.4 --refuta-se "<what would refute it>"` |
+| Premise | `novo premissa "<t>" --pai <front>` + `liga <H> depende <R>` |
+| Weight of evidence | `ach <E> <H> CC\|C\|N\|I\|II`; `ach <F>` shows the matrix and what is diagnostic |
+| Test | `teste <hyp> "<t>" --alcance .. --porque "if + opens X; if − closes Y" --previsao --controle --controle-tipo real --instrumento I..` |
+| Run | `roda <T> --pid <pid> --log <file>` (long) or straight `resultado` (quick) |
+| Cheap hunch | `teste <hyp> "<t>" --alcance .. --porque .. --exploratorio` (counts as a lead; needs no `--refuta-se`) |
+| Result | `resultado <T> positivo\|negativo\|inconclusivo\|falhou "<note>" [--sentido "<what it says>"\|"nenhum: <why>"] --n <size> --controle-ok sim\|nao` |
+| Question | `novo questao "<question>" --pai <front\|target\|O>`; a hypothesis that answers it: `liga <H> responde <Q>`; `questoes` |
+| Possible relation | `conexoes <id\|"concept">` (query) → `conexao <from> <to> <relation> "<why>" --rival .. --discriminador ..` → `estado C.. confirmada\|rejeitada "<evidence>"` |
+| Source with many units | JSON contract → `extrai f.json` (plan) → `--aplica` (`references/extracao.md`) |
+| Working theory | `leitura "<picture>" --sustenta E.. --rival H.. --questao Q.. --lacuna Q.. --motivo "<what changed>"` |
+| Hypothesis criterion | `edita <H> --refuta-se "<what would refute it>"` (a confirmatory test requires it) |
+| Getting oriented | `proximo` (what to do and why) · `cadeia <id>` (what something rests on) · `cronologia` |
+| Line of reasoning | `ramo novo "<question>" --de <id> --porque "<why open it>"`; `ramo usa B..`; `ficha` · `trilha` · `arvore` |
+| Go back and take another direction | `ramo novo ".." --de B.. --passo N --porque ".."` (fork: inherits only the steps up to N) |
+| Reasoning without a test | `passo leu\|pensou\|achou\|corrigiu\|decidiu\|proximo ".." --porque ".." [--nos E..,T..]` |
+| Rival readings of the same clue | one sibling branch each, under the same question or branch; never a queue |
+| Line paused or dead | `estado B.. pausado\|morto\|concluido "<tested scope or reason>"` |
+| Line closed | `estado <id> refutada "<id of the test or fact that showed it>"` |
+| User decision | `novo decisao "<t>" --origem usuario --proibe ".." --permite ".."` (your own choice of method is a fact `--natureza inferencia`) |
+| Loose end | `novo fio "<t>"` |
+| Conflict | `liga <E1> contradiz <E2>` (stays on the map until one is retracted) |
+| Recurring object | `novo entidade "<name>" --classe .. --alias "synonym,spelling"`; `atributo <N> <key> <value> --fato E..` |
 
-Ausência só é fato com o alcance: "não há X em Y, procurado por Z". Ela pesa contra uma hipótese
-só quando a hipótese prevê a presença e o método tem sensibilidade medida para achá-la.
+Absence is only a fact with its scope: "there is no X in Y, searched by Z". It weighs against a hypothesis
+only when the hypothesis predicts presence and the method has measured sensitivity to find it.
 
-## Ciclo
+## Cycle
 
-**F0 Coleta.** Coletar antes de analisar. Original só leitura; derivado aponta o pai.
-`fonte <caminho>`. → `custodia.md`
+**F0 Collection.** Collect before analysing. Originals are read-only; a derivative points to its parent.
+`fonte <path>`. → `custodia.md`
 
-**F1 Leitura.** Ordem: o que já foi feito (`ja`), fonte bruta com leitura própria escrita antes,
-metadados, interpretações anteriores, soluções de terceiros por último. Leia em camadas (skill
-`leitura`). Leitura por ferramenta pede segunda leitura independente. Do material à questão:
-observação → pista → conexão → questão. → `leitura.md`, `extracao.md`
+**F1 Reading.** Order: what has already been done (`ja`), the raw source with your own reading written first,
+metadata, earlier interpretations, third-party solutions last. Read in layers (skill `leitura`). A reading by
+tool calls for an independent second reading. From material to question: observation → clue → connection →
+question. → `leitura.md`, `extracao.md`
 
-**F2 Hipóteses.** Rivais de verdade, não cota: considere acaso, erro técnico banal, engano e
-artefato quando forem plausíveis. Só sai a refutada. Probabilidades somam 1 só entre rivais
-mutuamente exclusivas (com "outra"); explicações que podem coexistir não se normalizam. → `hipoteses.md`
+**F2 Hypotheses.** Real rivals, not a quota: consider chance, plain technical error, deception and artefact
+when plausible. Only the refuted one leaves. Probabilities sum to 1 only among mutually exclusive rivals (with
+"other"); explanations that can coexist are not normalized. → `hipoteses.md`
 
-**F3 Pré-avaliação.** Antes de teste que custe mais que minutos: que hipótese o resultado exclui?
-Se nenhuma, não roda. Previsão numérica, controle com poder medido, custo estimado, alcance
-declarado. → `quantitativo.md`
+**F3 Pre-assessment.** Before a test costing more than minutes: which hypothesis does the result exclude? If
+none, it does not run. Numerical prediction, control with measured power, estimated cost, declared scope.
+→ `quantitativo.md`
 
-**F4 Execução.** Controle em cada execução. Script e log no `teste`. Instrumento registrado com
-`instrumento`; se mudar, testes antigos ficam "a revalidar". → `validacao.md`
+**F4 Execution.** A control in every run. Script and log in the `teste`. Instrument recorded with
+`instrumento`; if it changes, old tests become "to revalidate". → `validacao.md`
 
-**F5 Avaliação.** Proposições são as de F2? Compare com o máximo sob ruído. Liste discrepâncias.
-Leia a saída como texto e forma, não só como contagem (`--sentido`). Positivo sai como candidato,
-nunca como achado. → `validacao.md`
+**F5 Evaluation.** Are the propositions those of F2? Compare with the maximum under noise. List
+discrepancies. Read the output as text and form, not just as a count (`--sentido`). A positive comes out as a
+candidate, never as a finding. → `validacao.md`
 
-**F6 Verificação.** Quem julga não escreveu o teste. Verificador cego, com chamarizes.
+**F6 Verification.** Whoever judges did not write the test. Blind verifier, with decoys.
 
-**F7 Revisão.** Retratou algo: reavalie dependentes. Troca de hipótese líder: estime do zero
-antes de olhar a antiga.
+**F7 Revision.** Retracted something: reassess what depends on it. Change of leading hypothesis: estimate from
+scratch before looking at the old one. The old one does not vanish: it becomes a paused or dead branch with
+the reason; the new one only defeats it by showing something it does not explain.
 
-## Proporcionalidade
+## Proportionality
 
-| Ação | Exige |
+| Action | Requires |
 |---|---|
-| Leitura, pergunta factual | Nada |
-| Tentativa barata (< 10 min) | `teste` + `resultado`; vale como pista, não como cobertura |
-| Teste citado como evidência | F3 (exclui o quê, custo) e controle |
-| Varredura ou encerrar linha | F0 a F5 |
-| Declarar achado | F0 a F7 |
+| Reading, factual question | Nothing |
+| Cheap attempt (< 10 min) | `teste` + `resultado`; counts as a lead, not as coverage |
+| Test cited as evidence | F3 (excludes what, cost) and a control |
+| Sweep or closing a line | F0 to F5 |
+| Declaring a finding | F0 to F7 |
 
-Os portões protegem afirmações, não tentativas. "Falta F3" não é motivo para não tentar algo
-barato. Caso parado: `exploracao.md`.
+The gates protect claims, not attempts. "F3 is missing" is no reason not to try something cheap. Stuck case:
+`exploracao.md`.
 
-## Concluir
+## Concluding
 
-Duas frases separadas (`padroes.md`): probabilidade com número ("provável, 55–80%") e confiança
-na base (alta, moderada, baixa). Diga o que refutaria e o que mudou desde o último julgamento.
-"Em aberto, e eis o teste que decidiria" é conclusão válida. "Parece" sem peso é proibido.
+Two separate sentences (`padroes.md`): probability with a number ("likely, 55–80%") and confidence in the
+basis (high, moderate, low). Say what would refute it and what changed since the last judgment. "Open, and
+here is the test that would decide it" is a valid conclusion. "Seems" without weight is forbidden.
 
-## Parar
+## Stopping
 
-- Conclua quando uma hipótese sobrevive, as rivais têm inconsistência dura e uma previsão nova
-  se confirmou por via independente.
-- Encerre a linha quando só vive com remendos, o custo supera o valor, ou três ações seguidas
-  não moveram nenhuma probabilidade. Negativo encerra a receita testada e baixa a confiança no tema.
-- Após negativos repetidos, volte às premissas (F1, F2) antes de ampliar o espaço.
-- Nunca pare porque a resposta parece óbvia ou porque já investiu muito.
+- Conclude when one hypothesis survives, the rivals have hard inconsistencies and a new prediction has been
+  confirmed by an independent route.
+- Close the line when it only survives with patches, the cost exceeds the value, or three consecutive actions
+  moved no probability. A negative closes the tested recipe and lowers confidence in the theme.
+- After repeated negatives, go back to the premises (F1, F2) before widening the space.
+- Never stop because the answer seems obvious or because you have already invested a lot.
 
-## Time
+## Team
 
-O coordenador (sessão principal) decide, registra e integra: o papel de integrador é dele, não de um agente. Regras de delegação: `agentes.md`.
+The coordinator (main session) decides, records and integrates: the integrator role is theirs, not an
+agent's. Delegation rules: `agentes.md`.
 
-| Fase | Agente |
+| Phase | Agent |
 |---|---|
 | F0 | `arquivista` |
-| F1, F2 com fonte externa | `pesquisador` |
-| F1 a F3 | `analista` |
-| F1, leitura de conjunto, caso preso na mecânica | `interprete` (sem ver a sua leitura) |
-| F4 | `engenheiro`, depois `revisor` |
+| F1, F2 with an external source | `pesquisador` |
+| F1 to F3 | `analista` |
+| F1, overall reading, case stuck in mechanics | `interprete` (without seeing your reading) |
+| F4 | `engenheiro`, then `revisor` |
 | F6 | `verificador` |
-| Antes de registrar negativo | `ceticismo` |
+| Before recording a negative | `ceticismo` |
 
-Relatório de agente entra grau C até conferido na fonte (skill `conferir-relatorio`).
+An agent's report comes in at grade C until checked against the source (skill `conferir-relatorio`).
 
-## Anti-padrões
+## Anti-patterns
 
-- Agir sem ler o mapa. Refazer o que `ja` mostraria.
-- Caçar confirmação da primeira hipótese.
-- Ler pista como string: testar a palavra como senha, varrer livro por termo, julgar sentido por p.
-- Dar o conceito por morto porque uma forma dele deu 0.
-- Padrão achado depois de olhar, sem previsão nem controle.
-- Registrar intenção como resultado.
-- Delegar sem contexto; ou delegar a verificação com o veredito.
+- Acting without reading the map. Redoing what `ja` would show.
+- Opening a new direction without a branch, or correcting course by rewriting instead of recording the step.
+- Treating competing readings as a succession (the newest "corrects" the previous one).
+- Hunting for confirmation of the first hypothesis.
+- Reading a clue as a string: testing the word as a password, sweeping a book for a term, judging meaning by p.
+- Declaring the concept dead because one form of it gave 0.
+- A pattern found after looking, with no prediction or control.
+- Recording intention as a result.
+- Calling an inference a proven fact.
+- Delegating without context; or delegating verification together with the verdict.
 
-## Referências
+## References
 
-| Arquivo | Quando |
+| File | When |
 |---|---|
 | `leitura.md` | F1 |
 | `hipoteses.md` | F2 |
 | `quantitativo.md` | F3, F5 |
-| `validacao.md` | F4 a F6 |
+| `validacao.md` | F4 to F6 |
 | `custodia.md` | F0 |
-| `padroes.md` | Concluir |
-| `vieses.md` | Revisão |
-| `fichas.md` | Modelos de registro por fase |
-| `extracao.md` | Material novo: observação, pista, conexão, questão, contrato JSON |
-| `exploracao.md` | Caso parado |
-| `agentes.md` | Antes de delegar |
-| `cripto.md` | Opcional: casos com cifras |
-| `leituras.md` | Bibliografia |
+| `padroes.md` | Concluding |
+| `vieses.md` | Revision |
+| `fichas.md` | Record templates per phase |
+| `extracao.md` | New material: observation, clue, connection, question, JSON contract |
+| `exploracao.md` | Stuck case |
+| `agentes.md` | Before delegating |
+| `cripto.md` | Optional: cases with ciphers |
+| `leituras.md` | Bibliography |

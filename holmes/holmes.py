@@ -29,7 +29,7 @@ O plano é a consulta `mapa`; o material bruto fica no corpus (holmes/corpus.py)
              "<nota>" [--sentido "<o que diz>"|"nenhum: <por quê>"|"revisar: <o quê>"] [--n ..] [--controle-ok]
              jobs
   fontes     fonte <arquivo|pasta|url> [--procedencia] [--confiabilidade A-F] [--sem-corpus]
-             cita <pedaço do corpus> "<afirmação>" [--natureza] [--grau]   confere <E> "<nota>"
+             cita <pedaço do corpus> "<afirmação>" [--natureza] [--grau]   confere <E> "<nota>" --por fonte|medicao|teste|reproducao [--prova ..]
   entidades  atributo <N> <chave> <valor> [--fato E]
   provas     instrumento <caminho> "<nome>" [--verificador "cmd"] · prova [--executa] [--legado]
              (sem --executa só lista: são comandos de shell guardados no banco)
@@ -98,6 +98,8 @@ ARESTAS = ["sustenta", "enfraquece", "contradiz", "refuta", "depende", "duplica"
            "responde", "rival"]
 # passo: o "commit" de um ramo. Os manuais exigem --porque; registrou/mudou/abriu/bifurcou são automáticos.
 PASSOS_MANUAIS = ["leu", "pensou", "testou", "achou", "corrigiu", "decidiu", "proximo"]
+# como um fato vira provado: fato é constatação, e a prova pode não ser uma fonte
+PROVAS = ["fonte", "medicao", "teste", "reproducao"]
 ACH = {"CC": 2, "C": 1, "N": 0, "I": -1, "II": -2}
 
 ESQUEMA = """
@@ -176,7 +178,7 @@ def conecta(caso=None):
     db.row_factory = sqlite3.Row
     db.executescript(ESQUEMA)
     for tab, col, tipo in (("no", "legado", "INTEGER NOT NULL DEFAULT 0"), ("execucao", "sentido", "TEXT"),
-                           ("teste", "modo", "TEXT"), ("no", "ramo", "INTEGER")):
+                           ("teste", "modo", "TEXT"), ("no", "ramo", "INTEGER"), ("fato", "conferido_por", "TEXT")):
         if col not in {r[1] for r in db.execute(f"PRAGMA table_info({tab})")}:  # banco criado antes da coluna
             db.execute(f"ALTER TABLE {tab} ADD COLUMN {col} {tipo}")
     return db
@@ -296,7 +298,7 @@ def cria(db, tipo, titulo, pai=None, resumo=None, origem=None, grau=None, estado
         if n >= MAX_HIP:
             raise Erro(f"{rot(p)} já tem {n} hipóteses vivas (máx. {MAX_HIP}): refute ou estacione uma")
     if origem == "externo" and not grau:
-        grau = "C"  # subagente, outra IA, comunidade: grau C até conferir na fonte
+        grau = "C"  # subagente, outra IA, comunidade: grau C até ser provado (`confere --por`)
     estado = estado or ESTADOS[tipo][0]
     if estado not in ESTADOS[tipo]:
         raise Erro(f"estado {estado!r} inválido para {tipo}; use: {', '.join(ESTADOS[tipo])}")
@@ -522,7 +524,8 @@ def selo(db, r):
         return (f"→{res}" if res else "") + (f" ⚠ {v}" if v else "")
     if r["tipo"] == "fato":
         f = um(db, "SELECT * FROM fato WHERE no=?", r["id"])
-        return f" {f['natureza']}/{r['origem']}/{r['grau'] or '-'}" + ("" if f["conferido"] else " não-conferido")
+        return f" {f['natureza']}/{r['origem']}/{r['grau'] or '-'}" + (f" provado:{f['conferido_por']}" if f["conferido"] and f["conferido_por"]
+                                                                            else "" if f["conferido"] else " não-provado")
     if r["tipo"] == "hipotese":
         h = um(db, "SELECT prob FROM hipotese WHERE no=?", r["id"])
         return f" p={h['prob']:.2f}" if h and h["prob"] is not None else ""
@@ -701,7 +704,7 @@ def mapa(db, caso, tudo=False):
                      "INVÁLIDO": "resultados inválidos"}[chave]] = nl
     rasc = um(db, "SELECT count(*) FROM no WHERE tipo='fato' AND estado='rascunho' AND legado=0")[0]
     if rasc:
-        alertas.append(("rasc", f"{rasc} fato(s) em rascunho esperando conferência na fonte (`confere`)."))
+        alertas.append(("rasc", f"{rasc} fato(s) em rascunho esperando prova (`confere --por fonte|medicao|teste|reproducao`)."))
     if herdado:
         alertas.append(("legado", "herdado, fora dos alertas: " + ", ".join(f"{v} {k}" for k, v in herdado.items())
                         + ". Trie um alvo por vez (`saude`); mexer num item o traz de volta."))
@@ -1086,7 +1089,7 @@ def proximo(db):
     rasc = q(db, "SELECT DISTINCT n.* FROM no n JOIN aresta a ON a.para=n.id WHERE n.tipo='fato' AND n.estado='rascunho' "
                  "AND a.tipo IN ('depende','deriva') AND n.legado=0")
     if rasc:
-        R.append((f"conferir na fonte {', '.join(rot(r) for r in rasc[:3])}", "há raciocínio apoiado em fato não conferido"))
+        R.append((f"provar {', '.join(rot(r) for r in rasc[:3])}", "há raciocínio apoiado em fato não provado"))
     if not R:
         h = um(db, "SELECT n.*, h.prob FROM no n JOIN hipotese h ON h.no=n.id JOIN no f ON f.id=n.pai WHERE n.estado='viva' "
                    "AND n.legado=0 AND f.estado='ativa' AND h.refuta_se IS NOT NULL AND NOT EXISTS (SELECT 1 FROM no t "
@@ -1333,7 +1336,7 @@ def extrai(db, dados, aplica=False, so=None, rejeita=()):
                       estado="rascunho" if origem == "externo" else "vigente", natureza=nat,
                       fonte=o.get("fonte") or fonte_id, local=local, citacao=citacao)
             if o.get("pedaco"):
-                db.execute("UPDATE fato SET conferido=? WHERE no=?", (agora(), no))
+                db.execute("UPDATE fato SET conferido=?, conferido_por='fonte' WHERE no=?", (agora(), no))
             mapa_ids[loc] = no
         plano.append(f"+ {loc} fato/{nat}: {o['texto'][:90]}")
     for x in dados.get("questoes", []):
@@ -1495,6 +1498,7 @@ def main(argv=None):
     s = sub.add_parser("cita"); s.add_argument("pedaco", type=int); s.add_argument("afirmacao")
     s.add_argument("--natureza", default="citacao", choices=NATUREZAS); s.add_argument("--grau", default="B")
     s = sub.add_parser("confere"); s.add_argument("fato"); s.add_argument("nota")
+    s.add_argument("--por", required=True, choices=PROVAS); s.add_argument("--prova")
     s = sub.add_parser("atributo"); s.add_argument("entidade"); s.add_argument("chave"); s.add_argument("valor")
     s.add_argument("--fato")
     s = sub.add_parser("ramo"); s.add_argument("acao", nargs="?", choices=["novo", "usa", "solta"])
@@ -1905,15 +1909,29 @@ def main(argv=None):
             local = f"pedaço #{p['id']} " + (f"msg {p['msg_id']}" if p["msg_id"] else f"{p['kind']} {p['ordem']}")
             no = cria(db, "fato", a.afirmacao, origem="fonte", grau=a.grau, estado="vigente", natureza=a.natureza,
                       fonte=f"S{fno}", local=local, citacao=p["texto"][:1000])
-            db.execute("UPDATE fato SET conferido=? WHERE no=?", (agora(), no))
+            db.execute("UPDATE fato SET conferido=?, conferido_por='fonte' WHERE no=?", (agora(), no))
             print(f"E{no} (citação literal copiada do corpus, conferida agora)")
         elif a.cmd == "confere":
             e = pega(db, a.fato, "fato")
-            db.execute("UPDATE fato SET conferido=? WHERE no=?", (agora(), e["id"]))
+            nat = um(db, "SELECT natureza FROM fato WHERE no=?", e["id"])["natureza"]
+            if nat in ("inferencia", "interpretacao"):
+                raise Erro(f"{rot(e)} é {nat}: fato provado é constatação. O que a prova é uma constatação nova: "
+                           "registre-a (`novo fato .. --natureza medicao|observacao|citacao`, depois `confere`) e "
+                           f"ligue `liga E<nova> sustenta {rot(e)}`; a {nat} segue como {nat} (ou vira hipótese)")
+            prova = a.prova
+            if a.por in ("medicao", "reproducao") and not (prova or "").strip():
+                raise Erro(f"--por {a.por} exige --prova \"<comando que reproduz a constatação>\"")
+            if a.por == "teste":
+                t = pega(db, prova or "", "teste")
+                if not resultado_de(db, t["id"]):
+                    raise Erro(f"{rot(t)} não tem resultado registrado: um teste só prova depois de rodar")
+                prova = rot(t)
+            db.execute("UPDATE fato SET conferido=?, conferido_por=?, prova=coalesce(?, prova) WHERE no=?",
+                       (agora(), a.por, prova, e["id"]))
             if e["estado"] == "rascunho":
                 db.execute("UPDATE no SET estado='vigente' WHERE id=?", (e["id"],))
-            toca(db, e["id"], "conferido", a.nota)
-            print(f"{rot(e)} conferido na fonte" + (" e agora vigente" if e["estado"] == "rascunho" else ""))
+            toca(db, e["id"], f"provado por {a.por}", f"{a.nota}" + (f" · prova: {prova}" if prova else ""))
+            print(f"{rot(e)} provado por {a.por}" + (" e agora vigente" if e["estado"] == "rascunho" else ""))
         elif a.cmd == "atributo":
             n = pega(db, a.entidade, "entidade")
             fato = pega(db, a.fato, "fato")["id"] if a.fato else None

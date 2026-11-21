@@ -1,69 +1,72 @@
-# Extração investigativa: do material à compreensão
+# Investigative extraction: from material to understanding
 
-Sequência conceitual, não obrigação de criar um objeto por etapa:
-**material → observação → pista → conexão → questão → hipótese → evidência → síntese.**
-Pare onde a informação parar. Uma observação sem pista é um registro válido; uma fonte sem nada relevante é
-um resultado ("nada extraído de S12, lida inteira").
+A conceptual sequence, not an obligation to create one object per stage:
+**material → observation → clue → connection → question → hypothesis → evidence → synthesis.**
+Stop where the information stops. An observation without a clue is a valid record; a source with nothing
+relevant is a result ("nothing extracted from S12, read in full").
 
-## A. Preservar e localizar
-`fonte <arquivo>` (sha, procedência). Original só leitura. Toda observação aponta para onde está (`local`,
-`pedaco`) e como foi obtida (`metodo`, `limites`). A interpretação nunca substitui o original.
+## A. Preserve and locate
+`fonte <file>` (sha, provenance). Originals are read-only. Every observation points to where it is (`local`,
+`pedaco`) and how it was obtained (`metodo`, `limites`). The interpretation never replaces the original.
 
-## B. Decompor em observações
-Unidades verificáveis uma a uma, no vocabulário do material:
+## B. Break down into observations
+Units verifiable one by one, in the material's own vocabulary:
 
-| Material | Olhe |
+| Material | Look at |
 |---|---|
-| Texto | termos, nomes, datas, referências, negações, o que mudou em relação a uma versão ou ao original citado, estrutura |
-| Imagem | objetos, posições, cores, formas, simetria, diferenças, agrupamentos |
-| Números | valores, distribuição, sequências, intervalos, repetições |
-| Saída de execução | além do sucesso ou falha: formato, conteúdo, o que saiu diferente do esperado |
-| Acontecimento | quem, o quê, quando (`entidade --classe evento` + `atributo quando`), causa alegada ou demonstrada |
+| Text | terms, names, dates, references, negations, what changed relative to a version or to the quoted original, structure |
+| Image | objects, positions, colours, shapes, symmetry, differences, groupings |
+| Numbers | values, distribution, sequences, intervals, repetitions |
+| Run output | beyond success or failure: format, content, what came out different from expected |
+| Event | who, what, when (`entidade --classe evento` + `atributo quando`), alleged or demonstrated cause |
 
-Observação: "a célula (3,7) tem RGB FEFEFE". Não é observação: "o autor marcou a célula". Isso é interpretação.
+Observation: "cell (3,7) has RGB FEFEFE". Not an observation: "the author marked the cell". That is an
+interpretation.
 
-## C. Pista: por que olhar para isto
-Anomalia, repetição, contraste, simetria ou assimetria, diferença entre versões, correspondência, referência,
-ausência onde a presença era esperada, algo que contraria uma previsão, algo que a leitura atual não explica.
-Não presuma intenção: anomalia pode ser erro, artefato de processamento, ruído ou normalidade. Não descarte o
-comum: ele fica pesquisável e pode virar pista quando outra coisa aparecer.
+## C. Clue: why look at this
+Anomaly, repetition, contrast, symmetry or asymmetry, a difference between versions, a correspondence, a
+reference, absence where presence was expected, something contradicting a prediction, something the current
+reading does not explain. Do not presume intent: an anomaly may be an error, a processing artefact, noise or
+normality. Do not discard the ordinary: it stays searchable and may become a clue when something else appears.
 
-## D. Conexões
-`conexoes <id>` ou `conexoes "<o conceito em palavras>"` antes de registrar algo como novo. Se duas pistas
-parecem apontar para a mesma ideia sem dividir palavra, nomeie a ideia e registre-a como entidade com aliases
-(`novo entidade "complementaridade" --classe conceito --alias "duas metades,yin-yang"`): daí em diante, ela liga
-o que chegar. Para cada candidata, escreva a relação, a rival (acaso, tema genérico, mesma fonte repetida) e o
-discriminador. Grave só a promissora (`conexao`) e a rejeição que evitaria redescoberta. Três agentes repetindo
-a mesma leitura não são três evidências.
+## D. Connections
+`conexoes <id>` or `conexoes "<the concept in words>"` before recording something as new. If two clues seem to
+point to the same idea without sharing a word, name the idea and record it as an entity with aliases
+(`novo entidade "complementarity" --classe conceito --alias "two halves,yin-yang"`): from then on it links
+whatever arrives. For each candidate, write the relation, the rival (chance, generic theme, the same source
+repeated) and the discriminator. Record only the promising one (`conexao`) and the rejection that would prevent
+rediscovery. Three agents repeating the same reading are not three pieces of evidence.
 
-## E. Questões
-O que segue sem explicação? Que informação falta? Duas pistas apontam para o mesmo fenômeno? A pergunta atual
-parte de uma premissa falsa? Questão sem hipótese é legítima: fica aberta e aparece como lacuna.
+## E. Questions
+What remains unexplained? What information is missing? Do two clues point to the same phenomenon? Does the
+current question start from a false premise? A question without a hypothesis is legitimate: it stays open and
+shows up as a gap.
 
-## F. Hipóteses
-Para as questões que comportam explicação: o que explica, o que a motivou, de que premissas depende, o que
-prevê, o que a enfraqueceria, quais as rivais. Inclua acaso, erro, artefato e engano quando forem rivais
-plausíveis, não para cumprir número. Exploratória (sem `--refuta-se`) pode ser explorada; só a operacional
-recebe teste confirmatório.
+## F. Hypotheses
+For the questions that admit an explanation: what it explains, what motivated it, which premises it depends on,
+what it predicts, what would weaken it, what the rivals are. Include chance, error, artefact and deception when
+they are plausible rivals, not to fill a number. An exploratory one (without `--refuta-se`) may be explored;
+only an operational one gets a confirmatory test.
 
-## G. Integrar ao plano
-A informação reforça uma questão, revela dependência, abre ou enfraquece hipótese, liga frentes, resolve
-lacuna ou muda prioridade? Frente nova só para problema relevante e independente (máx. 5 ativas).
+## G. Integrate into the plan
+Does the information reinforce a question, reveal a dependency, open or weaken a hypothesis, link fronts, close
+a gap or change a priority? A new front only for a relevant, independent problem (max. 5 active). A new line of
+reasoning is a branch born from the point where it arose (`ramo novo ... --de <id> --porque`).
 
-## H. Atualizar a compreensão
-O que mudou no entendimento geral? Se nada, a leitura fica. Se mudou: `leitura "..." --sustenta .. --rival ..
---questao .. --motivo "<o que mudou e por quê>"`.
+## H. Update the understanding
+What changed in the overall understanding? If nothing, the reading stays. If it changed: `leitura "..."
+--sustenta .. --rival .. --questao .. --motivo "<what changed and why>"`.
 
-## Registrar de uma vez: o contrato
-Para uma fonte com várias unidades, escreva o JSON do contrato (`MODELO.md`, "Contrato de extração"), rode
-`holmes.py extrai f.json` para ver o plano e `--aplica` para gravar. Exemplo mínimo:
+## Recording at once: the contract
+For a source with many units, write the contract's JSON (`MODELO.md`, "Extraction contract"), run
+`holmes.py extrai f.json` to see the plan and `--aplica` to record. Minimal example:
 
 ```json
 {"fonte": "S12",
- "observacoes": [{"id": "o1", "texto": "Rodapé com yin-yang a tinta", "local": "folha 2", "metodo": "visual"}],
- "pistas": [{"obs": "o1", "sobre": "Q4", "porque": "único desenho da folha"}],
- "conexoes": [{"de": "o1", "para": "E3", "relacao": "sobre", "porque": "duas metades ↔ yin-yang",
-               "rival": "símbolo decorativo comum", "discriminador": "fica onde as partes se juntam?"}]}
+ "observacoes": [{"id": "o1", "texto": "Footer with a yin-yang in ink", "local": "sheet 2", "metodo": "visual"}],
+ "pistas": [{"obs": "o1", "sobre": "Q4", "porque": "the sheet's only drawing"}],
+ "conexoes": [{"de": "o1", "para": "E3", "relacao": "sobre", "porque": "two halves ↔ yin-yang",
+               "rival": "common decorative symbol", "discriminador": "is it where the parts meet?"}]}
 ```
 
-Quando não registrar: o que só repete o que já está no corpus e não pesa em nenhuma questão. Fica pesquisável.
+When not to record: what only repeats what is already in the corpus and weighs on no question. It stays searchable.

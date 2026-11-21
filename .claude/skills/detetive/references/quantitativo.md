@@ -1,71 +1,72 @@
-# F3/F5 — Avaliação quantitativa
+# F3/F5 — Quantitative assessment
 
-Sem dado publicado, simule para o caso. Ordem de grandeza com base declarada basta. Sem base
-nenhuma, diga que não há avaliação possível. Faça toda conta em código, não de cabeça.
+Without published data, simulate for the case. An order of magnitude with a declared basis is enough. With no
+basis at all, say no assessment is possible. Do every calculation in code, not in your head.
 
-## Razão de verossimilhança (LR)
+## Likelihood ratio (LR)
 
-LR = P(E | H) ÷ P(E | alternativa mais razoável). O LR multiplica **odds**, não probabilidade:
-odds = p ÷ (1 − p); odds posterior = odds anterior × LR; p posterior = odds ÷ (1 + odds).
-Ex.: p = 0,2 → odds 0,25; LR = 8 → odds 2 → p ≈ 0,67 (não 0,2 × 8).
-- Proposições fixadas antes do resultado.
-- LRs só multiplicam se as evidências são condicionalmente independentes. Três agentes repetindo a
-  mesma leitura, ou duas pistas da mesma fonte, são uma evidência, não três.
-- O LR nada diz sobre hipóteses fora do par; as duas podem ser falsas.
-- Não transponha: "1 em 10⁹ de ser acaso" não é "1 em 10⁹ de estar errado". Numa busca de N
-  candidatos, o prior de cada um é perto de 1/N.
+LR = P(E | H) ÷ P(E | most reasonable alternative). The LR multiplies **odds**, not probability:
+odds = p ÷ (1 − p); posterior odds = prior odds × LR; posterior p = odds ÷ (1 + odds).
+E.g.: p = 0.2 → odds 0.25; LR = 8 → odds 2 → p ≈ 0.67 (not 0.2 × 8).
+- Propositions fixed before the result.
+- LRs only multiply if the pieces of evidence are conditionally independent. Three agents repeating the same
+  reading, or two clues from the same source, are one piece of evidence, not three.
+- The LR says nothing about hypotheses outside the pair; both may be false.
+- Do not transpose: "1 in 10⁹ of being chance" is not "1 in 10⁹ of being wrong". In a search of N candidates,
+  each one's prior is close to 1/N.
 
-### LR de uma coincidência
-1. Escreva E exatamente como observado.
-2. P(E | H): perto de 1 se H prevê E; baixa se só permite.
-3. P(E | H-nada): simule com o mesmo procedimento que gerou E, incluindo todas as escolhas.
-4. Traduza na escala verbal de `padroes.md`.
+### LR of a coincidence
+1. Write E exactly as observed.
+2. P(E | H): close to 1 if H predicts E; low if it merely allows it.
+3. P(E | H-nothing): simulate with the same procedure that produced E, including every choice.
+4. Translate onto the verbal scale in `padroes.md`.
 
-Exemplo: 8 dígitos hex batendo por acaso têm P = 2⁻³² por tentativa. Após 10⁶ tentativas, LR ≈
-4 × 10³ (forte). Após 10⁹, LR ≈ 4 (fraco). Mesmo acerto, valor diferente.
+Example: 8 hex digits matching by chance have P = 2⁻³² per attempt. After 10⁶ attempts, LR ≈ 4 × 10³
+(strong). After 10⁹, LR ≈ 4 (weak). Same hit, different value.
 
-## Taxa de erro do critério de aceitação
+## Error rate of the acceptance criterion
 
-- **FPR** = P(aceita | errado). **Sensibilidade** = P(aceita | certo). Meça as duas em casos de
-  resposta conhecida, parecidos com o caso real.
-- Relate o limite superior de 95%: 0 erros em n → cerca de 3/n.
-- **Alarmes falsos esperados = FPR × N.** Se ≥ 1, o critério é só filtro e precisa de segundo
-  estágio independente.
-- Não infira FPR de buscas reais ("nunca deu falso positivo"): lá a verdade é desconhecida.
-- Sem sensibilidade medida, o negativo não encerra a receita.
+- **FPR** = P(accepts | wrong). **Sensitivity** = P(accepts | right). Measure both on cases with a known
+  answer, similar to the real case.
+- Report the 95% upper bound: 0 errors in n → about 3/n.
+- **Expected false alarms = FPR × N.** If ≥ 1, the criterion is only a filter and needs an independent second
+  stage.
+- Do not infer FPR from real searches ("it never gave a false positive"): there the truth is unknown.
+- Without measured sensitivity, a negative does not close the recipe.
 
-## Graus de liberdade
+## Degrees of freedom
 
-- Some log₂ de cada escolha livre: ordem, início, formato, filtro, erros tolerados.
-- **Orçamento de evidência:** bits do resultado menos log₂(tentativas, inclusive descartadas e de
-  sessões anteriores). Margem ≤ 0 não é evidência.
-- **Escolhas de coleta** (versão do texto, recorte, índice 0/1) também contam. Declaradas antes,
-  são legítimas; escolhidas depois, são ajuste.
-- **Jardim de bifurcações:** uma única análise já infla o falso positivo se os detalhes foram
-  decididos olhando o dado. Fixe-os antes ou liste-os e corrija.
+- Add up log₂ of each free choice: order, start, format, filter, tolerated errors.
+- **Evidence budget:** bits of the result minus log₂(attempts, including discarded ones and those from earlier
+  sessions). A margin ≤ 0 is not evidence.
+- **Collection choices** (text version, crop, index 0/1) count too. Declared beforehand, they are legitimate;
+  chosen afterwards, they are fitting.
+- **Garden of forking paths:** a single analysis already inflates the false positive if the details were decided
+  while looking at the data. Fix them beforehand, or list them and correct.
 
-## Campeão de busca grande
+## Champion of a large search
 
-Busca grande sempre acha um falso muito parecido. Compare o melhor escore com a distribuição do
-máximo de N amostras sob ruído (ou p_global ≈ N·p). Candidato vindo do topo exige segunda
-verificação antes de virar fato.
+A large search always finds a very similar false one. Compare the best score with the distribution of the
+maximum of N samples under noise (or p_global ≈ N·p). A candidate coming from the top requires a second
+verification before becoming a fact.
 
-## Nulo e positivo
+## Null and positive
 
-Nulo = embaralhamentos do próprio material. Positivo = sintéticos do tipo suposto, mesmo tamanho.
-Achado = fora do nulo e dentro do positivo. Corrija pelo número de lugares em que olhou.
+Null = shuffles of the material itself. Positive = synthetics of the supposed type, same size. Finding = outside
+the null and inside the positive. Correct for the number of places you looked.
 
-## Correlação
+## Correlation
 
-Exija a tabela 2×2 com as 4 contagens. Antes de afirmar relação entre A e B, considere: A→B, B→A,
-C causa ambos, coincidência, o dado está errado.
+Require the 2×2 table with the 4 counts. Before claiming a relation between A and B, consider: A→B, B→A, C
+causes both, coincidence, the data is wrong.
 
-## Calibração
+## Calibration
 
-Cada previsão (`--previsao`) leva probabilidade numérica. Ao registrar `resultado`, compare com a
-previsão. Acompanhe o Brier (0 perfeito; 50/50 dá 0,25). Sem esse retorno, calibração é autoestima.
+Every prediction (`--previsao`) carries a numerical probability. When recording `resultado`, compare with the
+prediction. Track the Brier score (0 perfect; 50/50 gives 0.25). Without that feedback, calibration is self-esteem.
 
-## Tempo
+## Time
 
-Tempo = espaço ÷ (taxa medida × paralelismo), com a taxa medida na máquina, no script e com as
-opções reais. Se dá séculos, a hipótese está errada: volte à estrutura. Meça antes de otimizar.
+Time = space ÷ (measured rate × parallelism), with the rate measured on the machine, in the script and with the
+real options. If it comes out in centuries, the hypothesis is wrong: go back to the structure. Measure before
+optimizing.

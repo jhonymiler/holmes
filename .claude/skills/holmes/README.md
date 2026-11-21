@@ -1,9 +1,9 @@
-# holmes (mod opcional)
+# holmes (optional mod)
 
-Poda saídas longas do Bash: acima de `HOLMES_LIMITE_SAIDA` (padrão 4000) o inteiro vai para
-`/tmp/holmes-saidas/<sessão>/` e o contexto recebe só cabeça, cauda e o caminho.
+Trims long Bash outputs: above `HOLMES_LIMITE_SAIDA` (default 4000) the full output goes to
+`/tmp/holmes-saidas/<session>/` and the context receives only the head, the tail and the path.
 
-Os hooks do holmes (mapa na abertura, pistas, diário, cobrança de registro) **não** estão aqui: ficam em
-`.claude/settings.json` e funcionam com ou sem este mod, em qualquer cliente. Carrega sozinho de
-`.claude/skills/holmes/` onde mods são permitidos; em `claude -p`, use `--plugin-dir .claude/skills/holmes`.
-Testes: `claude plugin test .claude/skills/holmes`.
+The holmes hooks (map at session start, clues, diary, reminders to record) are **not** here: they live in
+`.claude/settings.json` and work with or without this mod, in any client. It loads by itself from
+`.claude/skills/holmes/` where mods are allowed; in `claude -p`, use `--plugin-dir .claude/skills/holmes`.
+Tests: `claude plugin test .claude/skills/holmes`.

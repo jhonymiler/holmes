@@ -33,7 +33,7 @@ Um agente de IA numa investigação longa erra sempre do mesmo jeito:
 - 📜 lê uma pista **ao pé da letra** quando ela queria dizer outra coisa.
 
 O holmes foi desenhado a partir dessas falhas, observadas em 64 sessões reais de uma investigação de várias
-semanas ([LICOES.md](LICOES.md)).
+semanas ([LICOES.md](LICOES.md), em inglês, como toda a documentação além deste README).
 
 ## Como ele funciona
 
@@ -55,6 +55,10 @@ flowchart LR
   objetivo, frentes, hipóteses com critério de refutação, testes, resultados, fatos com origem e grau,
   decisões do usuário, pendências. Cada sessão abre com um `mapa` de até 3,5 KB, gerado do banco. O resto
   é puxado por id quando preciso, e o caso cabe na janela de contexto por maior que fique.
+- **O percurso é uma árvore.** Cada linha de raciocínio é um *ramo* que nasce de um ponto (uma questão, uma
+  hipótese, um passo de outro ramo) e acumula *passos* com o porquê, como commits. Dá para voltar a um passo
+  e abrir outra direção (um fork) sem apagar nada; `trilha` refaz o caminho da raiz até qualquer ramo, e
+  `ficha` diz numa página onde estamos e por quê. Exemplo comentado (em inglês) em [EXEMPLO.md](EXEMPLO.md).
 - **O material fica num corpus pesquisável.** Chats, documentos, livros e páginas são cortados em pedaços e
   indexados (BM25, literal, vetorial ou híbrido). O agente busca e cita o trecho literal em vez de abrir
   arquivos enormes.
@@ -115,7 +119,7 @@ primeira vez o Claude Code pede confiança na pasta para carregar os hooks.
 ```
 CLAUDE.md                        modelo de instruções do projeto (fatos de máquina ficam só aqui)
 .claude/settings.json            os hooks do holmes (valem no CLI, no VS Code e no app)
-.claude/rules/constituicao.md    22 regras de toda sessão
+.claude/rules/constituicao.md    26 regras de toda sessão
 .claude/skills/detetive/         o método (SKILL.md + references/ sob demanda)
 .claude/skills/leitura/          leitura de sentido: camadas, saída de teste, leitura de conjunto
 .claude/skills/conferir-relatorio/  confere relatório de subagente ou IA na fonte primária
@@ -141,7 +145,7 @@ Opcionais: `numpy` acelera a busca vetorial; `pdftotext` indexa PDF.
 | Consulta | `mapa`, `ver`, `busca`, `ja`, `ach`, `saude` | `corpus.py busca` (bm25, literal, vetor, híbrido), `janela`, `ver` |
 | Ligação | `fonte` registra o arquivo e o indexa no corpus; `cita <pedaço>` copia o trecho literal para um fato | — |
 
-Modelo de dados completo, com diagramas: [MODELO.md](MODELO.md).
+Modelo de dados completo, com diagramas: [MODELO.md](MODELO.md). Um caso fictício do começo ao fim, com fluxogramas e as saídas reais de cada comando: [EXEMPLO.md](EXEMPLO.md).
 
 ## Referência
 
@@ -159,7 +163,7 @@ Modelo de dados completo, com diagramas: [MODELO.md](MODELO.md).
 | relacionar | `conexoes <id\|"texto">` (candidatas; consulta) · `conexao <de> <para> <relação> "<por quê>" [--rival] [--discriminador]` · `estado C.. confirmada\|rejeitada "<motivo>"` |
 | hipóteses | `prob <H> 0.4 "<motivo>"` · `ach <E> <H> CC\|C\|N\|I\|II` · `ach <F>` (matriz) |
 | testar | `teste <H> "<t>" --alcance .. --porque .. [--exploratorio]` · `roda <T> --pid --log` · `resultado <T> <res> "<nota>" [--sentido ".."]` · `jobs` |
-| fontes | `fonte <arquivo\|pasta\|url>` · `cita <pedaço> "<afirmação>"` · `confere <E> "<onde>"` |
+| fontes | `fonte <arquivo\|pasta\|url>` · `cita <pedaço> "<afirmação>"` · `confere <E> "<nota>" --por fonte\|medicao\|teste\|reproducao [--prova ..]` (fato é constatação provada; a prova não precisa ser fonte) |
 | mudar | `estado <id> <estado> "<motivo>"` · `edita <id> [--refuta-se]` · `liga`/`desliga <de> <tipo> <para>` · `atributo <N> <chave> <valor>` |
 | provar | `instrumento <caminho> "<nome>" --verificador "<cmd>"` · `prova` (lista) · `prova --executa [--legado]` |
 

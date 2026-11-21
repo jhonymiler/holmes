@@ -1,37 +1,39 @@
 ---
 name: conferir-relatorio
-description: "Confere na fonte primária o relatório de um subagente, de uma IA externa ou de outra sessão antes de registrá-lo no caso. Use quando um agente devolver resultado, quando o usuário pedir 'confere' ou 'verifica o que ele disse', ou antes de levar qualquer coisa de fora para o registro."
+description: "Checks a report from a subagent, an external AI or another session against the primary source before recording it in the case. Use when an agent returns a result, when the user asks to 'check' or 'verify what it said' (confere, verifica o que ele disse), or before bringing anything from outside into the record."
 ---
 
-# Conferir relatório na fonte
+# Checking a report against the source
 
-Tudo que vem de fora (subagente, IA externa, outra sessão, terceiros) entra **grau C** até ser
-conferido. Agente erra ids, linhas e citações com frequência.
+Everything that comes from outside (subagent, external AI, another session, third parties) enters at
+**grade C** until checked. Agents frequently get ids, lines and quotes wrong.
 
-## Passos
+## Steps
 
-1. **Escreva seu julgamento antes de ler o relatório inteiro**, se o ponto for decisivo.
-2. **Integridade do que ele editou.** Compare com a versão anterior (`diff`, `git diff`). Conte as
-   linhas removidas. Remoção não pedida: mostre ao usuário antes de aceitar.
-3. **Cada id citado:** `python3 -I holmes/holmes.py ver <id>`. O texto diz o que o relatório afirma?
-4. **Cada citação de documento:** abra a fonte na linha indicada (`sed -n '<a>,<b>p' <arquivo>`).
-   Cite o trecho, não a paráfrase do agente.
-5. **Cada número ou resultado:** rode de novo o comando ou script que o produziu, ou confira o log.
-   Diga se o resultado é **real** (dado do caso) ou **sintético** (dado de teste, simulação, exemplo).
-6. **"Nunca testado" / "não está no registro":** `ja "<termo>"` e `busca "<termo>"` com sinônimos.
-   Muitas vezes o termo entrou em outro papel. Diga qual.
-7. **Fato de fora do repositório** (obra, evento, especificação): sem fonte lida, registre como relato
-   externo (`novo fato --natureza relato --origem externo`: grau C, rascunho), nunca como fato vigente nem
-   como premissa do caso. Vira premissa só se uma linha precisar assumi-lo, declarado (`novo premissa`).
-8. **Grave só o conferido:**
-   - conferido na fonte primária: `cita <pedaço> "<t>"`, ou `novo fato "<t>" --origem externo` seguido de `confere <E> "<onde conferiu>"`;
-   - não conferido: `novo fato "<t>" --natureza relato --origem externo` (fica rascunho, grau C), ou não grave;
-   - pista sem prova: `novo fio "<t>"`;
-   - ligações: `liga <de> <tipo> <para>` **só depois** de ver o id impresso pelo `novo`.
-9. **Corrija o documento** que o agente editou onde estava errado e diga ao usuário o que foi
-   descartado e por quê.
+1. **Write your own judgment before reading the whole report**, if the point is decisive.
+2. **Integrity of what it edited.** Compare with the previous version (`diff`, `git diff`). Count removed
+   lines. An unrequested removal: show the user before accepting.
+3. **Every cited id:** `python3 -I holmes/holmes.py ver <id>`. Does the text say what the report claims?
+4. **Every document quote:** open the source at the given line (`sed -n '<a>,<b>p' <file>`). Quote the
+   excerpt, not the agent's paraphrase.
+5. **Every number or result:** rerun the command or script that produced it, or check the log. Say whether the
+   result is **real** (case data) or **synthetic** (test data, simulation, example).
+6. **"Never tested" / "not in the record":** `ja "<term>"` and `busca "<term>"` with synonyms. Often the term
+   came in under another role. Say which.
+7. **A fact from outside the repository** (a work, an event, a specification): without a source read, record
+   it as an external report (`novo fato --natureza relato --origem externo`: grade C, draft), never as a proven
+   fact nor as a case premise. It becomes a premise only if a line needs to assume it, declared
+   (`novo premissa`).
+8. **Record only what was checked:**
+   - checked against the primary source: `cita <chunk> "<t>"`, or `novo fato "<t>" --origem externo` followed
+     by `confere <E> "<where it was checked>" --por fonte`;
+   - reproduced by you (rerun, recomputed): `confere <E> "<what was rerun>" --por reproducao --prova "<command>"`;
+   - not checked: `novo fato "<t>" --natureza relato --origem externo` (stays a draft, grade C), or do not record;
+   - a lead without proof: `novo fio "<t>"`;
+   - links: `liga <from> <type> <to>` **only after** seeing the id printed by `novo`.
+9. **Fix the document** the agent edited where it was wrong, and tell the user what was discarded and why.
 
-## Saída para o usuário
+## Output for the user
 
-Tabela curta: item | conferido? | onde | real ou sintético | registrado como (id).
-Depois, em frase própria, o que **não** foi conferido e por quê.
+A short table: item | checked? | where | real or synthetic | recorded as (id).
+Then, in a sentence of your own, what was **not** checked and why.

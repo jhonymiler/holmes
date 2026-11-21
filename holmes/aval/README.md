@@ -1,59 +1,60 @@
-# Avaliação da capacidade investigativa
+# Evaluating investigative capability
 
-Dois níveis, que não se confundem:
+Two levels, which are not to be confused:
 
-| Nível | O que mede | Roda sem modelo? | Comando |
+| Level | What it measures | Runs without a model? | Command |
 |---|---|---|---|
-| Mecanismo | se a descoberta de relações põe o par certo entre as 5 primeiras candidatas | sim | `python3 -I holmes/aval/aval.py recuperacao` |
-| Investigação | se um agente, usando o holmes, chega à solução sem fabricar relações | não: precisa de uma sessão real | protocolo abaixo + `aval.py pontua` |
+| Mechanism | whether relation discovery puts the right pair among the top 5 candidates | yes | `python3 -I holmes/aval/aval.py recuperacao` |
+| Investigation | whether an agent, using holmes, reaches the solution without fabricating relations | no: needs a real session | protocol below + `aval.py pontua` |
 
-## Caso sintético `relojoeiro.json`
+## Synthetic case `relojoeiro.json`
 
-30 pistas em 3 ondas (texto, objeto, número, documento, símbolo), 9 ligações verdadeiras (2 literais e 7 só por
-conceito), 4 armadilhas (palavra igual sem relação) e 13 distratoras. A solução é conhecida e fica fora do caso.
+30 clues in 3 waves (text, object, number, document, symbol), 9 true links (2 literal and 7 by concept only), 4
+traps (the same word without a relation) and 13 distractors. The solution is known and kept outside the case.
 
-Medido em 2026-11-20 (top 5):
+Measured on 2026-11-20 (top 5):
 
-| Modo | Ligações | Não literais | Armadilhas na lista |
+| Mode | Links | Non-literal | Traps in the list |
 |---|---|---|---|
-| `busca` (o que existia) | 3/9 | 1/7 | 3/4 |
+| `busca` (what existed) | 3/9 | 1/7 | 3/4 |
 | `conexoes` | 3/9 | 1/7 | 2/4 |
-| `conexoes` + conceitos do intérprete | 9/9 | 7/7 | 2/4 |
+| `conexoes` + the interpreter's concepts | 9/9 | 7/7 | 2/4 |
 
 > [!NOTE]
-> A terceira linha é teto, não desempenho: os conceitos vieram do gabarito.
+> The third row is a ceiling, not performance: the concepts came from the answer key.
 
-Leitura: o mecanismo sozinho não descobre relação sem palavra comum. O ganho vem do conceito abstrato registrado
-como entidade com aliases (o que o agente ou o `interprete` propõe) e reaproveitado em todas as pistas seguintes.
-Armadilhas na lista são esperadas: candidata não
-é relação; o que conta é quantas o agente confirma (medido em `pontua`).
+Reading: the mechanism alone does not discover a relation without a shared word. The gain comes from the abstract
+concept recorded as an entity with aliases (what the agent or the `interprete` proposes) and reused on every
+following clue. Traps in the list are expected: a candidate is not a relation; what counts is how many the agent
+confirms (measured by `pontua`).
 
-## Protocolo de uma rodada com modelo
+## Protocol for a round with a model
 
 > [!WARNING]
-> Este protocolo ainda não foi executado.
+> This protocol has not been run yet.
 
-1. Raiz limpa: copie o kit para uma pasta nova, `holmes.py init relojoeiro "<objetivo do json>"`.
-2. Para cada onda, entregue ao agente só as pistas daquela onda, como arquivo `fonte`. Nunca a solução, as
-   ligações nem os conceitos.
-3. Pedido fixo: "Investigue com o holmes até propor a combinação. Registre o que observar, as questões, as
-   hipóteses e as relações." Compacte a conversa entre a onda 2 e a 3 (`/compact`) para medir a retomada.
-4. No fim: `python3 -I holmes/aval/aval.py pontua casos/relojoeiro/caso.db`.
-5. Rode duas variantes com o mesmo modelo: kit atual e kit anterior (sem `conexoes`, `questao`, `extrai`), 3
-   vezes cada. Compare as medianas.
+1. Clean root: copy the kit into a new folder, `holmes.py init relojoeiro "<objective from the json>"`.
+2. For each wave, give the agent only that wave's clues, as a `fonte` file. Never the solution, the links or the
+   concepts.
+3. Fixed request: "Investigate with holmes until you propose the combination. Record what you observe, the
+   questions, the hypotheses and the relations." Compact the conversation between waves 2 and 3 (`/compact`) to
+   measure resumption.
+4. At the end: `python3 -I holmes/aval/aval.py pontua casos/relojoeiro/caso.db`.
+5. Run two variants with the same model: the current kit and the previous kit (without `conexoes`, `questao`,
+   `extrai`), 3 times each. Compare the medians.
 
-Rubrica (o que `pontua` devolve, e o que é bom):
+Rubric (what `pontua` returns, and what is good):
 
-| Métrica | Bom |
+| Metric | Good |
 |---|---|
-| ligações verdadeiras no grafo | alto |
-| armadilhas aceitas no grafo | 0 (cada uma é uma associação falsa) |
-| armadilhas rejeitadas explicitamente | alto (evita redescobrir) |
-| interpretações registradas como observação | 0 |
-| conexões sugeridas sem decisão | baixo no fim |
-| leitura final contém a solução | sim |
-| testes gastos | baixo, para o mesmo resultado |
-| intervenção humana | contar à mão: quantas vezes foi preciso redirecionar |
+| true links in the graph | high |
+| traps accepted into the graph | 0 (each one is a false association) |
+| traps explicitly rejected | high (avoids rediscovery) |
+| interpretations recorded as observations | 0 |
+| suggested connections left without a decision | low at the end |
+| the final reading contains the solution | yes |
+| tests spent | low, for the same result |
+| human intervention | count by hand: how many times redirection was needed |
 
-Avaliação de raciocínio aberto (qualidade das hipóteses rivais, do discriminador escolhido) não é automática:
-leia a `cadeia` da hipótese vencedora e julgue com um revisor que não viu a solução.
+Open-ended reasoning (the quality of the rival hypotheses, of the chosen discriminator) is not automatic: read the
+winning hypothesis' `cadeia` and judge it with a reviewer who has not seen the solution.

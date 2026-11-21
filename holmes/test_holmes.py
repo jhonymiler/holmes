@@ -108,8 +108,16 @@ def test_fatos_fontes_corpus_e_entidades():
     v = roda(r, "ver", eid)
     assert "citacao: Prezado senhor" in v and "deriva" in v
     roda(r, "novo", "fato", "Fulano disse que a carta é falsa", "--origem", "externo", "--natureza", "relato")
-    assert "fato:rascunho relato/externo/C não-conferido" in roda(r, "busca", "fulano falsa", "--sem-corpus")
+    assert "fato:rascunho relato/externo/C não-provado" in roda(r, "busca", "fulano falsa", "--sem-corpus")
     assert "1 fato(s) em rascunho" in roda(r, "mapa")
+    assert "provado:fonte" in roda(r, "busca", "tinta ferrogalica", "--sem-corpus")
+    roda(r, "novo", "fato", "A carta foi escrita por um canhoto", "--natureza", "inferencia")
+    eid_inf = roda(r, "busca", "canhoto", "--sem-corpus").split()[0]
+    assert "é inferencia" in roda(r, "confere", eid_inf, "parece", "--por", "fonte", ok=False)  # inferência não se prova
+    roda(r, "novo", "fato", "A tinta reage ao ferro no teste de cor", "--natureza", "medicao")
+    eid_med = roda(r, "busca", "reage ferro", "--sem-corpus").split()[0]
+    roda(r, "confere", eid_med, "refeito", "--por", "medicao", ok=False)                   # medição exige --prova
+    assert "provado por medicao" in roda(r, "confere", eid_med, "refeito", "--por", "medicao", "--prova", "true")
     # entidade com alias: buscar "lock" acha o que foi escrito como "fechadura"
     roda(r, "novo", "entidade", "fechadura", "--classe", "conceito", "--alias", "lock,tumbler")
     roda(r, "novo", "fio", "Medir os pinos da fechadura do porão")

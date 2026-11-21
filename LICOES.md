@@ -1,192 +1,203 @@
-# Lições de campo: por que o holmes 2.0 é assim
+# Field lessons: why holmes 2.0 is the way it is
 
-Este documento é o diagnóstico que explica de onde vem cada peça do 2.0. A base é uma investigação real e
-longa, conduzida com agentes de IA ao longo de várias semanas: 64 sessões, ~620 MB de transcrição. Cada
-sessão foi condensada só no diálogo (falas do usuário, texto do agente e nome das ferramentas) e lida por
-inteiro por 20 leitores independentes. Duas auditorias leram o código do harness e os bancos.
+This document is the diagnosis behind every piece of 2.0. Its basis is a long, real investigation run with AI
+agents over several weeks: 64 sessions, ~620 MB of transcript. Each session was condensed to the dialogue only
+(the user's words, the agent's text and the tool names) and read in full by 20 independent readers. Two audits
+read the harness code and the databases.
 
 > [!NOTE]
-> O caso em si não importa aqui. Os padrões de falha abaixo são do agente, não do assunto, e reaparecem em
-> qualquer investigação longa.
+> The case itself does not matter here. The failure patterns below belong to the agent, not the subject, and
+> come back in any long investigation.
 
-## Resumo em cinco linhas
+## Summary in five lines
 
-1. O agente quase nunca perdeu o plano por falta de informação. Perdeu porque havia informação demais, em
-   lugares demais, e nenhuma âncora curta dizendo "o objetivo é este, estamos nesta frente, o próximo
-   passo é este".
-2. Na maior parte do tempo o trabalho foi fechar receitas negativas em túnel. Centenas de "0 acertos"
-   seguidos. Quem puxava o passo atrás era sempre o usuário ("visão do todo", "estou perdido", "em que
-   parte estamos?").
-3. A maioria dos negativos não valia o que dizia. O instrumento que julgava os resultados foi achado cego
-   ou incompleto pelo menos cinco vezes. 78% dos testes registrados não diziam qual instrumento os julgou.
-4. O progresso real veio de leitura literal da fonte primária, de perguntas simples do usuário e de
-   revisão externa conferida na fonte. Não veio de varredura.
-5. A primeira versão do holmes tentou consertar isso acrescentando mais coisas: guias, painéis, regras,
-   injeções, arestas automáticas. Cada acréscimo aumentou o volume que precisava ser lido e reduziu o que
-   de fato chegava ao agente.
+1. The agent almost never lost the plan for lack of information. It lost it because there was too much
+   information, in too many places, and no short anchor saying "the objective is this, we are on this front, the
+   next step is this".
+2. Most of the time the work was closing negative recipes in a tunnel. Hundreds of "0 hits" in a row. The one
+   pulling the step back was always the user ("the whole picture", "I'm lost", "where are we?").
+3. Most negatives were not worth what they claimed. The instrument judging the results was found blind or
+   incomplete at least five times. 78% of the recorded tests did not say which instrument judged them.
+4. Real progress came from literal reading of the primary source, from the user's simple questions and from
+   external review checked against the source. It did not come from sweeps.
+5. The first version of holmes tried to fix this by adding things: guides, dashboards, rules, injections,
+   automatic edges. Each addition increased the volume that had to be read and reduced what actually reached
+   the agent.
 
-## Como a condução evoluiu
+## How the conduct evolved
 
-| Fase | O que aconteceu | Sinal do usuário |
+| Phase | What happened | The user's signal |
 |---|---|---|
-| Antes de qualquer estrutura | Um caderno `.md` corrido por caso (8 mil linhas) e vários casos misturados. Objetivo contínuo (`/goal`) preso em laço por 4 a 17 h. "Premissas" escritas no caderno viraram fato por horas. | "mas vai desistir assim fácil?"; "estamos pulando etapas"; "status" perguntado 6 vezes ou mais |
-| Nasce o holmes v1 | SQLite por caso, método em fases, subagentes, instruções enxugadas. Logo depois o banco ainda estava vazio: uma sessão remota seguia escrevendo em `.md`. | "enorme, pode atrapalhar mais que ajudar" (sobre os `.md`) |
-| Defeitos em série | O instrumento falhou várias vezes seguidas. A busca por palavra falhou duas vezes, e daí nasceu um índice vetorial. Meta-trabalho: 14 guias, 7 digestos, milhares de artefatos catalogados, com ganho medido de 24 para 25 acertos em 36 buscas. | "muita informação, vários .md espalhados… falta uma única fonte de memória" |
-| O banco cresce | A auto-consolidação gerava 53 a 61% das arestas. A visão do todo foi pedida 4 vezes numa noite. Medido: o painel de abertura era cortado de 465 KB para 14 KB, e o mod nem carregava no ambiente. | "você vai pulando de galho em galho deixando de fechar raciocínios" |
-| Validade em xeque | O instrumento cobria 22 de 7.502 alvos. Negativos de semanas perderam validade. Sessões paralelas colidiram ids no mesmo banco. | "se der erro nunca vamos saber" |
-| Inchaço | ~1.900 afirmações, e 555 de 713 testes sem instrumento. Uma lista de "famílias" de combinações foi de 11 para 319 numa única sessão de objetivo contínuo. Uma premissa falsa vinda do próprio banco sustentou ~15 testes em 11 h. | "estamos sempre tentando tudo de uma vez à toa… estou perdido"; "banco inchado demais… não conseguimos recuperar os acertos" |
+| Before any structure | One running `.md` notebook per case (8 thousand lines) and several cases mixed together. A continuous objective (`/goal`) stuck in a loop for 4 to 17 h. "Premises" written in the notebook became facts for hours. | "are you going to give up that easily?"; "we're skipping steps"; "status" asked 6 times or more |
+| holmes v1 is born | SQLite per case, a phased method, subagents, trimmed instructions. Shortly after, the database was still empty: a remote session kept writing to `.md`. | "huge, it may get in the way more than help" (about the `.md` files) |
+| Defects in series | The instrument failed several times in a row. Word search failed twice, and a vector index was born from that. Meta-work: 14 guides, 7 digests, thousands of catalogued artefacts, with a measured gain from 24 to 25 hits in 36 searches. | "a lot of information, many scattered .md… a single source of memory is missing" |
+| The database grows | Auto-consolidation produced 53 to 61% of the edges. The whole picture was requested 4 times in one night. Measured: the opening dashboard was cut from 465 KB to 14 KB, and the mod did not even load in the environment. | "you keep jumping from branch to branch without closing your reasoning" |
+| Validity in question | The instrument covered 22 of 7,502 targets. Weeks of negatives lost their validity. Parallel sessions collided ids in the same database. | "if it errors we'll never know" |
+| Bloat | ~1,900 claims, and 555 of 713 tests without an instrument. A list of combination "families" went from 11 to 319 in a single continuous-objective session. A false premise coming from the database itself supported ~15 tests over 11 h. | "we're always trying everything at once for nothing… I'm lost"; "database too bloated… we can't recover the hits" |
+| The path is lost | Interpretations stored as loose facts, 1,238 of 1,283 facts with no place in the tree; one conclusion (the film's numbers in the author's text) rediscovered three times in 17 days; four competing readings of the same clue recorded as a queue in which each "corrected" the previous one. | "we open branches but have no view of them… it should be a tree we can always go back to and fork" |
 
-## Os padrões de falha
+## The failure patterns
 
-Categorias que os leitores atribuíram às correções do usuário, somadas em todos os lotes:
+Categories the readers assigned to the user's corrections, added up over all batches:
 
 ```mermaid
 pie showData
-    title Correções do usuário por tipo de falha
-    "Perdeu o plano geral" : 34
-    "Afirmou sem evidência" : 33
-    "Desviou do pedido" : 28
-    "Não consultou a memória" : 24
-    "Túnel de negativos" : 23
-    "Força bruta prematura" : 17
-    "Esqueceu o porquê" : 16
+    title The user's corrections by failure type
+    "Lost the overall plan" : 34
+    "Claimed without evidence" : 33
+    "Strayed from the request" : 28
+    "Did not consult memory" : 24
+    "Tunnel of negatives" : 23
+    "Premature brute force" : 17
+    "Forgot the why" : 16
 ```
 
-O instrumento de julgamento aparece em 156 menções nos relatórios.
+The judging instrument appears in 156 mentions across the reports.
 
-### 1. Túnel de negativos e perda do plano geral
-- Num trecho foram ~40 seções seguidas de "0 acertos" depois de uma compactação. Noutro, ~145 negativos
-  com 24 scripts rodados *depois* de o próprio agente notar a saturação. Noutro, 12 h fechando variações
-  sobre partes já resolvidas, até o usuário perguntar se aquilo era essencial.
-- O agente oscilava entre traduzir cada pista em operação mecânica e abandonar a narrativa. Faltava saber
-  a que tese cada teste servia ("qual o propósito?").
-- Não existia âncora: na auditoria, a abertura injetava 0 bytes de estado do caso. O painel comia o
-  orçamento, e os 10 "fios" injetados eram frases soltas colhidas por regex (456 abertos, 41 fechados).
+### 1. Tunnel of negatives and loss of the overall plan
+- In one stretch there were ~40 consecutive sections of "0 hits" after a compaction. In another, ~145 negatives
+  with 24 scripts run *after* the agent itself had noticed the saturation. In another, 12 h closing variations
+  on already solved parts, until the user asked whether that was essential.
+- The agent swung between turning every clue into a mechanical operation and abandoning the narrative. It
+  lacked knowing which thesis each test served ("what is the purpose?").
+- There was no anchor: in the audit, the opening injected 0 bytes of case state. The dashboard ate the budget,
+  and the 10 injected "threads" were loose sentences harvested by regex (456 open, 41 closed).
 
-### 2. Não consultar antes e redescobrir
-- Mais de 12 "já estava no dossiê" num único período. Um resultado foi refeito por 1 h, e ele já estava no
-  banco e numa fonte antiga. O inventário foi "resgatado" 4 vezes. Uma fórmula foi reconstruída 3 vezes.
-- "Não está no banco" e "nunca tentado" falsos, porque a consulta cortava linhas, falhava com frases ou só
-  buscava num tipo de registro e não nos documentos.
-- Havia seis comandos concorrentes para "o que o banco sabe", e as regras tinham de explicar quando cada
-  um não bastava.
+### 2. Not consulting first, and rediscovering
+- More than 12 "it was already in the dossier" in a single period. A result was redone for 1 h, and it was
+  already in the database and in an old source. The inventory was "rescued" 4 times. A formula was rebuilt 3
+  times.
+- False "not in the database" and "never tried", because the query cut lines, failed on phrases or only searched
+  one kind of record and not the documents.
+- There were six competing commands for "what the database knows", and the rules had to explain when each one
+  was not enough.
 
-### 3. Negativo sem validade de instrumento
-- Instrumento cego a formatos de resposta legítimos. Instrumento congelado numa cópia local desatualizada.
-  22 alvos em vez de 7.502. Off-by-one em 5 geradores. Filtro que rejeitava justamente os dois casos reais
-  conhecidos. Cada um invalidou de dezenas a bilhões de "zeros".
-- O banco não distinguia escrito, executado e fechado, nem guardava versão ou data do instrumento.
-  "Fechado/esgotado/exaustivo" aparecia sem alcance ("frases humanas testadas" eram ~30 frases).
-- Controles plantados com o mesmo bug do código passaram verdes. Só controle com dado real, segunda
-  implementação ou sabotagem por revisor pegou.
+### 3. Negatives without instrument validity
+- An instrument blind to legitimate answer formats. An instrument frozen in an outdated local copy. 22 targets
+  instead of 7,502. Off-by-one in 5 generators. A filter that rejected precisely the two known real cases. Each
+  one invalidated from dozens to billions of "zeros".
+- The database did not distinguish written, run and closed, nor did it keep the instrument's version or date.
+  "Closed/exhausted/exhaustive" appeared without a scope ("human phrases tested" were ~30 phrases).
+- Planted controls with the same bug as the code went green. Only a control with real data, a second
+  implementation or sabotage by a reviewer caught them.
 
-### 4. Fato, interpretação e terceiros misturados
-- Interpretação de terceiro registrada como fala do autor. Comentário de terceiro citado como se fosse da
-  fonte. Plano colado de outra IA (com um número inexistente) tomado como premissa.
-- Premissas viraram fato pela escrita. Uma delas sustentou 15 experimentos. Afirmações retratadas
-  continuaram sendo citadas porque a consulta não mostrava o status.
+### 4. Fact, interpretation and third parties mixed up
+- A third party's interpretation recorded as the author's words. A third party's comment quoted as if it came
+  from the source. A plan pasted from another AI (with a non-existent number) taken as a premise.
+- Premises became facts by being written down. One of them supported 15 experiments. Retracted claims kept being
+  quoted because the query did not show their status.
+- "Fact" meant "checked against a source": a measurement anyone could rerun had no way of being recorded as
+  proven, and an inference could become a "current fact" with one check.
 
-### 5. Compactação perde o fio
-- Depois de compactar, o agente refez testes que ele mesmo fizera horas antes (milhões de operações),
-  apresentou como "novo" um achado da mesma noite, negou uma frase que era dele, mudou de idioma e voltou
-  a uma frente que o usuário já tinha deixado.
-- Medição na própria sessão: o raciocínio (falas + texto do agente) é ~7% da janela. Comandos e saídas são
-  ~75%. A compactação descartava justamente os 7%. O diário de raciocínio por sessão foi a melhor correção
-  do v1.
+### 5. Compaction loses the thread
+- After compacting, the agent redid tests it had done hours before (millions of operations), presented a
+  finding from the same night as "new", denied a sentence that was its own, switched language and went back to a
+  front the user had already left.
+- Measured in the session itself: the reasoning (the user's words + the agent's text) is ~7% of the window.
+  Commands and outputs are ~75%. Compaction discarded precisely the 7%. The per-session reasoning diary was v1's
+  best fix.
 
-### 6. Volume: documentos e injeções demais
-- Nove `.md` se diziam "leia primeiro" ou "fonte de verdade". Para se orientar, o agente precisava de
-  ~235 KB (65–70 mil tokens). O harness custava ~12 mil tokens antes da primeira linha útil e ~55–60 mil
-  numa sessão de 50 prompts.
-- As 12 regras do usuário estavam em 5 lugares, e uma delas aparecia repetida 15 vezes.
-- 61% das ~18 mil arestas eram automáticas. As 52 hipóteses estavam todas "vivas" e 49 não tinham nenhuma
-  aresta: as hipóteses de verdade estavam no texto livre.
-- Injeção acima de 10 mil caracteres vira prévia de 2 KB, e hook de módulo pode ser barrado por plugin de
-  segurança da organização. Parte do que se achava injetado nunca chegou ao agente.
+### 6. Volume: too many documents and injections
+- Nine `.md` files claimed to be "read first" or "source of truth". To get oriented, the agent needed ~235 KB
+  (65–70 thousand tokens). The harness cost ~12 thousand tokens before the first useful line and ~55–60 thousand
+  in a 50-prompt session.
+- The user's 12 rules lived in 5 places, and one of them appeared 15 times.
+- 61% of the ~18 thousand edges were automatic. The 52 hypotheses were all "alive" and 49 had no edge at all: the
+  real hypotheses lived in free text.
+- An injection over 10 thousand characters becomes a 2 KB preview, and a module hook can be blocked by the
+  organization's security plugin. Part of what was believed to be injected never reached the agent.
 
-### 7. Força bruta como refúgio
-- O agente admitiu: varredura "rende resultado mensurável" e interpretação não. Mesmo com o usuário
-  pedindo foco no sentido das pistas, voltava a varrer. Transformava a pista em string e combinação e
-  declarava o espaço "exausto", e foi corrigido por isso ao menos 4 vezes.
-- Os avanços vieram de ler o texto literal da fonte e de perguntar o que ele nomeia.
+### 7. Brute force as a refuge
+- The agent admitted it: a sweep "yields a measurable result" and interpretation does not. Even with the user
+  asking to focus on the clues' meaning, it went back to sweeping. It turned the clue into strings and
+  combinations and declared the space "exhausted", and was corrected for it at least 4 times.
+- Progress came from reading the source's literal text and asking what it names.
 
-### 8. Laços de objetivo contínuo e ociosidade
-- Um avaliador com critério inalcançável ("resolver tudo", "cobertura total") produziu ~12 respostas quase
-  idênticas, ~50 negativos só "para manter movimento" e 17 h de receitas. Em outro período foram 12 h
-  ociosas "aguardando decisão" sem oferecer opções.
+### 8. Continuous-objective loops and idleness
+- An evaluator with an unreachable criterion ("solve everything", "total coverage") produced ~12 almost
+  identical answers, ~50 negatives just "to keep moving" and 17 h of recipes. In another period there were 12 h
+  idle "awaiting a decision" without offering options.
 
-### 9. Comunicação e o usuário como roteador
-- Jargão interno e tabelas densas levaram a "não entendi nada". Um ✅ numa coluna foi lido como problema
-  resolvido. O controle positivo também foi lido como achado.
-- O usuário colou análises de outras IAs mais de 12 vezes, e essas colagens trouxeram achados reais. A
-  revisão externa funcionava, mas dependia de transporte manual.
+### 9. Communication, and the user as a router
+- Internal jargon and dense tables led to "I didn't understand anything". A ✅ in a column was read as a solved
+  problem. The positive control was also read as a finding.
+- The user pasted analyses from other AIs more than 12 times, and those pastes brought real findings. External
+  review worked, but depended on manual transport.
 
-### 10. Concorrência
-- Sessões e máquinas em paralelo no mesmo banco: ids intercalados e duplicados, scripts com o mesmo nome,
-  `holmes.py` quebrado no meio da edição de outra sessão, cadernos colidindo.
-- `pkill -f` matando o próprio shell, `ps` vazio por causa de um proxy, jobs que terminavam horas antes de
-  o agente ver, estimativas de tempo erradas por fator 2.
+### 10. Concurrency
+- Sessions and machines running in parallel on the same database: interleaved and duplicated ids, scripts with
+  the same name, `holmes.py` broken in the middle of another session's edit, colliding notebooks.
+- `pkill -f` killing its own shell, empty `ps` because of a proxy, jobs finishing hours before the agent noticed,
+  time estimates off by a factor of 2.
 
-### 11. Leitura mecânica no lugar de leitura de sentido
-- Em 21 dos 23 relatórios o usuário cobra a mesma coisa: "tem certeza que essas palavras são literais ou
-  remetem a uma mensagem subliminar?", "não trate o livro como puras palavras matemáticas, tem
-  significado", "o material não foi feito por uma máquina, então as palavras têm significados", "estamos
-  indo muito ao pé da letra", "não quero que você determine nulos, preciso que analise a saída".
-- O padrão: a pista virava string e senha em milhares de combinações, o livro era varrido por
-  palavra-chave e dado como esgotado, a saída era julgada só pelo p, e um 0 numa tradução literal matava a
-  ideia inteira. O agente aplicava ceticismo estatístico a significado.
-- Quando o usuário mandava ler pelo sentido e não descartar, saíram os achados textuais. O v1 chegou a
-  codificar isso (dois julgamentos, "conceitual, não literal", skill de leitura narrativa), mas só depois
-  de semanas e espalhado em regras longas.
-- A versão inicial do 2.0 perdeu essas regras na generalização e manteve só as que puxam para o rigor.
-  Corrigido: seção "Sentido" da constituição, skill `leitura`, agente `interprete`, `--sentido`, `leitura`
-  no topo do mapa e pausa de leitura de conjunto.
+### 11. Mechanical reading instead of reading for meaning
+- In 21 of the 23 reports the user asks for the same thing: "are you sure these words are literal or do they
+  point to a subliminal message?", "don't treat the book as pure mathematical words, it has meaning", "the
+  material wasn't made by a machine, so the words have meanings", "we're being far too literal", "I don't want
+  you to determine nulls, I need you to analyse the output".
+- The pattern: the clue became a string and a password in thousands of combinations, the book was swept by
+  keyword and called exhausted, the output was judged only by p, and a 0 on a literal translation killed the
+  whole idea. The agent applied statistical scepticism to meaning.
+- When the user asked to read for meaning and not discard, the textual findings came out. v1 eventually encoded
+  this (two judgments, "conceptual, not literal", a narrative-reading skill), but only after weeks and scattered
+  across long rules.
+- The initial version of 2.0 lost those rules in the generalization and kept only the ones that pull towards
+  rigour. Fixed: the constitution's "Meaning" section, skill `leitura`, agent `interprete`, `--sentido`,
+  `leitura` at the top of the map and the overall-reading pause.
 
-## O que funcionou e foi mantido
-- Controle positivo, nulo declarado e previsão escrita antes. Retratação curta e registrada.
-- Conferir relatório de subagente na fonte (achou citações erradas 5 vezes, e 14 de 14 ids errados num
-  relatório).
-- Revisor cético e independente, e IA externa com briefing neutro, tratada como hipótese.
-- Diário de raciocínio regenerado do transcript a cada turno.
-- Portão "já foi feito?", quando existia e era rápido. Teste cirúrgico com fonte primária.
-- Perguntas do usuário em linguagem simples. Elas viraram os melhores testes de modelo.
+### 12. The path of the reasoning was not recorded
+- The database kept what was being investigated but not how each thing had been reached: inferences went in as
+  loose facts with the why in prose inside the title, course corrections left no trace (the `substitui` edge was
+  used 9 times and `refuta` once in 2,300 edges), and 8 of 9 working readings were replaced within two days.
+- Competing readings of the same clue were stored as a succession, each one "correcting" the previous, so a
+  newer interpretation could silently discard an older one that had never been refuted.
+- Rebuilding why a line had been opened, or where it had stopped, required searching dozens of memories.
 
-## Do diagnóstico à peça do 2.0
+## What worked and was kept
+- Positive control, declared null and prediction written beforehand. Short, recorded retraction.
+- Checking a subagent's report against the source (it found wrong quotes 5 times, and 14 of 14 wrong ids in
+  one report).
+- A sceptical, independent reviewer, and an external AI with a neutral briefing, treated as a hypothesis.
+- A reasoning diary regenerated from the transcript every turn.
+- The "has this been done already?" gate, when it existed and was quick. A surgical test with a primary source.
+- The user's plain-language questions. They became the best model tests.
 
-| Problema | Peça do 2.0 |
+## From the diagnosis to the 2.0 piece
+
+| Problem | 2.0 piece |
 |---|---|
-| Sem âncora de plano | `mapa`: objetivo → alvos (com dependências) → frentes ativas → hipóteses vivas → fronteira, decisões do usuário, fios, contradições, testes abertos, alertas. No máximo 3,5 KB, gerado, e é a única coisa que a abertura injeta. |
-| Leitura mecânica | Constituição 5–8, skill `leitura`, agente `interprete`; `resultado --sentido`; `leitura` no topo do mapa, ligada à base; `teste` exige `--refuta-se`, e o negativo fecha a forma testada, não o conceito. |
-| Túnel | Alerta automático no `mapa`, no `resultado` e no hook de prompt após N negativos seguidos sem hipótese nova (`HOLMES_TUNEL`, padrão 5). Regra 16 da constituição. |
-| Frentes demais | Máximo de 5 frentes ativas e 7 hipóteses vivas por frente, checado pela CLI. |
-| Redescoberta | Um comando de busca (`busca`/`ja`, BM25 sem acento, nós + fontes, uma linha por item com estado). O hook de prompt injeta até 6 linhas sem repetir na sessão. `teste` recusa receita idêntica já feita e mostra as parecidas. |
-| Negativo sem validade | `teste` exige `--alcance`. `instrumento` registra o sha. Negativo sem instrumento aparece INDETERMINADO, e quando o instrumento muda os negativos antigos aparecem A REVALIDAR. |
-| Fato × interpretação | `--origem` (autor, fonte, medido, usuario, agente, externo) e `--grau`. Externo entra C automaticamente. `fato` nasce `rascunho`, e o status aparece em toda linha de busca. |
-| Compactação | Diário de raciocínio por sessão (hooks `fim`/`pre-compact`); a abertura pós-compactação injeta o mapa + a cauda do diário. O estado vive no banco, não no resumo. |
-| Volume | Um banco, um `CASO.md` de 2 KB, `MAPA.md` gerado. Constituição de 22 regras sem histórico. Skill detetive curta, com referências sob demanda. Sem arestas automáticas: relação percebida é `conexao` candidata até ser confirmada. Título e resumo com limite de tamanho. |
-| Injeção que não chega | Hooks de shell para tudo o que injeta, e um módulo só para `tool.call` (poda de saída), que comprovadamente chega. Cada injeção fica abaixo de 9 mil caracteres, com corte avisado. A carga foi verificada numa sessão real. |
-| Força bruta como refúgio | Modos LEITURA / CIRURGIA / VARREDURA declarados; varredura só com hipótese ancorada em fonte e custo estimado. Palpite barato roda como `--exploratorio`, que vale pista, nunca cobertura. |
-| Objetivo contínuo em laço | Regra 22: condição verificável e saída "bloqueado". |
-| Comunicação | Regra 20: uma linha de veredito com rótulo (ACHADO, NEGATIVO no alcance, CONTROLE, INSTRUMENTO) antes do detalhe. O `resultado` lembra disso. |
-| Concorrência | Ids por AUTOINCREMENT do SQLite em WAL (sem numeração à mão). O caso ativo é explícito (`usa`), nunca adivinhado pelo arquivo mais recente. |
-| Jobs | `roda --pid --log`; `jobs` e o `mapa` mostram PID vivo ou MORTO. O hook nega `pkill -f`. |
-| Registro esquecido | Hook `pos` avisa o agente quando um script do caso roda sem teste aberto, e o `fim` cobra registro uma vez por turno. |
+| No anchor for the plan | `mapa`: objective → targets (with dependencies) → active fronts → live hypotheses → frontier, user decisions, threads, contradictions, open tests, alerts, active branch. At most 3.5 KB, generated, and the only thing the opening injects. |
+| Mechanical reading | Constitution 5–8, skill `leitura`, agent `interprete`; `resultado --sentido`; `leitura` at the top of the map, tied to its basis; `teste` requires `--refuta-se`, and a negative closes the tested form, not the concept. |
+| Tunnel | Automatic alert in the `mapa`, in `resultado` and in the prompt hook after N consecutive negatives without a new hypothesis (`HOLMES_TUNEL`, default 5). Rule 16 of the constitution. |
+| Too many fronts | At most 5 active fronts and 7 live hypotheses per front, checked by the CLI. |
+| Rediscovery | One search command (`busca`/`ja`, accent-insensitive BM25, nodes + sources + branch steps, one line per item with its state). The prompt hook injects up to 6 lines without repeating within the session. `teste` refuses an identical recipe already done and shows the similar ones. |
+| Negative without validity | `teste` requires `--alcance`. `instrumento` records the sha. A negative without an instrument shows as INDETERMINADO, and when the instrument changes the old negatives show as A REVALIDAR. |
+| Fact × interpretation | `--origem` (author, source, measured, user, agent, external) and `--grau`. External enters as C automatically. `fato` is born `rascunho`, and its status shows on every search line. |
+| What makes a fact a fact | A fact is a proven finding: `confere --por fonte\|medicao\|teste\|reproducao`, with `--prova` for measurement, test and reproduction; an inference or interpretation is refused, and what proves it enters as a new fact. |
+| Compaction | Per-session reasoning diary (hooks `fim`/`pre-compact`); the post-compaction opening injects the map + the tail of the diary. State lives in the database, not in the summary. |
+| Volume | One database, a 2 KB `CASO.md`, a generated `MAPA.md`. A constitution of 26 rules without history. A short detective skill, with references on demand. No automatic edges: a perceived relation is a candidate `conexao` until confirmed. Title and summary with size limits. |
+| Loss of the path | `ramo` + `passo`: every line born from a point with its why; immutable steps; fork from an earlier step; `trilha`, `arvore` and `ficha` rebuild the path. Measured in the real case before the piece: 1,238 of 1,283 facts with no place in the tree and the same conclusion rediscovered three times in 17 days. |
+| Injection that does not arrive | Shell hooks for everything that injects, and a module only for `tool.call` (output trimming), which demonstrably arrives. Each injection stays under 9 thousand characters, with a warned cut. The load was verified in a real session. |
+| Brute force as a refuge | Declared LEITURA / CIRURGIA / VARREDURA modes; a sweep only with a hypothesis anchored in a source and an estimated cost. A cheap hunch runs as `--exploratorio`, which counts as a lead, never as coverage. |
+| Continuous objective in a loop | Rule 22: a verifiable condition and a "blocked" exit. |
+| Communication | Rule 20: one verdict line with a label (ACHADO, NEGATIVO within scope, CONTROLE, INSTRUMENTO) before the detail. `resultado` reminds of it. |
+| Concurrency | Ids by SQLite AUTOINCREMENT in WAL (no hand numbering). The active case is explicit (`usa`), never guessed from the most recent file. |
+| Jobs | `roda --pid --log`; `jobs` and the `mapa` show the PID alive or DEAD. The hook denies `pkill -f`. |
+| Forgotten record | The `pos` hook warns the agent when a case script runs without an open test, and `fim` asks for the record once per turn. |
 
-## O que ficou de fora de propósito (e quando reconsiderar)
-- **Busca vetorial como padrão.** No v1, BM25 por trecho teve recall@5 de 100% contra 2% do vetorial com o
-  mesmo material. O corpus oferece o modo vetorial e o híbrido como opção (`embed`), regeneráveis e nunca
-  injetados.
-- **Curva de esquecimento, saliência, consolidação automática, painel web, colheita de fios por regex.**
-  Medidos como inertes ou como ruído no v1.
-- **Fases do método como portão obrigatório.** O usuário sentiu "cerimônia". O 2.0 obriga os controles
-  (alcance, instrumento, origem) e deixa as fases como método na skill.
-- **Migração de bancos antigos.** O 2.0 começa limpo. Material de outro sistema entra por `extrai` (contrato
-  JSON) ou `fonte`; itens importados podem ser marcados `legado`, que os mantém fora dos alertas até alguém
-  mexer neles.
+## Left out on purpose (and when to reconsider)
+- **Vector search as the default.** In v1, per-chunk BM25 reached recall@5 of 100% against 2% for vectors on the
+  same material. The corpus offers vector and hybrid modes as options (`embed`), regenerable and never injected.
+- **Forgetting curve, salience, automatic consolidation, web dashboard, thread harvesting by regex.** Measured
+  as inert or as noise in v1.
+- **Method phases as a mandatory gate.** The user felt it as "ceremony". 2.0 enforces the controls (scope,
+  instrument, origin) and leaves the phases as method in the skill.
+- **Migrating old databases.** 2.0 starts clean. Material from another system enters through `extrai` (JSON
+  contract) or `fonte`; imported items can be marked `legado`, which keeps them out of the alerts until someone
+  touches them.
 
-## Limites desta análise
-- Os resultados das ferramentas foram removidos antes da leitura, e muitas falas longas do agente estão
-  truncadas. As medidas citadas vêm das falas, não da saída bruta.
-- Alguns lotes de sessões não puderam ser lidos (barrados pelo filtro de segurança do modelo leitor). Os
-  padrões acima aparecem em todos os lotes lidos. Não há sinal de que os outros mudariam o diagnóstico,
-  mas eles não foram lidos.
+## Limits of this analysis
+- Tool results were removed before reading, and many of the agent's long turns are truncated. The measures cited
+  come from the dialogue, not from raw output.
+- Some session batches could not be read (blocked by the reader model's safety filter). The patterns above show
+  up in every batch read. There is no sign the others would change the diagnosis, but they were not read.

@@ -1,84 +1,87 @@
 ---
 name: leitura
-description: "Leitura de sentido: interpretar pistas, fontes e saídas de teste além da literalidade, em camadas (literal, figurada, alusão, função, subliminar, ausência), e ler o conjunto dos resultados para entender que história o caso conta e onde se está nela. Use ao ler uma pista ou fonte nova, ao registrar um resultado, quando o mapa pedir LEITURA DE CONJUNTO, depois de negativos repetidos, ao traduzir uma ideia em teste, ou quando o usuário perguntar 'o que isso significa?', 'em que parte estamos?', 'faz sentido?'. Gatilhos: significado, sentido, interpretar, metáfora, alusão, subliminar, narrativa, história, simbólico, literal demais, o que o autor quis dizer."
+description: "Reading for meaning: interpret clues, sources and test outputs beyond the literal, in layers (literal, figurative, allusion, function, subliminal, absence), and read the results as a whole to understand what story the case tells and where we are in it. Use when reading a new clue or source, when recording a result, when the map asks for an overall reading (LEITURA DE CONJUNTO), after repeated negatives, when turning an idea into a test, or when the user asks 'what does this mean?', 'where are we?', 'does it make sense?'. Triggers: meaning, interpret, metaphor, allusion, subliminal, narrative, story, symbolic, too literal, what the author meant, significado, sentido, interpretar, narrativa, o que o autor quis dizer."
 ---
 
-# Leitura de sentido
+# Reading for meaning
 
-O material de um caso foi feito por alguém que comunica: um autor de enigma, quem redigiu um contrato,
-quem montou uma planilha. Quase nunca a informação é só a literalidade das palavras ou dos bytes: ela
-aponta para outras coisas, por imagem, alusão, duplo sentido e omissão. O erro mais caro do v1 foi ler
-tudo como mecânica (palavra como senha, livro como lista de termos, saída como contagem) e só ver
-sentido quando o usuário cobrava. O erro oposto também custa: achar mensagem onde há coincidência.
-Nem todo material tem segundo sentido; a leitura literal e contextual é sempre a base.
+A case's material was made by someone who communicates: a puzzle author, whoever drafted a contract, whoever
+built a spreadsheet. The information is almost never just the literal words or bytes: it points to other
+things, through image, allusion, double meaning and omission. The costliest mistake of v1 was reading
+everything as mechanics (a word as a password, a book as a list of terms, an output as a count) and only
+seeing meaning when the user insisted. The opposite mistake costs too: finding a message where there is
+coincidence. Not every material has a second meaning; the literal and contextual reading is always the base.
 
-## As camadas (literal e função sempre; as outras são lentes, quando o material e a questão justificarem)
+## The layers (literal and function always; the others are lenses, when the material and the question warrant)
 
-| Camada | Pergunta |
+| Layer | Question |
 |---|---|
-| Literal | O que o texto ou a saída diz, palavra por palavra? Leia inteiro, não a linha que bateu. |
-| Figurada | É metáfora, alegoria, imagem? O que ela representaria se não fosse literal? |
-| Alusão | A que obra, cena, personagem, ideia ou acontecimento ela aponta? Ache a fonte e leia o trecho. |
-| Função | O que ela faz no caso: instrui, identifica, marca etapa, dá nome, despista? |
-| Subliminar | Jogo de palavras, homofonia, palavra escondida (acróstico, iniciais), duplo sentido, número que é índice, o que foi trocado em relação ao original citado (o diff costuma ser a mensagem). |
-| Ausência | O que deveria estar ali e não está? O que o autor evitou dizer? |
+| Literal | What does the text or the output say, word for word? Read all of it, not the line that matched. |
+| Figurative | Is it a metaphor, an allegory, an image? What would it stand for if it were not literal? |
+| Allusion | Which work, scene, character, idea or event does it point to? Find the source and read the passage. |
+| Function | What does it do in the case: instruct, identify, mark a stage, give a name, mislead? |
+| Subliminal | Wordplay, homophony, hidden word (acrostic, initials), double meaning, a number that is an index, what was changed relative to the quoted original (the diff is often the message). |
+| Absence | What should be there and is not? What did the author avoid saying? |
 
-Registre cada leitura que importar: `novo fato "<leitura>" --natureza interpretacao --origem agente`, ligada
-à pista (`liga E.. sobre <pista>`). Se a leitura liga duas pistas, é `conexao` candidata; se nomeia um
-conceito que aparece em várias, registre-o como entidade com aliases (`references/extracao.md`, passo D). Leitura sua é legítima: não a rebaixe por ser sua, nem a promova a fala
-do autor.
+Record every reading that matters: `novo fato "<reading>" --natureza interpretacao --origem agente`, linked to
+the clue (`liga E.. sobre <clue>`). If the reading links two clues, it is a candidate `conexao`; if it names a
+concept that shows up in several, record it as an entity with aliases (`references/extracao.md`, step D). Your
+own reading is legitimate: do not demote it for being yours, nor promote it to the author's words. An
+interpretation is never a proven fact.
 
-## Ler a saída de um teste
+## Reading a test's output
 
-1. Olhe a saída como texto e forma antes de contar: que palavra, que padrão, que número apareceu? Ecoa
-   algo das fontes ou da LEITURA ATUAL?
-2. Depois o número: nulo, controle, alcance.
-3. `resultado <T> ... --sentido "<o que isto diz no contexto>"` (ou `"nenhum: <por quê>"`, ou deixe pendente
-   para a leitura de conjunto). Sentido percebido é hipótese, não evidência: estime quão provável seria
-   ver algo assim por acaso, contando as escolhas livres (`quantitativo.md`). Sem essa conta, não é acaso
-   nem achado: é pista, registrada e confrontada com uma rival.
+1. Look at the output as text and form before counting: what word, what pattern, what number appeared? Does it
+   echo something from the sources or from the LEITURA ATUAL?
+2. Then the number: null, control, scope.
+3. `resultado <T> ... --sentido "<what this says in context>"` (or `"nenhum: <why>"`, or leave it pending for
+   the overall reading). Perceived meaning is a hypothesis, not evidence: estimate how likely it would be to see
+   something like it by chance, counting the free choices (`quantitativo.md`). Without that estimate it is
+   neither chance nor finding: it is a lead, recorded and confronted with a rival.
 
-## Do conceito à operação
+## From concept to operation
 
-Pergunte o que referencia o quê, não qual é o verbo. Monte a correspondência antes de operar:
-personagem ↔ peça, relação ↔ relação, acontecimento ↔ transformação.
+Ask what references what, not what the verb is. Build the correspondence before operating:
+character ↔ piece, relation ↔ relation, event ↔ transformation.
 
-1. Escreva o conceito (a hipótese) e o que o derrubaria (`--refuta-se`).
-2. Liste formas de traduzi-lo em operação de famílias diferentes, não variações de uma (2 ou 3 costumam
-   bastar; é heurística, não cota).
-3. Escolha a que a fonte mais determina. Conte as escolhas livres: cada uma é um grau de liberdade.
-4. Um 0 válido fecha aquela forma e baixa a confiança no conceito (`prob`). O conceito cai quando o critério
-   de refutação é atingido; negativos que se acumulam não o deixam intacto.
+1. Write the concept (the hypothesis) and what would refute it (`--refuta-se`).
+2. List ways of turning it into an operation from different families, not variations of one (2 or 3 usually
+   suffice; it is a heuristic, not a quota).
+3. Pick the one the source determines most. Count the free choices: each one is a degree of freedom.
+4. A valid 0 closes that form and lowers confidence in the concept (`prob`). The concept falls when the
+   refutation criterion is met; accumulating negatives do not leave it intact.
 
-## Leitura de conjunto (quando o mapa pede, ou depois de um túnel)
+## Overall reading (when the map asks, or after a tunnel)
 
-1. `ver` dos últimos resultados: leia os `sentido` juntos, não um por um.
-2. Pergunte: somados, o que contam? Que leitura nenhum deles contradiz? O que surpreendeu?
-3. Onde estamos na história do caso? O que ela prevê como próximo passo?
-4. Liste leituras alternativas do todo, ao menos uma fora da lente usada até agora.
-5. Se o quadro mudou: `holmes.py leitura "<até 800 caracteres>" --sustenta E.. --rival H.. --questao Q..
-   --motivo "<o que mudou e por quê>"`. Se não mudou, diga por quê e deixe a leitura como está.
+1. `ver` the latest results: read their `sentido` together, not one by one.
+2. Ask: taken together, what do they tell? Which reading does none of them contradict? What was surprising?
+3. Where are we in the case's story? What does it predict as the next step?
+4. List alternative readings of the whole, at least one outside the lens used so far.
+5. If the picture changed: `holmes.py leitura "<up to 800 characters>" --sustenta E.. --rival H.. --questao Q..
+   --motivo "<what changed and why>"`. If it did not, say why and leave the reading as it is.
 
-## Fechar o porquê
+## Closing the why
 
-Quando algo resolve, registre por que a correspondência funcionou (a relação abstrata entre a pista e
-a solução). É ela que guia o próximo passo; a receita que deu certo raramente se repete igual.
+When something is solved, record why the correspondence worked (the abstract relation between the clue and
+the solution). That is what guides the next step; the recipe that worked rarely repeats unchanged.
 
-## Armadilhas
+## Traps
 
-- **Literalidade:** testar a palavra da pista como senha ou byte em vez de perguntar o que ela significa.
-- **Fonte tratada como string:** varrer um livro por palavra-chave e dá-lo como esgotado. Leia o trecho
-  inteiro e resuma o conceito que ele explica.
-- **Descartar sentido por p não calculado:** sem a conta, a coincidência fica como pista, não como ruído.
-- **Conexão espúria:** duas pistas com tema parecido ("dualidade", "tempo") ligam quase tudo. Relação
-  vale quando prevê algo que a rival (tema genérico, acaso, mesma fonte) não prevê.
-- **Narrativa coerente demais:** cada elo a mais torna a história menos provável, não mais.
-- **Lente única:** ler tudo pela mesma obra ou teoria. Uma das 3 leituras alternativas é de fora dela.
-- **Tema sem ponte:** associação livre virando teste. A ponte entre fonte e operação tem de ser escrita.
-- **Leitura promovida a achado:** sem verificação independente, leitura é pista ou hipótese.
-- **Esquecer o papel do objeto:** um objeto do caso tem papel na história (quem ele é), não só valor.
+- **Literalness:** testing the clue's word as a password or bytes instead of asking what it means.
+- **Source treated as a string:** sweeping a book for a keyword and calling it exhausted. Read the whole
+  passage and summarize the concept it explains.
+- **Discarding meaning by an uncomputed p:** without the estimate, the coincidence stays a lead, not noise.
+- **Spurious connection:** two clues with a similar theme ("duality", "time") link almost anything. A relation
+  counts when it predicts something the rival (generic theme, chance, same source) does not.
+- **Story too coherent:** each extra link makes the story less likely, not more.
+- **Single lens:** reading everything through the same work or theory. One of the 3 alternative readings comes
+  from outside it.
+- **Theme without a bridge:** free association turning into a test. The bridge between source and operation
+  must be written down.
+- **Reading promoted to finding:** without independent verification, a reading is a lead or a hypothesis.
+- **Forgetting the object's role:** an object in the case has a role in the story (who it is), not just a value.
 
-## Parceiros
+## Partners
 
-Para leitura de sentido, um segundo leitor ajuda: o agente `interprete` (leitura independente, sem ver a
-sua) ou outro modelo via briefing. O que voltar entra grau C até conferido na fonte.
+For reading for meaning, a second reader helps: the `interprete` agent (an independent reading, without seeing
+yours) or another model through a briefing. What comes back enters at grade C until checked.

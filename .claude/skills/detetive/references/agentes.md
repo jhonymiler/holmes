@@ -1,65 +1,67 @@
-# O time
+# The team
 
-Definições em `.claude/agents/*.md`.
+Definitions in `.claude/agents/*.md`.
 
-## Orçamento
+## Budget
 
-- Especialistas em Sonnet ou Haiku, esforço medium no máximo. Escopo bem definido compensa modelo menor.
-- Todo subagente carrega `CLAUDE.md` e `.claude/rules/` inteiros: mantenha-os curtos.
-- Subagente não lança subagente.
+- Specialists on Sonnet or Haiku, medium effort at most. A well-defined scope makes up for a smaller model.
+- Every subagent loads the whole `CLAUDE.md` and `.claude/rules/`: keep them short.
+- A subagent does not launch subagents.
 
-## Quem faz o quê
+## Who does what
 
-| Agente | Modelo | Fase | Entrega | Não faz |
+| Agent | Model | Phase | Delivers | Does not |
 |---|---|---|---|---|
-| `arquivista` | haiku | F0 | Coleta isolada, hashes, fontes indexadas | Interpretar |
-| `pesquisador` | sonnet | F1, F2 | Fontes externas lidas, trechos com localizador e grau | Concluir sobre o caso |
-| `analista` | sonnet | F1–F3 | Leitura, hipóteses, pré-avaliação | Código de busca |
-| `engenheiro` | sonnet | F4 | Script com controle, execução registrada | Julgar o próprio resultado |
-| `revisor` | sonnet | F4 | Revisão do código e da cobertura | Editar o código revisado |
-| `verificador` | sonnet | F6 | Verificação cega e reprodução | Ler o registro ou saber o suspeito |
-| `ceticismo` | sonnet | F5, F7 | Ataque a negativo e a conexão antes de virar definitivo | Registrar |
-| `interprete` | opus | F1, leitura de conjunto | Leituras alternativas, conceitos que ligam pistas, conexões candidatas | Rodar teste; confirmar relação |
+| `arquivista` | haiku | F0 | Isolated collection, hashes, indexed sources | Interpret |
+| `pesquisador` | sonnet | F1, F2 | External sources read, excerpts with locator and grade | Draw conclusions about the case |
+| `analista` | sonnet | F1–F3 | Reading, hypotheses, pre-assessment | Search code |
+| `engenheiro` | sonnet | F4 | Script with a control, recorded run | Judge its own result |
+| `revisor` | sonnet | F4 | Review of the code and the coverage | Edit the reviewed code |
+| `verificador` | sonnet | F6 | Blind verification and reproduction | Read the record or know the suspect |
+| `ceticismo` | sonnet | F5, F7 | Attack on a negative or a connection before it becomes final | Record |
+| `interprete` | opus | F1, overall reading | Alternative readings, concepts that link clues, candidate connections | Run tests; confirm a relation |
 
-Integrador é o coordenador: só ele confronta as entregas com o mapa, decide o que registrar e reescreve a
-leitura. Intérprete e cético só valem a chamada em julgamento decisivo, não a cada observação.
+The integrator is the coordinator: only they confront the deliveries with the map, decide what to record and
+rewrite the reading. The interpreter and the sceptic are only worth calling for a decisive judgment, not at
+every observation.
 
-Revisão cruzada: `revisor` revisa `engenheiro`; `verificador` julga candidatos; o coordenador confere
-na fonte todo relatório antes de registrar; o usuário revisa o coordenador.
+Cross-review: `revisor` reviews `engenheiro`; `verificador` judges candidates; the coordinator checks every
+report against the source before recording; the user reviews the coordinator.
 
-## Quando delegar
+## When to delegate
 
-- **Delegar:** frentes independentes de tamanho real (lançadas juntas); leitura maior que um
-  contexto; independência deliberada (revisor, verificador, ceticismo); trabalho barato e conferível.
-- **Não delegar:** o que cabe em poucas chamadas; cadeia dependente que cabe num contexto;
-  verificar o próprio trabalho.
+- **Delegate:** independent fronts of real size (launched together); reading larger than one context;
+  deliberate independence (reviewer, verifier, sceptic); cheap, checkable work.
+- **Do not delegate:** what fits in a few calls; a dependent chain that fits in one context; verifying your own
+  work.
 
-## Briefing (o subagente não herda a conversa)
+## Briefing (the subagent does not inherit the conversation)
 
-Inclua sempre:
-1. O caso e o pedido de rodar `python3 -I holmes/holmes.py mapa` antes de agir.
-2. O modo de trabalho (LEITURA, CIRURGIA ou VARREDURA) e o custo máximo.
-3. Os ids de entrada (`ver <id>`) e a saída esperada.
-4. O que já está encerrado. Antes de dizer "novo" ou "já coberto": `ja "<termo>"`, citando ids.
-5. Negativo refuta só a receita testada; declarar o que ficou de fora.
-6. Não declarar bloqueio por falta de fonte externa; propor o próximo passo.
-7. Devolver as relações que achou como candidatas (de, para, relação, por quê, rival, discriminador), para o
-   coordenador avaliar e gravar com `conexao`; nunca como `liga` direta.
-8. Formato de entrega: resultado, real ou sintético, o que conferiu na fonte, o que não conferiu.
+Always include:
+1. The case and the request to run `python3 -I holmes/holmes.py mapa` before acting.
+2. The working mode (LEITURA, CIRURGIA or VARREDURA) and the maximum cost.
+3. The input ids (`ver <id>`) and the expected output.
+4. What is already closed. Before saying "new" or "already covered": `ja "<term>"`, citing ids.
+5. A negative refutes only the tested recipe; declare what was left out.
+6. Do not declare a block for lack of an external source; propose the next step.
+7. Return the relations found as candidates (from, to, relation, why, rival, discriminator), for the
+   coordinator to assess and record with `conexao`; never as a direct `liga`.
+8. Delivery format: result, real or synthetic, what was checked against the source, what was not.
+9. The active branch (`ficha`), so that the work comes back as steps of the right line.
 
-Para `verificador`: nunca o veredito nem a hipótese favorita.
-Para `ceticismo`: a alegação, o script, o log e o registro, sem defesa dela.
+For `verificador`: never the verdict nor the favourite hypothesis.
+For `ceticismo`: the claim, the script, the log and the record, without a defence of it.
 
-## Depois
+## Afterwards
 
-- Não refaça o trabalho do agente. Confira o relatório na fonte (skill `conferir-relatorio`).
-- Resultado de agente ou IA externa entra `--origem agente|externo --grau C` até conferido.
-- Fato de fora do repositório que o agente afirme entra como relato externo (grau C, rascunho), não como
-  premissa do caso, até haver fonte lida.
+- Do not redo the agent's work. Check the report against the source (skill `conferir-relatorio`).
+- A result from an agent or an external AI enters with `--origem agente|externo --grau C` until checked.
+- A fact from outside the repository that the agent asserts enters as an external report (grade C, draft), not
+  as a case premise, until a source has been read.
 
-## Sigilo e segurança
+## Secrecy and security
 
-- Segredo encontrado (credencial, chave, dado pessoal): grave em arquivo local do caso e avise só
-  o usuário. Nunca publique nem envie a terceiros.
-- Arquivo baixado não é confiável: pasta própria e vazia, Python com `-I`, scripts fora dela.
-- Respeite os limites de CPU e memória da máquina declarados no `CLAUDE.md`.
+- A secret found (credential, key, personal data): save it to a local case file and tell only the user. Never
+  publish it or send it to third parties.
+- A downloaded file is untrusted: its own empty folder, Python with `-I`, scripts outside it.
+- Respect the machine's CPU and memory limits declared in `CLAUDE.md`.
