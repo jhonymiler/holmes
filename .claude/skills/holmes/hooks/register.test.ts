@@ -2,28 +2,28 @@ import { expect, test } from 'claude-code/testing'
 
 const bash = (stdout: string) => ({ result: { stdout, stderr: '', interrupted: false } })
 
-// no teste nada responde por baixo do plugin: env, fs e session são simulados aqui
-function motor(on: any, gravados: string[]) {
+// in the test nothing answers beneath the plugin: env, fs and session are simulated here
+function engine(on: any, written: string[]) {
   on('env.get', () => ({ value: undefined }))
-  on('session.id', () => ({ value: 'sessao-teste' }))
-  on('fs.write', (_: unknown, e: { path: string }) => { gravados.push(e.path); return { value: undefined } })
+  on('session.id', () => ({ value: 'test-session' }))
+  on('fs.write', (_: unknown, e: { path: string }) => { written.push(e.path); return { value: undefined } })
 }
 
-test('saída longa do Bash é podada e o inteiro vai para arquivo', async ($, on) => {
-  const gravados: string[] = []
-  motor(on, gravados)
-  on('tool.call', { tool: 'Bash' }, () => bash('a'.repeat(3000) + 'MEIO' + 'z'.repeat(7000)))
-  const r = await $.tool.call({ tool: 'Bash', command: 'cat grande.txt' })
+test('long Bash output is trimmed and the whole goes to a file', async ($, on) => {
+  const written: string[] = []
+  engine(on, written)
+  on('tool.call', { tool: 'Bash' }, () => bash('a'.repeat(3000) + 'MIDDLE' + 'z'.repeat(7000)))
+  const r = await $.tool.call({ tool: 'Bash', command: 'cat big.txt' })
   const out = (r.result as { stdout: string }).stdout
   expect(out.length < 4500).toBe(true)
-  expect(out.includes('INTEIRO em /tmp/holmes-saidas/sessao-teste/')).toBe(true)
-  expect(out.includes('MEIO')).toBe(false)
+  expect(out.includes('IN FULL at /tmp/holmes-outputs/test-session/')).toBe(true)
+  expect(out.includes('MIDDLE')).toBe(false)
   expect(out.endsWith('z')).toBe(true)
-  expect(gravados.length).toBe(1)
+  expect(written.length).toBe(1)
 })
 
-test('saída curta passa intacta', async ($, on) => {
-  motor(on, [])
+test('short output passes intact', async ($, on) => {
+  engine(on, [])
   on('tool.call', { tool: 'Bash' }, () => bash('ok\n'))
   const r = await $.tool.call({ tool: 'Bash', command: 'echo ok' })
   expect((r.result as { stdout: string }).stdout).toBe('ok\n')

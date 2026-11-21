@@ -1,41 +1,48 @@
 #!/usr/bin/env python3
-"""holmes 2.0 — o raciocínio da investigação num grafo SQLite por caso (modelo em MODELO.md).
+"""holmes 2.0 — the investigation's reasoning as one SQLite graph per case (model in MODEL.md).
 
-Árvore: objetivo O → alvo A → frente F → hipótese H / premissa R → teste T → execução X.
-Ao lado: fato E (cita fonte S), entidade N, decisão do usuário D, fio P, instrumento I, questão Q,
-conexão candidata C (relação sugerida, fora do grafo até ser confirmada), leitura L (teoria de trabalho).
-O plano é a consulta `mapa`; o material bruto fica no corpus (holmes/corpus.py).
+Tree: objective O → target A → front F → hypothesis H / premise R → test T → run X.
+Beside it: fact E (quotes a source S), clue K, entity N, user decision D, thread P, instrument I, question Q,
+candidate connection C (a suggested relation, outside the graph until confirmed), reading L (working theory).
+The plan is the `map` query; raw material lives in the corpus (holmes/corpus.py).
 
-  caso       init <caso> "<objetivo>" · usa <caso> · casos
-  plano      mapa [--tudo] · proximo · ver <id> · cadeia <id> · questoes · cronologia · saude
-             busca "<txt>" [--sem-corpus] · ja "<txt>"
-  leitura    leitura "<o quadro>" [--sustenta E,..] [--enfraquece E,..] [--rival H,..] [--questao Q]
-                     [--lacuna Q,..] [--motivo "<por que mudou>"]          (sem texto: mostra a atual)
-  relações   conexoes <id|"texto"> [-n 8]   (candidatas por consulta; nada é gravado)
-             conexao <de> <para> <relação> "<por quê>" [--rival] [--discriminador] [--motivos E,..]
-             estado C.. confirmada|rejeitada "<motivo>"   (confirmada vira aresta do grafo)
-  extração   extrai <arquivo.json> [--aplica] [--so id,..] [--rejeita id,..]   (contrato em MODELO.md)
-  criar      novo <tipo> "<título>" [--pai ID] [--resumo] [--origem] [--grau] [--estado]
-             [--natureza --fonte S --local --citacao]   (fato)
-             [--prob --refuta-se]                       (hipótese)
-             [--classe --alias "a,b"]                   (entidade)
-             [--proibe --permite]                       (decisão)
-  mudar      estado <id> <estado> "<motivo>" [--solucao]  · edita <id> [--titulo] [--resumo] [--refuta-se]
-             liga <de> <tipo> <para> ["nota"] · desliga <de> <tipo> <para>
-             prob <H> <0..1> "<motivo>" · ach <E> <H> CC|C|N|I|II · ach <F>   (matriz)
-  testar     teste <H> "<título>" --alcance .. --porque .. [--fora] [--previsao] [--controle --controle-tipo]
-                   [--instrumento I] [--script] [--forca] [--exploratorio]
-             roda <T> [--pid] [--log] [--host]  → X       resultado <T|X> positivo|negativo|inconclusivo|falhou
-             "<nota>" [--sentido "<o que diz>"|"nenhum: <por quê>"|"revisar: <o quê>"] [--n ..] [--controle-ok]
+  case       init <case> "<objective>" · use <case> · cases
+  plan       map [--all] · next · show <id> · chain <id> · questions · timeline · health
+             search "<txt>" [--no-corpus] · tried "<txt>"
+  reading    reading "<the picture>" [--supports E,..] [--weakens E,..] [--rival H,..] [--question Q]
+                     [--gap Q,..] [--reason "<why it changed>"]          (no text: shows the current one)
+  relations  connections <id|"text"> [-n 8]   (candidates by query; nothing is stored)
+             connection <from> <to> <relation> "<why>" [--rival] [--discriminator] [--reasons E,..]
+             state C.. confirmed|rejected "<reason>"   (confirmed becomes a graph edge)
+  extraction extract <file.json> [--apply] [--only id,..] [--reject id,..]   (contract in MODEL.md)
+  create     new <type> "<title>" [--parent ID] [--summary] [--origin] [--grade] [--state]
+             [--nature --source S --location --quote --by --proof]   (fact / clue)
+             [--prob --refuted-if]                       (hypothesis)
+             [--class --alias "a,b"]                     (entity)
+             [--forbids --allows]                        (decision)
+  change     state <id> <state> "<reason>" [--solution]  · edit <id> [--title] [--summary] [--refuted-if]
+             link <from> <type> <to> ["note"] · unlink <from> <type> <to>
+             prob <H> <0..1> "<reason>" · ach <E> <H> CC|C|N|I|II · ach <F>   (matrix)
+  test       test <H> "<title>" --scope .. --why .. [--outside] [--prediction] [--control --control-type]
+                  [--instrument I] [--script] [--force] [--exploratory]
+             run <T> [--pid] [--log] [--host]  → X       result <T|X> positive|negative|inconclusive|failed
+             "<note>" [--meaning "<what it says>"|"none: <why>"|"revisit: <what>"] [--n ..] [--control-ok]
              jobs
-  fontes     fonte <arquivo|pasta|url> [--procedencia] [--confiabilidade A-F] [--sem-corpus]
-             cita <pedaço do corpus> "<afirmação>" [--natureza] [--grau]   confere <E> "<nota>" --por fonte|medicao|teste|reproducao [--prova ..]
-  entidades  atributo <N> <chave> <valor> [--fato E]
-  provas     instrumento <caminho> "<nome>" [--verificador "cmd"] · prova [--executa] [--legado]
-             (sem --executa só lista: são comandos de shell guardados no banco)
+  sources    source <file|folder|url> [--provenance] [--reliability A-F] [--no-corpus]
+             quote <corpus chunk> "<claim>" [--nature] [--grade]   prove <K|E> "<note>" --by source|measurement|test|reproduction [--proof ..]
+  entities   attribute <N> <key> <value> [--fact E]
+  branches   branch new "<question>" --from <id> --why ".." [--step N] · branch use B.. · branch release
+             step <type> "<text>" --why ".." [--nodes ..] · tree [id] · trail [B..] · sheet
+  proofs     instrument <path> "<name>" [--verifier "cmd"] · proof [--execute] [--legacy]
+             (without --execute it only lists: they are shell commands stored in the database)
+  upkeep     reorganize [--apply]
 
-Ambiente: HOLMES_RAIZ, HOLMES_CASOS, HOLMES_CASO (força o caso), HOLMES_TUNEL (padrão 5), HOLMES_CORPUS,
-HOLMES_LEITURA (padrão 6: resultados sem leitura de conjunto antes de o mapa pedir uma).
+Old Portuguese commands, options and values are still accepted (MIGRATION.md); an old case database is
+migrated in place the first time it is opened.
+
+Environment: HOLMES_ROOT, HOLMES_CASES, HOLMES_CASE (forces the case), HOLMES_TUNNEL (default 5), HOLMES_CORPUS,
+HOLMES_READING (default 6: results without an overall reading before the map asks for one). The old names
+(HOLMES_RAIZ, HOLMES_CASOS, HOLMES_CASO, HOLMES_TUNEL, HOLMES_LEITURA) are read when the new ones are absent.
 """
 import argparse
 import hashlib
@@ -51,138 +58,398 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import corpus as C  # noqa: E402
 
-RAIZ = Path(os.environ.get("HOLMES_RAIZ") or Path(__file__).resolve().parents[1])
-CASOS = Path(os.environ.get("HOLMES_CASOS") or RAIZ / "casos")
-ATIVO = RAIZ / ".holmes" / "ativo"
-TUNEL = int(os.environ.get("HOLMES_TUNEL") or 5)
-LEITURA_A_CADA = int(os.environ.get("HOLMES_LEITURA") or 6)
-MAX_FRENTES, MAX_HIP, MAX_MAPA = 5, 7, 3500
 
-PREFIXO = {"objetivo": "O", "alvo": "A", "frente": "F", "hipotese": "H", "premissa": "R", "teste": "T",
-           "fato": "E", "entidade": "N", "decisao": "D", "fio": "P", "fonte": "S", "instrumento": "I",
-           "leitura": "L", "questao": "Q", "conexao": "C", "ramo": "B", "pista": "K"}
-TIPO_DE = {v: k for k, v in PREFIXO.items()}
-ESTADOS = {  # o primeiro é o inicial
-    "objetivo": ["aberto", "atingido", "abandonado"],
-    "alvo": ["aberto", "resolvido", "bloqueado"],
-    "frente": ["ativa", "estacionada", "fechada", "descartada"],
-    "hipotese": ["viva", "apoiada", "refutada", "estacionada"],
-    "premissa": ["assumida", "verificada", "refutada"],
-    "teste": ["planejado", "rodando", "feito", "cancelado"],
-    "fato": ["vigente", "contestado", "retratado"],  # fato é constatação já provada: nasce vigente
-    "pista": ["aberta", "descartada"],  # o que ainda não está provado; provada, vira fato (`confere`)
-    "entidade": ["ativa", "fundida"],
-    "decisao": ["vigente", "revogada"],
-    "fio": ["aberto", "fechado", "estacionado"],
-    "fonte": ["catalogada", "indexada"],
-    "instrumento": ["vigente", "obsoleto"],
-    "leitura": ["vigente", "substituida"],
-    "questao": ["aberta", "respondida", "reformulada", "estacionada"],
-    "conexao": ["sugerida", "confirmada", "rejeitada"],
-    "ramo": ["ativo", "pausado", "morto", "fundido", "concluido"],
+def env(new, old, default=None):
+    """New environment variable first, the old Portuguese one as fallback."""
+    return os.environ.get(new) or os.environ.get(old) or default
+
+
+ROOT = Path(env("HOLMES_ROOT", "HOLMES_RAIZ") or Path(__file__).resolve().parents[1])
+_cases_env = env("HOLMES_CASES", "HOLMES_CASOS")
+# an existing `casos/` root is still used while `cases/` holds no case database
+CASES = Path(_cases_env) if _cases_env else (ROOT / "casos" if (ROOT / "casos").is_dir()
+                                             and not any((ROOT / "cases").glob("*/*.db")) else ROOT / "cases")
+STATE_DIR = ROOT / ".holmes"
+ACTIVE, OLD_ACTIVE = STATE_DIR / "active", STATE_DIR / "ativo"
+TUNNEL = int(env("HOLMES_TUNNEL", "HOLMES_TUNEL") or 5)
+READING_EVERY = int(env("HOLMES_READING", "HOLMES_LEITURA") or 6)
+MAX_FRONTS, MAX_HYP, MAX_MAP = 5, 7, 3500
+
+PREFIX = {"objective": "O", "target": "A", "front": "F", "hypothesis": "H", "premise": "R", "test": "T",
+          "fact": "E", "entity": "N", "decision": "D", "thread": "P", "source": "S", "instrument": "I",
+          "reading": "L", "question": "Q", "connection": "C", "branch": "B", "clue": "K"}
+TYPE_OF = {v: k for k, v in PREFIX.items()}
+STATES = {  # the first one is the initial state
+    "objective": ["open", "achieved", "abandoned"],
+    "target": ["open", "solved", "blocked"],
+    "front": ["active", "parked", "closed", "discarded"],
+    "hypothesis": ["alive", "supported", "refuted", "parked"],
+    "premise": ["assumed", "verified", "refuted"],
+    "test": ["planned", "running", "done", "cancelled"],
+    "fact": ["current", "contested", "retracted"],  # a fact is an already proven finding: it is born current
+    "clue": ["open", "dropped"],  # what is not proven yet; once proven it becomes a fact (`prove`)
+    "entity": ["active", "merged"],
+    "decision": ["current", "revoked"],
+    "thread": ["open", "closed", "parked"],
+    "source": ["catalogued", "indexed"],
+    "instrument": ["current", "obsolete"],
+    "reading": ["current", "superseded"],
+    "question": ["open", "answered", "reformulated", "parked"],
+    "connection": ["suggested", "confirmed", "rejected"],
+    "branch": ["active", "paused", "dead", "merged", "concluded"],
 }
-COM_MOTIVO = {"atingido", "abandonado", "resolvido", "bloqueado", "estacionada", "fechada", "descartada",
-              "refutada", "verificada", "cancelado", "contestado", "retratado", "fundida", "revogada", "fechado",
-              "estacionado", "obsoleto", "respondida", "reformulada", "confirmada", "rejeitada", "pausado", "morto",
-              "fundido", "concluido"}
-CAIDOS = {"refutada", "retratado", "contestado", "descartada", "revogada", "abandonado", "cancelado", "rejeitada", "morto"}
-VIVOS = {"aberto", "ativa", "viva", "apoiada", "assumida", "verificada", "planejado", "rodando", "feito",
-         "rascunho", "vigente", "bloqueado", "resolvido", "aberta", "respondida", "sugerida", "confirmada", "ativo",
-         "pausado"}
-PAIS = {"alvo": {"objetivo", "alvo"}, "frente": {"alvo", "objetivo"}, "hipotese": {"frente"},
-        "premissa": {"frente", "alvo", "objetivo"}, "teste": {"hipotese"},
-        "questao": {"objetivo", "alvo", "frente", "questao"}}
-ORIGENS = ["autor", "fonte", "medido", "usuario", "agente", "externo"]
-NATUREZAS = ["observacao", "medicao", "citacao", "inferencia", "interpretacao", "relato"]
-NATUREZAS_FATO = ["observacao", "medicao", "citacao"]  # inferência, interpretação e relato são pista
-# responde: hipótese → questão que ela tenta responder · rival: explicação concorrente (leitura/hipótese → hipótese)
-ARESTAS = ["sustenta", "enfraquece", "contradiz", "refuta", "depende", "duplica", "substitui", "sobre", "deriva",
-           "responde", "rival"]
-# passo: o "commit" de um ramo. Os manuais exigem --porque; registrou/mudou/abriu/bifurcou são automáticos.
-PASSOS_MANUAIS = ["leu", "pensou", "testou", "achou", "corrigiu", "decidiu", "proximo"]
-# como um fato vira provado: fato é constatação, e a prova pode não ser uma fonte
-PROVAS = ["fonte", "medicao", "teste", "reproducao"]
+NEEDS_REASON = {"achieved", "abandoned", "solved", "blocked", "parked", "closed", "discarded", "dropped", "refuted",
+                "verified", "cancelled", "contested", "retracted", "merged", "revoked", "obsolete", "answered",
+                "reformulated", "confirmed", "rejected", "paused", "dead", "concluded"}
+FALLEN = {"refuted", "retracted", "contested", "discarded", "dropped", "revoked", "abandoned", "cancelled", "rejected",
+          "dead"}
+PARENTS = {"target": {"objective", "target"}, "front": {"target", "objective"}, "hypothesis": {"front"},
+           "premise": {"front", "target", "objective"}, "test": {"hypothesis"},
+           "question": {"objective", "target", "front", "question"}}
+ORIGINS = ["author", "source", "measured", "user", "agent", "external"]
+NATURES = ["observation", "measurement", "quote", "inference", "interpretation", "report"]
+FACT_NATURES = ["observation", "measurement", "quote"]  # inference, interpretation and report are clues
+# answers: hypothesis → the question it tries to answer · rival: competing explanation (reading/hypothesis → hypothesis)
+EDGES = ["supports", "weakens", "contradicts", "refutes", "depends", "duplicates", "supersedes", "about", "derives",
+         "answers", "rival"]
+# step: a branch's "commit". Manual ones require --why; recorded/changed/opened/forked are automatic.
+MANUAL_STEPS = ["read", "thought", "tested", "found", "corrected", "decided", "next"]
+# how a fact becomes proven: a fact is a finding, and the proof need not be a source
+PROOFS = ["source", "measurement", "test", "reproduction"]
+RESULTS = ["positive", "negative", "inconclusive", "failed"]
+PROVENANCES = ["primary", "derived", "third-party", "ours"]
+CONTROL_TYPES = ["real", "planted", "sabotage", "none"]
 ACH = {"CC": 2, "C": 1, "N": 0, "I": -1, "II": -2}
 
-ESQUEMA = """
-PRAGMA journal_mode=WAL;
-PRAGMA foreign_keys=ON;
-CREATE TABLE IF NOT EXISTS no(id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL,
-  pai INTEGER REFERENCES no(id), titulo TEXT NOT NULL CHECK(length(titulo) <= 160),
-  resumo TEXT CHECK(length(resumo) <= 800), estado TEXT NOT NULL, origem TEXT, grau TEXT CHECK(grau IN ('A','B','C')),
-  criado TEXT NOT NULL, atualizado TEXT NOT NULL, legado INTEGER NOT NULL DEFAULT 0);
-CREATE INDEX IF NOT EXISTS no_pai ON no(pai, tipo, estado);
-CREATE TABLE IF NOT EXISTS alvo(no INTEGER PRIMARY KEY REFERENCES no(id), solucao TEXT, prova TEXT);
-CREATE TABLE IF NOT EXISTS hipotese(no INTEGER PRIMARY KEY REFERENCES no(id), prob REAL CHECK(prob BETWEEN 0 AND 1),
-  refuta_se TEXT);
-CREATE TABLE IF NOT EXISTS teste(no INTEGER PRIMARY KEY REFERENCES no(id),
-  alcance TEXT NOT NULL CHECK(length(alcance) <= 600), fora TEXT CHECK(length(fora) <= 600),
-  porque TEXT NOT NULL CHECK(length(porque) <= 600), previsao TEXT, previsao_em TEXT, controle TEXT,
-  controle_tipo TEXT CHECK(controle_tipo IN ('real','plantado','sabotagem','nenhum')),
-  instrumento INTEGER REFERENCES no(id), script TEXT, receita TEXT);
-CREATE TABLE IF NOT EXISTS execucao(id INTEGER PRIMARY KEY, teste INTEGER NOT NULL REFERENCES no(id),
-  versao INTEGER REFERENCES versao(id), script_sha TEXT, host TEXT, pid INTEGER, log TEXT, inicio TEXT, fim TEXT,
-  n TEXT, controle_ok INTEGER, resultado TEXT CHECK(resultado IN ('positivo','negativo','inconclusivo','falhou')),
-  nota TEXT, sentido TEXT);
-CREATE TABLE IF NOT EXISTS instrumento(no INTEGER PRIMARY KEY REFERENCES no(id), caminho TEXT UNIQUE, verificador TEXT);
-CREATE TABLE IF NOT EXISTS versao(id INTEGER PRIMARY KEY, instrumento INTEGER NOT NULL REFERENCES no(id),
-  sha TEXT NOT NULL, quando TEXT NOT NULL, verificado INTEGER, nota TEXT);
-CREATE TABLE IF NOT EXISTS fato(no INTEGER PRIMARY KEY REFERENCES no(id), natureza TEXT, fonte INTEGER REFERENCES no(id),
-  local TEXT, citacao TEXT CHECK(length(citacao) <= 1000), conferido TEXT, prova TEXT);
-CREATE TABLE IF NOT EXISTS fonte(no INTEGER PRIMARY KEY REFERENCES no(id), ref TEXT UNIQUE, sha TEXT,
-  procedencia TEXT CHECK(procedencia IN ('primaria','derivada','terceiros','nossa')),
-  confiabilidade TEXT CHECK(confiabilidade IN ('A','B','C','D','E','F')), documento INTEGER);
-CREATE TABLE IF NOT EXISTS entidade(no INTEGER PRIMARY KEY REFERENCES no(id), classe TEXT, aliases TEXT);
-CREATE TABLE IF NOT EXISTS atributo(entidade INTEGER REFERENCES no(id), chave TEXT, valor TEXT,
-  fato INTEGER REFERENCES no(id), quando TEXT, PRIMARY KEY(entidade, chave));
-CREATE TABLE IF NOT EXISTS decisao(no INTEGER PRIMARY KEY REFERENCES no(id), proibe TEXT, permite TEXT);
-CREATE TABLE IF NOT EXISTS aresta(de INTEGER NOT NULL REFERENCES no(id), tipo TEXT NOT NULL,
-  para INTEGER NOT NULL REFERENCES no(id), nota TEXT CHECK(length(nota) <= 200), criado TEXT, PRIMARY KEY(de, tipo, para));
-CREATE TABLE IF NOT EXISTS ach(fato INTEGER REFERENCES no(id), hipotese INTEGER REFERENCES no(id), valor TEXT NOT NULL,
-  nota TEXT, PRIMARY KEY(fato, hipotese));
-CREATE TABLE IF NOT EXISTS legado(ref TEXT PRIMARY KEY, no INTEGER NOT NULL REFERENCES no(id));
-CREATE TABLE IF NOT EXISTS conexao(no INTEGER PRIMARY KEY REFERENCES no(id), de INTEGER NOT NULL REFERENCES no(id),
-  para INTEGER NOT NULL REFERENCES no(id), relacao TEXT NOT NULL, rival TEXT CHECK(length(rival) <= 400),
-  discriminador TEXT CHECK(length(discriminador) <= 400), canal TEXT);
-CREATE TABLE IF NOT EXISTS evento(id INTEGER PRIMARY KEY, no INTEGER, acao TEXT NOT NULL, texto TEXT, quando TEXT NOT NULL);
-CREATE VIRTUAL TABLE IF NOT EXISTS idx USING fts5(ref UNINDEXED, texto, tokenize='unicode61 remove_diacritics 2');
-CREATE TABLE IF NOT EXISTS ramo(no INTEGER PRIMARY KEY REFERENCES no(id), de_passo INTEGER REFERENCES passo(id));
-CREATE TABLE IF NOT EXISTS passo(id INTEGER PRIMARY KEY, ramo INTEGER NOT NULL REFERENCES no(id), tipo TEXT NOT NULL,
-  texto TEXT NOT NULL CHECK(length(texto) <= 400), porque TEXT CHECK(length(porque) <= 400), nos TEXT,
-  quando TEXT NOT NULL);
-CREATE INDEX IF NOT EXISTS passo_ramo ON passo(ramo, id);
-"""
+# ---------- the old Portuguese vocabulary (MIGRATION.md): accepted on input, translated in old databases ----------
+
+OLD_COMMANDS = {"usa": "use", "casos": "cases", "saude": "health", "questoes": "questions", "proximo": "next",
+                "cronologia": "timeline", "prova": "proof", "cadeia": "chain", "conexoes": "connections",
+                "conexao": "connection", "extrai": "extract", "mapa": "map", "novo": "new", "edita": "edit",
+                "leitura": "reading", "estado": "state", "liga": "link", "desliga": "unlink", "teste": "test",
+                "roda": "run", "resultado": "result", "busca": "search", "ja": "tried", "ver": "show",
+                "fonte": "source", "cita": "quote", "confere": "prove", "atributo": "attribute", "ramo": "branch",
+                "passo": "step", "arvore": "tree", "trilha": "trail", "ficha": "sheet", "reorganiza": "reorganize",
+                "instrumento": "instrument"}
+OLD_TYPES = {"objetivo": "objective", "alvo": "target", "frente": "front", "hipotese": "hypothesis",
+             "premissa": "premise", "teste": "test", "fato": "fact", "pista": "clue", "entidade": "entity",
+             "decisao": "decision", "fio": "thread", "fonte": "source", "instrumento": "instrument",
+             "leitura": "reading", "questao": "question", "conexao": "connection", "ramo": "branch"}
+_OLD_STATE_LISTS = {
+    "objective": ["aberto", "atingido", "abandonado"], "target": ["aberto", "resolvido", "bloqueado"],
+    "front": ["ativa", "estacionada", "fechada", "descartada"], "hypothesis": ["viva", "apoiada", "refutada", "estacionada"],
+    "premise": ["assumida", "verificada", "refutada"], "test": ["planejado", "rodando", "feito", "cancelado"],
+    "fact": ["vigente", "contestado", "retratado"], "clue": ["aberta", "descartada"], "entity": ["ativa", "fundida"],
+    "decision": ["vigente", "revogada"], "thread": ["aberto", "fechado", "estacionado"],
+    "source": ["catalogada", "indexada"], "instrument": ["vigente", "obsoleto"], "reading": ["vigente", "substituida"],
+    "question": ["aberta", "respondida", "reformulada", "estacionada"],
+    "connection": ["sugerida", "confirmada", "rejeitada"],
+    "branch": ["ativo", "pausado", "morto", "fundido", "concluido"]}
+OLD_STATES = {t: dict(zip(old, STATES[t])) for t, old in _OLD_STATE_LISTS.items()}
+OLD_STATES["fact"]["rascunho"] = "draft"  # legacy-only fact state: `reorganize` turns the item into a clue
+ANY_OLD_STATE = {}
+for _m in OLD_STATES.values():
+    for _k, _v in _m.items():
+        ANY_OLD_STATE.setdefault(_k, _v)
+OLD_VALUES = {
+    "type": OLD_TYPES,
+    "nature": {"observacao": "observation", "medicao": "measurement", "citacao": "quote", "inferencia": "inference",
+               "interpretacao": "interpretation", "relato": "report"},
+    "origin": {"autor": "author", "fonte": "source", "medido": "measured", "usuario": "user", "agente": "agent",
+               "externo": "external"},
+    "edge": {"sustenta": "supports", "enfraquece": "weakens", "contradiz": "contradicts", "refuta": "refutes",
+             "depende": "depends", "duplica": "duplicates", "substitui": "supersedes", "sobre": "about",
+             "deriva": "derives", "responde": "answers"},
+    "step": {"abriu": "opened", "bifurcou": "forked", "registrou": "recorded", "mudou": "changed", "testou": "tested",
+             "leu": "read", "pensou": "thought", "achou": "found", "corrigiu": "corrected", "decidiu": "decided",
+             "proximo": "next"},
+    "proof": {"fonte": "source", "medicao": "measurement", "teste": "test", "reproducao": "reproduction"},
+    "result": {"positivo": "positive", "negativo": "negative", "inconclusivo": "inconclusive", "falhou": "failed"},
+    "provenance": {"primaria": "primary", "derivada": "derived", "terceiros": "third-party", "nossa": "ours"},
+    "control_type": {"plantado": "planted", "sabotagem": "sabotage", "nenhum": "none"},
+    "mode": {"exploratorio": "exploratory"},
+    "yesno": {"sim": "yes", "nao": "no"},
+    "branch_action": {"novo": "new", "usa": "use", "solta": "release"},
+    "class": {"evento": "event", "conceito": "concept"},  # the code looks for class 'event' (`timeline`)
+    "key": {"quando": "when"},  # the code looks for attribute 'when' (`timeline`)
+    "edge_note": {"decisiva": "decisive", "lacuna": "gap"},  # notes the code matches on reading edges
+    "version_note": {"detectada ao rodar": "detected when running"},
+}
 
 
-class Erro(Exception):
+def translate(kind, v):
+    """Old Portuguese value → new English value (unknown values pass through unchanged)."""
+    if v is None:
+        return None
+    if kind == "meaning":  # "nenhum: <why>" / "revisar: <what>" → "none: .." / "revisit: .."
+        pref, sep, rest = v.partition(":")
+        new = {"nenhum": "none", "revisar": "revisit"}.get(pref.strip().lower())
+        return f"{new}:{rest}" if sep and new else v
+    return OLD_VALUES[kind].get(v, v)
+
+
+def state_of(typ, v):
+    """A state given on the command line or stored the old way, translated for the node's type."""
+    return OLD_STATES.get(typ, {}).get(v) or ANY_OLD_STATE.get(v, v) if v not in STATES.get(typ, ()) else v
+
+
+def accepts(kind):
+    """argparse `type=`: translates an old value before `choices` checks it."""
+    return lambda v: translate(kind, v)
+
+
+class Error(Exception):
     pass
 
 
-def agora():
+def now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def casos():
-    return sorted(p.parent.name for p in CASOS.glob("*/caso.db"))
+def case_dir(case):
+    return CASES / case
 
 
-def caso_ativo():
-    c = os.environ.get("HOLMES_CASO") or (ATIVO.read_text().strip() if ATIVO.exists() else "")
+def cases():
+    return sorted({p.parent.name for pat in ("*/case.db", "*/caso.db") for p in CASES.glob(pat)})
+
+
+def read_active():
+    for f in (ACTIVE, OLD_ACTIVE):
+        if f.exists():
+            return f.read_text().strip()
+    return ""
+
+
+def write_active(case):
+    STATE_DIR.mkdir(exist_ok=True)
+    ACTIVE.write_text(case)
+    OLD_ACTIVE.unlink(missing_ok=True)  # one source of truth after the first write
+
+
+def active_case():
+    c = env("HOLMES_CASE", "HOLMES_CASO") or read_active()
     if not c:
-        raise Erro("nenhum caso ativo: `holmes.py usa <caso>` (ou `init`)")
-    if not (CASOS / c / "caso.db").exists():
-        raise Erro(f"caso {c!r} não existe em {CASOS}")
+        raise Error("no active case: `holmes.py use <case>` (or `init`)")
+    if c not in cases():
+        raise Error(f"case {c!r} does not exist in {CASES}")
     return c
 
 
-def conecta(caso=None):
-    db = sqlite3.connect(CASOS / (caso or caso_ativo()) / "caso.db", timeout=30)
+def case_db(case):
+    """case.db of a case; an old caso.db (with CASO.md and MAPA.md) is renamed once, before it is migrated."""
+    d = case_dir(case)
+    new, old = d / "case.db", d / "caso.db"
+    if not new.exists() and old.exists():
+        try:
+            con = sqlite3.connect(old.as_uri() + "?mode=rw", uri=True)  # never creates an empty caso.db
+            con.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # fold the WAL into the main file before renaming
+            con.close()
+            os.link(old, new)  # atomic: fails if another process already moved it
+        except (sqlite3.OperationalError, FileExistsError, FileNotFoundError):
+            return new
+        old.unlink()
+        for suffix in ("-wal", "-shm"):  # emptied by the checkpoint
+            if (d / f"caso.db{suffix}").exists() and not (d / f"case.db{suffix}").exists():
+                (d / f"caso.db{suffix}").rename(d / f"case.db{suffix}")
+        for a, b in (("CASO.md", "CASE.md"), ("MAPA.md", "MAP.md")):
+            if (d / a).exists() and not (d / b).exists():
+                (d / a).rename(d / b)
+    return new
+
+
+SCHEMA = """
+PRAGMA journal_mode=WAL;
+PRAGMA foreign_keys=ON;
+CREATE TABLE IF NOT EXISTS node(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL,
+  parent INTEGER REFERENCES node(id), title TEXT NOT NULL CHECK(length(title) <= 160),
+  summary TEXT CHECK(length(summary) <= 800), state TEXT NOT NULL, origin TEXT, grade TEXT CHECK(grade IN ('A','B','C')),
+  created TEXT NOT NULL, updated TEXT NOT NULL, legacy INTEGER NOT NULL DEFAULT 0, branch INTEGER);
+CREATE INDEX IF NOT EXISTS node_parent ON node(parent, type, state);
+CREATE TABLE IF NOT EXISTS target(node INTEGER PRIMARY KEY REFERENCES node(id), solution TEXT, proof TEXT);
+CREATE TABLE IF NOT EXISTS hypothesis(node INTEGER PRIMARY KEY REFERENCES node(id), prob REAL CHECK(prob BETWEEN 0 AND 1),
+  refuted_if TEXT);
+CREATE TABLE IF NOT EXISTS test(node INTEGER PRIMARY KEY REFERENCES node(id),
+  scope TEXT NOT NULL CHECK(length(scope) <= 600), outside TEXT CHECK(length(outside) <= 600),
+  why TEXT NOT NULL CHECK(length(why) <= 600), prediction TEXT, predicted_at TEXT, control TEXT,
+  control_type TEXT CHECK(control_type IN ('real','planted','sabotage','none')),
+  instrument INTEGER REFERENCES node(id), script TEXT, recipe TEXT, mode TEXT);
+CREATE TABLE IF NOT EXISTS run(id INTEGER PRIMARY KEY, test INTEGER NOT NULL REFERENCES node(id),
+  version INTEGER REFERENCES version(id), script_sha TEXT, host TEXT, pid INTEGER, log TEXT, started TEXT, finished TEXT,
+  n TEXT, control_ok INTEGER, result TEXT CHECK(result IN ('positive','negative','inconclusive','failed')),
+  note TEXT, meaning TEXT);
+CREATE TABLE IF NOT EXISTS instrument(node INTEGER PRIMARY KEY REFERENCES node(id), path TEXT UNIQUE, verifier TEXT);
+CREATE TABLE IF NOT EXISTS version(id INTEGER PRIMARY KEY, instrument INTEGER NOT NULL REFERENCES node(id),
+  sha TEXT NOT NULL, at TEXT NOT NULL, verified INTEGER, note TEXT);
+CREATE TABLE IF NOT EXISTS fact(node INTEGER PRIMARY KEY REFERENCES node(id), nature TEXT, source INTEGER REFERENCES node(id),
+  location TEXT, quote TEXT CHECK(length(quote) <= 1000), proven_at TEXT, proof TEXT, proven_by TEXT);
+CREATE TABLE IF NOT EXISTS source(node INTEGER PRIMARY KEY REFERENCES node(id), ref TEXT UNIQUE, sha TEXT,
+  provenance TEXT CHECK(provenance IN ('primary','derived','third-party','ours')),
+  reliability TEXT CHECK(reliability IN ('A','B','C','D','E','F')), document INTEGER);
+CREATE TABLE IF NOT EXISTS entity(node INTEGER PRIMARY KEY REFERENCES node(id), class TEXT, aliases TEXT);
+CREATE TABLE IF NOT EXISTS attribute(entity INTEGER REFERENCES node(id), key TEXT, value TEXT,
+  fact INTEGER REFERENCES node(id), at TEXT, PRIMARY KEY(entity, key));
+CREATE TABLE IF NOT EXISTS decision(node INTEGER PRIMARY KEY REFERENCES node(id), forbids TEXT, allows TEXT);
+CREATE TABLE IF NOT EXISTS edge(src INTEGER NOT NULL REFERENCES node(id), type TEXT NOT NULL,
+  dst INTEGER NOT NULL REFERENCES node(id), note TEXT CHECK(length(note) <= 200), created TEXT, PRIMARY KEY(src, type, dst));
+CREATE TABLE IF NOT EXISTS ach(fact INTEGER REFERENCES node(id), hypothesis INTEGER REFERENCES node(id), value TEXT NOT NULL,
+  note TEXT, PRIMARY KEY(fact, hypothesis));
+CREATE TABLE IF NOT EXISTS legacy(ref TEXT PRIMARY KEY, node INTEGER NOT NULL REFERENCES node(id));
+CREATE TABLE IF NOT EXISTS connection(node INTEGER PRIMARY KEY REFERENCES node(id), src INTEGER NOT NULL REFERENCES node(id),
+  dst INTEGER NOT NULL REFERENCES node(id), relation TEXT NOT NULL, rival TEXT CHECK(length(rival) <= 400),
+  discriminator TEXT CHECK(length(discriminator) <= 400), channel TEXT);
+CREATE TABLE IF NOT EXISTS event(id INTEGER PRIMARY KEY, node INTEGER, action TEXT NOT NULL, text TEXT, at TEXT NOT NULL);
+CREATE VIRTUAL TABLE IF NOT EXISTS idx USING fts5(ref UNINDEXED, text, tokenize='unicode61 remove_diacritics 2');
+CREATE TABLE IF NOT EXISTS branch(node INTEGER PRIMARY KEY REFERENCES node(id), from_step INTEGER REFERENCES step(id));
+CREATE TABLE IF NOT EXISTS step(id INTEGER PRIMARY KEY, branch INTEGER NOT NULL REFERENCES node(id), type TEXT NOT NULL,
+  text TEXT NOT NULL CHECK(length(text) <= 400), why TEXT CHECK(length(why) <= 400), nodes TEXT,
+  at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS step_branch ON step(branch, id);
+"""
+
+# old table → (new table, [(old column, new column, how its value is translated)])
+OLD_SCHEMA = [
+    ("no", "node", [("id", "id", None), ("tipo", "type", "type"), ("pai", "parent", None), ("titulo", "title", None),
+                    ("resumo", "summary", None), ("estado", "state", "state"), ("origem", "origin", "origin"),
+                    ("grau", "grade", None), ("criado", "created", None), ("atualizado", "updated", None),
+                    ("legado", "legacy", None), ("ramo", "branch", None)]),
+    ("alvo", "target", [("no", "node", None), ("solucao", "solution", None), ("prova", "proof", None)]),
+    ("hipotese", "hypothesis", [("no", "node", None), ("prob", "prob", None), ("refuta_se", "refuted_if", None)]),
+    ("teste", "test", [("no", "node", None), ("alcance", "scope", None), ("fora", "outside", None), ("porque", "why", None),
+                       ("previsao", "prediction", None), ("previsao_em", "predicted_at", None),
+                       ("controle", "control", None), ("controle_tipo", "control_type", "control_type"),
+                       ("instrumento", "instrument", None), ("script", "script", None), ("receita", "recipe", None),
+                       ("modo", "mode", "mode")]),
+    ("execucao", "run", [("id", "id", None), ("teste", "test", None), ("versao", "version", None),
+                         ("script_sha", "script_sha", None), ("host", "host", None), ("pid", "pid", None),
+                         ("log", "log", None), ("inicio", "started", None), ("fim", "finished", None), ("n", "n", None),
+                         ("controle_ok", "control_ok", None), ("resultado", "result", "result"), ("nota", "note", None),
+                         ("sentido", "meaning", "meaning")]),
+    ("instrumento", "instrument", [("no", "node", None), ("caminho", "path", None), ("verificador", "verifier", None)]),
+    ("versao", "version", [("id", "id", None), ("instrumento", "instrument", None), ("sha", "sha", None),
+                           ("quando", "at", None), ("verificado", "verified", None), ("nota", "note", "version_note")]),
+    ("fato", "fact", [("no", "node", None), ("natureza", "nature", "nature"), ("fonte", "source", None),
+                      ("local", "location", None), ("citacao", "quote", None), ("conferido", "proven_at", None),
+                      ("prova", "proof", None), ("conferido_por", "proven_by", "proof")]),
+    ("fonte", "source", [("no", "node", None), ("ref", "ref", None), ("sha", "sha", None),
+                         ("procedencia", "provenance", "provenance"), ("confiabilidade", "reliability", None),
+                         ("documento", "document", None)]),
+    ("entidade", "entity", [("no", "node", None), ("classe", "class", "class"), ("aliases", "aliases", None)]),
+    ("atributo", "attribute", [("entidade", "entity", None), ("chave", "key", "key"), ("valor", "value", None),
+                               ("fato", "fact", None), ("quando", "at", None)]),
+    ("decisao", "decision", [("no", "node", None), ("proibe", "forbids", None), ("permite", "allows", None)]),
+    ("aresta", "edge", [("de", "src", None), ("tipo", "type", "edge"), ("para", "dst", None),
+                        ("nota", "note", "edge_note"), ("criado", "created", None)]),
+    ("_ach_pt", "ach", [("fato", "fact", None), ("hipotese", "hypothesis", None), ("valor", "value", None),
+                        ("nota", "note", None)]),
+    ("legado", "legacy", [("ref", "ref", None), ("no", "node", None)]),
+    ("conexao", "connection", [("no", "node", None), ("de", "src", None), ("para", "dst", None),
+                               ("relacao", "relation", "edge"), ("rival", "rival", None),
+                               ("discriminador", "discriminator", None), ("canal", "channel", None)]),
+    ("evento", "event", [("id", "id", None), ("no", "node", None), ("acao", "action", "action"),
+                         ("texto", "text", "event_text"), ("quando", "at", None)]),
+    ("ramo", "branch", [("no", "node", None), ("de_passo", "from_step", None)]),
+    ("passo", "step", [("id", "id", None), ("ramo", "branch", None), ("tipo", "type", "step"), ("texto", "text", None),
+                       ("porque", "why", None), ("nos", "nodes", None), ("quando", "at", None)]),
+]
+
+
+def translate_action(action, old_type):
+    """An old event action, translated where the code later matches it (state changes, results, links, proofs)."""
+    typ = OLD_TYPES.get(old_type, old_type)
+    fixed = {"criou": "created", "editou": "edited", "rodando": "running", "nova versão": "new version",
+             "substituida": "superseded", "reclassificado": "reclassified", "religado": "relinked",
+             "prova ok": "proof ok", "prova FALHOU": "proof FAILED", "conferido": "checked"}
+    if action in fixed:
+        return fixed[action]
+    if action.startswith(("prob ", "ach ")):
+        return action
+    m = re.fullmatch(r"(\S+)→(\S+)", action)
+    if m:
+        return f"{state_of(typ, m[1])}→{state_of(typ, m[2])}"
+    m = re.fullmatch(r"(X\d+) (\w+)", action)
+    if m:
+        return f"{m[1]} {translate('result', m[2])}"
+    m = re.fullmatch(r"(liga|desliga) (\w+)", action)
+    if m:
+        return f"{'link' if m[1] == 'liga' else 'unlink'} {translate('edge', m[2])}"
+    m = re.fullmatch(r"provado por (\w+)", action)
+    if m:
+        return f"proven by {translate('proof', m[1])}"
+    m = re.fullmatch(r"atributo (.+)", action)
+    if m:
+        return f"attribute {translate('key', m[1])}"
+    return action
+
+
+def translate_event_text(action, text):
+    """'criou' events start with the node type ('fato: <title>'): translate that prefix."""
+    if action == "criou" and text:
+        t, sep, rest = text.partition(":")
+        if sep and t in OLD_TYPES:
+            return f"{OLD_TYPES[t]}:{rest}"
+    return text
+
+
+def migrate(db):
+    """Migrates a database from the Portuguese schema (table `no`) in place, once, in one transaction:
+    every table is rebuilt under its English name with its stored values translated, and the search index is
+    rebuilt. A database that has no `no` table is already migrated (or new) and is left alone."""
+    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if "no" not in tables:
+        return False
+    db.create_function("holmes_tr", 2, translate)
+    db.create_function("holmes_state", 2, lambda t, s: state_of(OLD_TYPES.get(t, t), s))
+    db.create_function("holmes_action", 2, translate_action)
+    db.create_function("holmes_event_text", 2, translate_event_text)
+    level = db.isolation_level
+    db.isolation_level = None  # explicit BEGIN/COMMIT: the whole migration is one transaction
+    db.execute("PRAGMA foreign_keys=OFF")  # old tables point at `no`, which is dropped
+    try:
+        db.execute("BEGIN IMMEDIATE")
+        if "no" not in {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}:
+            db.execute("ROLLBACK")  # another process migrated it while we waited for the lock
+            return False
+        if "ach" in tables:
+            db.execute("ALTER TABLE ach RENAME TO _ach_pt")
+            tables.add("_ach_pt")
+        db.execute("DROP TABLE IF EXISTS idx")  # rebuilt below from the migrated nodes
+        db.execute("DROP INDEX IF EXISTS no_pai")
+        db.execute("DROP INDEX IF EXISTS passo_ramo")
+        for stmt in SCHEMA.split(";\n"):
+            if stmt.strip() and not stmt.strip().startswith("PRAGMA"):
+                db.execute(stmt)
+        for old, new, cols in OLD_SCHEMA:
+            if old not in tables:
+                continue  # table created by a later version: nothing to copy
+            have = {r[1] for r in db.execute(f"PRAGMA table_info({old})")}
+            pairs = [(o, n, k) for o, n, k in cols if o in have]
+            expr = {None: "{o}", "state": "holmes_state(tipo, {o})", "action": "holmes_action({o}, "
+                    "(SELECT tipo FROM no WHERE no.id={old}.no))", "event_text": "holmes_event_text(acao, {o})"}
+            sel = ", ".join(expr.get(k, f"holmes_tr('{k}', {{o}})").format(o=o, old=old) for o, n, k in pairs)
+            db.execute(f"INSERT INTO {new}({', '.join(n for _, n, _ in pairs)}) SELECT {sel} FROM {old}")
+        db.execute("UPDATE sqlite_sequence SET seq=(SELECT seq FROM sqlite_sequence WHERE name='no') WHERE name='node' "
+                   "AND EXISTS (SELECT 1 FROM sqlite_sequence WHERE name='no')")
+        for old, _, _ in OLD_SCHEMA:
+            db.execute(f"DROP TABLE IF EXISTS {old}")
+        for (i,) in db.execute("SELECT id FROM node").fetchall():
+            index_node(db, i)
+        event(db, None, "migrated", "Portuguese schema → English schema (MIGRATION.md)")
+        db.execute("COMMIT")
+    except BaseException:
+        if db.in_transaction:
+            db.execute("ROLLBACK")
+        raise
+    finally:
+        db.isolation_level = level
+    return True
+
+
+def connect(case=None):
+    db = sqlite3.connect(case_db(case or active_case()), timeout=30)
     db.row_factory = sqlite3.Row
-    db.executescript(ESQUEMA)
-    for tab, col, tipo in (("no", "legado", "INTEGER NOT NULL DEFAULT 0"), ("execucao", "sentido", "TEXT"),
-                           ("teste", "modo", "TEXT"), ("no", "ramo", "INTEGER"), ("fato", "conferido_por", "TEXT")):
-        if col not in {r[1] for r in db.execute(f"PRAGMA table_info({tab})")}:  # banco criado antes da coluna
-            db.execute(f"ALTER TABLE {tab} ADD COLUMN {col} {tipo}")
+    migrate(db)
+    db.executescript(SCHEMA)
     return db
 
 
@@ -190,1914 +457,2013 @@ def q(db, sql, *a):
     return db.execute(sql, a).fetchall()
 
 
-def um(db, sql, *a):
+def one(db, sql, *a):
     return db.execute(sql, a).fetchone()
 
 
-def rot(r):
-    return f"{PREFIXO[r['tipo']]}{r['id']}"
+def label(r):
+    return f"{PREFIX[r['type']]}{r['id']}"
 
 
-def pega(db, ref, tipo=None):
-    if ":" in str(ref):  # id de outro sistema (ex.: ext:42), gravado ao importar
-        l = um(db, "SELECT no FROM legado WHERE ref=?", str(ref).strip())
+def an(word):
+    return f"{'an' if word[:1] in 'aeiou' else 'a'} {word}"
+
+
+def get_node(db, ref, typ=None):
+    if ":" in str(ref):  # id from another system (e.g. ext:42), stored on import
+        l = one(db, "SELECT node FROM legacy WHERE ref=?", str(ref).strip())
         if not l:
-            raise Erro(f"{ref} não está no mapa de ids legados")
-        ref = str(l["no"])
+            raise Error(f"{ref} is not in the legacy id map")
+        ref = str(l["node"])
     m = re.fullmatch(r"([A-Z]?)(\d+)", str(ref).strip())
     if not m:
-        raise Erro(f"id inválido: {ref!r} (use H12, T30…)")
-    r = um(db, "SELECT * FROM no WHERE id=?", int(m[2]))
+        raise Error(f"invalid id: {ref!r} (use H12, T30…)")
+    r = one(db, "SELECT * FROM node WHERE id=?", int(m[2]))
     if not r:
-        raise Erro(f"{ref} não existe")
-    if m[1] and PREFIXO[r["tipo"]] != m[1] and {m[1], PREFIXO[r["tipo"]]} != {"E", "K"}:
-        raise Erro(f"{ref}: o nó {r['id']} é {r['tipo']} ({rot(r)}), não {TIPO_DE.get(m[1], m[1])}")
-    if tipo and r["tipo"] not in ({tipo} if isinstance(tipo, str) else tipo):
-        raise Erro(f"{ref} é {r['tipo']}, esperado {tipo}")
+        raise Error(f"{ref} does not exist")
+    if m[1] and PREFIX[r["type"]] != m[1] and {m[1], PREFIX[r["type"]]} != {"E", "K"}:
+        raise Error(f"{ref}: node {r['id']} is {an(r['type'])} ({label(r)}), not {an(TYPE_OF.get(m[1], m[1]))}")
+    if typ and r["type"] not in ({typ} if isinstance(typ, str) else typ):
+        raise Error(f"{ref} is {an(r['type'])}, expected {typ if isinstance(typ, str) else ' or '.join(typ)}")
     return r
 
 
-def evento(db, no, acao, texto=""):
-    db.execute("INSERT INTO evento(no, acao, texto, quando) VALUES (?,?,?,?)", (no, acao, (texto or "")[:300], agora()))
+def node_by_id(db, i):
+    return one(db, "SELECT * FROM node WHERE id=?", i)
 
 
-def arq_ramo(caso):
-    return RAIZ / ".holmes" / f"ramo-{caso}"
+def event(db, node, action, text=""):
+    db.execute("INSERT INTO event(node, action, text, at) VALUES (?,?,?,?)", (node, action, (text or "")[:300], now()))
 
 
-def ramo_ativo(db, caso):
-    f = arq_ramo(caso)
-    if not f.exists():
+def branch_file(case):
+    return STATE_DIR / f"branch-{case}"
+
+
+def active_branch(db, case):
+    for f in (branch_file(case), STATE_DIR / f"ramo-{case}"):
+        if f.exists():
+            break
+    else:
         return None
     try:
-        r = um(db, "SELECT * FROM no WHERE id=? AND tipo='ramo'", int(f.read_text().strip()))
+        r = one(db, "SELECT * FROM node WHERE id=? AND type='branch'", int(f.read_text().strip()))
     except ValueError:
         return None
-    return r if r and r["estado"] == "ativo" else None
+    return r if r and r["state"] == "active" else None
 
 
-ATUAL = {"ramo": None}  # ramo ativo desta invocação: cria(), estado e resultado gravam passos nele
+def set_branch(case, node):
+    STATE_DIR.mkdir(exist_ok=True)
+    (STATE_DIR / f"ramo-{case}").unlink(missing_ok=True)
+    if node is None:
+        branch_file(case).unlink(missing_ok=True)
+    else:
+        branch_file(case).write_text(str(node))
 
 
-def passo(db, ramo, tipo, texto, porque=None, nos=()):
-    porque = (porque or "")[:400]  # o porquê integral fica no nó (teste, evento); o passo guarda o resumo
-    pid = db.execute("INSERT INTO passo(ramo, tipo, texto, porque, nos, quando) VALUES (?,?,?,?,?,?)",
-                     (ramo, tipo, texto[:400], porque or None, ",".join(nos) or None, agora())).lastrowid
-    db.execute("UPDATE no SET atualizado=? WHERE id=?", (agora(), ramo))
-    indexa(db, ramo)
-    return pid
+CURRENT = {"branch": None}  # active branch of this invocation: create(), state and result record steps in it
 
 
-def indexa(db, no):
-    r = um(db, "SELECT * FROM no WHERE id=?", no)
-    partes = [r["titulo"], r["resumo"] or ""] + [x["ref"] for x in q(db, "SELECT ref FROM legado WHERE no=?", no)]
-    for sql in ("SELECT alcance, fora, porque, previsao FROM teste WHERE no=?",
-                "SELECT citacao, local FROM fato WHERE no=?", "SELECT classe, aliases FROM entidade WHERE no=?",
-                "SELECT proibe, permite FROM decisao WHERE no=?", "SELECT refuta_se FROM hipotese WHERE no=?",
-                "SELECT solucao FROM alvo WHERE no=?", "SELECT nota, sentido FROM execucao WHERE teste=?",
-                "SELECT chave || ' ' || valor FROM atributo WHERE entidade=?",
-                "SELECT relacao, rival, discriminador FROM conexao WHERE no=?"):
-        for x in q(db, sql, no):
-            partes += [str(v) for v in x if v]
-    if r["tipo"] == "ramo":  # o percurso é pesquisável: "como foi resolvido X?" acha o ramo pelos passos
-        partes += [f"{p['texto']} {p['porque'] or ''}" for p in q(db, "SELECT texto, porque FROM passo WHERE ramo=?", no)]
-    db.execute("DELETE FROM idx WHERE ref=?", (str(no),))
-    db.execute("INSERT INTO idx(ref, texto) VALUES (?,?)", (str(no), " ".join(partes)))
+def add_step(db, branch, typ, text, why=None, nodes=()):
+    why = (why or "")[:400]  # the full reason stays on the node (test, event); the step keeps the summary
+    sid = db.execute("INSERT INTO step(branch, type, text, why, nodes, at) VALUES (?,?,?,?,?,?)",
+                     (branch, typ, text[:400], why or None, ",".join(nodes) or None, now())).lastrowid
+    db.execute("UPDATE node SET updated=? WHERE id=?", (now(), branch))
+    index_node(db, branch)
+    return sid
 
 
-def toca(db, no, acao, texto=""):
-    # mexer num item herdado o traz para o presente: volta a entrar nos alertas do mapa
-    db.execute("UPDATE no SET atualizado=?, legado=0 WHERE id=?", (agora(), no))
-    evento(db, no, acao, texto)
-    indexa(db, no)
+def index_node(db, node):
+    r = one(db, "SELECT * FROM node WHERE id=?", node)
+    parts = [r["title"], r["summary"] or ""] + [x["ref"] for x in q(db, "SELECT ref FROM legacy WHERE node=?", node)]
+    for sql in ("SELECT scope, outside, why, prediction FROM test WHERE node=?",
+                "SELECT quote, location FROM fact WHERE node=?", "SELECT class, aliases FROM entity WHERE node=?",
+                "SELECT forbids, allows FROM decision WHERE node=?", "SELECT refuted_if FROM hypothesis WHERE node=?",
+                "SELECT solution FROM target WHERE node=?", "SELECT note, meaning FROM run WHERE test=?",
+                "SELECT key || ' ' || value FROM attribute WHERE entity=?",
+                "SELECT relation, rival, discriminator FROM connection WHERE node=?"):
+        for x in q(db, sql, node):
+            parts += [str(v) for v in x if v]
+    if r["type"] == "branch":  # the path is searchable: "how was X solved?" finds the branch by its steps
+        parts += [f"{p['text']} {p['why'] or ''}" for p in q(db, "SELECT text, why FROM step WHERE branch=?", node)]
+    db.execute("DELETE FROM idx WHERE ref=?", (str(node),))
+    db.execute("INSERT INTO idx(ref, text) VALUES (?,?)", (str(node), " ".join(parts)))
 
 
-# ---------- criar ----------
-
-def prova_de(db, por, prova, onde=None):
-    """Fato é constatação provada: diz como (fonte, medição, teste, reprodução) e com o quê.
-    `onde`: para --por fonte, a fonte, a citação ou o localizador que a prova aponta."""
-    if por not in PROVAS:
-        raise Erro("fato exige --por fonte|medicao|teste|reproducao: como ele está provado. "
-                   "Sem prova ainda, é pista (`novo pista`)")
-    if por == "fonte" and not (onde or "").strip():
-        raise Erro("--por fonte precisa apontar a fonte: --fonte S.., --citacao \"<trecho literal>\" ou "
-                   "--local \"<onde está>\" (citação literal do corpus: use `cita`)")
-    if por in ("medicao", "reproducao") and not (prova or "").strip():
-        raise Erro(f"--por {por} exige --prova \"<comando ou registro que reproduz a constatação>\"")
-    if por == "teste":
-        if not (prova or "").strip():
-            raise Erro("--por teste exige --prova T.. (o teste cujo resultado prova a constatação)")
-        t = pega(db, prova, "teste")
-        res, v = resultado_de(db, t["id"]), validade(db, t["id"])
-        if res != "positivo" or v:
-            raise Erro(f"{rot(t)} não prova nada: resultado {res or 'nenhum'}" + (f", {v}" if v else "")
-                       + ". Só um positivo válido (com instrumento, controle visto, não exploratório) prova")
-        prova = rot(t)
-    return por, prova
+def touch(db, node, action, text=""):
+    # touching an inherited item brings it to the present: it enters the map's alerts again
+    db.execute("UPDATE node SET updated=?, legacy=0 WHERE id=?", (now(), node))
+    event(db, node, action, text)
+    index_node(db, node)
 
 
-def cria(db, tipo, titulo, pai=None, resumo=None, origem=None, grau=None, estado=None, forca=False, **x):
-    if tipo not in ESTADOS:
-        raise Erro(f"tipo inválido {tipo!r}; use: {', '.join(ESTADOS)}")
-    if len(titulo) > 160:
-        raise Erro(f"título com {len(titulo)} caracteres (máx. 160): o detalhe vai em --resumo")
-    if resumo and len(resumo) > 800:
-        raise Erro(f"resumo com {len(resumo)} caracteres (máx. 800): uma conclusão por item; material vai ao corpus")
-    if origem and origem not in ORIGENS:
-        raise Erro(f"origem inválida; use: {', '.join(ORIGENS)}")
-    p = pega(db, pai) if pai else None
-    if tipo in PAIS and (not p or p["tipo"] not in PAIS[tipo]):
-        raise Erro(f"{tipo} precisa de --pai do tipo {' ou '.join(sorted(PAIS[tipo]))}")
-    if tipo == "ramo" and not p:
-        raise Erro("ramo precisa de --de: o ponto (questão, hipótese, alvo, ramo…) de onde ele nasce")
-    if tipo == "objetivo" and um(db, "SELECT 1 FROM no WHERE tipo='objetivo'"):
-        raise Erro("o caso já tem objetivo (um só); sub-problemas são alvos")
-    if tipo == "frente" and (estado or "ativa") == "ativa" and not forca:
-        n = um(db, "SELECT count(*) FROM no WHERE tipo='frente' AND estado='ativa'")[0]
-        if n >= MAX_FRENTES:
-            raise Erro(f"já há {n} frentes ativas (máx. {MAX_FRENTES}): estacione ou feche uma antes")
-    if tipo == "hipotese" and not forca:
-        n = um(db, "SELECT count(*) FROM no WHERE tipo='hipotese' AND estado='viva' AND pai=?", p["id"])[0]
-        if n >= MAX_HIP:
-            raise Erro(f"{rot(p)} já tem {n} hipóteses vivas (máx. {MAX_HIP}): refute ou estacione uma")
-    if origem == "externo" and not grau:
-        grau = "C"  # subagente, outra IA, comunidade: grau C até ser provado (`confere --por`)
-    estado = estado or ESTADOS[tipo][0]
-    if estado not in ESTADOS[tipo]:
-        raise Erro(f"estado {estado!r} inválido para {tipo}; use: {', '.join(ESTADOS[tipo])}")
-    t = agora()
-    no = db.execute("INSERT INTO no(tipo, pai, titulo, resumo, estado, origem, grau, criado, atualizado) "
-                    "VALUES (?,?,?,?,?,?,?,?,?)", (tipo, p["id"] if p else None, titulo, resumo, estado,
-                                                   origem or "agente", grau, t, t)).lastrowid
-    if tipo in ("fato", "pista"):
-        nat = x.get("natureza") or "observacao"
-        if nat not in NATUREZAS:
-            raise Erro(f"natureza inválida; use: {', '.join(NATUREZAS)}")
-        por, prova = None, x.get("prova")
-        if tipo == "fato":
-            if nat not in NATUREZAS_FATO:
-                raise Erro(f"{nat} não é fato: fato é constatação provada. Registre como pista "
-                           f"(`novo pista \"..\" --natureza {nat}`) ou, se for explicação testável, como hipótese")
-            por, prova = prova_de(db, x.get("por"), prova, x.get("fonte") or x.get("citacao") or x.get("local"))
-        fonte = pega(db, x["fonte"], "fonte")["id"] if x.get("fonte") else None
-        db.execute("INSERT INTO fato(no, natureza, fonte, local, citacao, prova, conferido, conferido_por) "
-                   "VALUES (?,?,?,?,?,?,?,?)", (no, nat, fonte, x.get("local"), x.get("citacao"), prova,
-                                                t if por else None, por))
-        if fonte:
-            db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (no, "deriva", fonte, None, t))
-    elif tipo == "hipotese":
-        prob = x.get("prob")
-        db.execute("INSERT INTO hipotese VALUES (?,?,?)", (no, prob, x.get("refuta_se")))
-    elif tipo == "entidade":
-        db.execute("INSERT INTO entidade VALUES (?,?,?)", (no, x.get("classe"), x.get("alias")))
-    elif tipo == "decisao":
-        db.execute("INSERT INTO decisao VALUES (?,?,?)", (no, x.get("proibe"), x.get("permite")))
-    elif tipo == "alvo":
-        db.execute("INSERT INTO alvo(no) VALUES (?)", (no,))
-    elif tipo == "ramo":
-        db.execute("INSERT INTO ramo VALUES (?,?)", (no, x.get("de_passo")))
-    rm = ATUAL["ramo"]
-    if rm and tipo not in ("ramo", "objetivo", "fonte", "instrumento"):  # todo achado nasce dentro de uma linha
-        db.execute("UPDATE no SET ramo=? WHERE id=?", (rm, no))
-        passo(db, rm, "registrou", f"{PREFIXO[tipo]}{no} {titulo}", x.get("porque"), (f"{PREFIXO[tipo]}{no}",))
-    evento(db, no, "criou", f"{tipo}: {titulo}")
-    indexa(db, no)
-    return no
+# ---------- create ----------
+
+def proof_of(db, by, proof, where=None):
+    """A fact is a proven finding: says how (source, measurement, test, reproduction) and with what.
+    `where`: for --by source, the source, quote or locator the proof points to."""
+    by = translate("proof", by)
+    if by not in PROOFS:
+        raise Error("a fact requires --by source|measurement|test|reproduction: how it is proven. "
+                    "Without a proof yet, it is a clue (`new clue`)")
+    if by == "source" and not (where or "").strip():
+        raise Error("--by source must point to the source: --source S.. or --location \"<where it is>\" "
+                    "(a fact created with `new fact` may also carry --quote \"<literal excerpt>\"; a literal quote "
+                    "from the corpus: use `quote`)")
+    if by in ("measurement", "reproduction") and not (proof or "").strip():
+        raise Error(f"--by {by} requires --proof \"<command or record that reproduces the finding>\"")
+    if by == "test":
+        if not (proof or "").strip():
+            raise Error("--by test requires --proof T.. (the test whose result proves the finding)")
+        t = get_node(db, proof, "test")
+        res, v = result_of(db, t["id"]), validity(db, t["id"])
+        if res != "positive" or v:
+            raise Error(f"{label(t)} proves nothing: result {res or 'none'}" + (f", {v}" if v else "")
+                        + ". Only a valid positive (with instrument, control seen, not exploratory) proves")
+        proof = label(t)
+    return by, proof
 
 
-# ---------- testes e execuções ----------
+def create(db, typ, title, parent=None, summary=None, origin=None, grade=None, state=None, force=False, **x):
+    typ = translate("type", typ)
+    if typ not in STATES:
+        raise Error(f"invalid type {typ!r}; use: {', '.join(STATES)}")
+    if len(title) > 160:
+        raise Error(f"title with {len(title)} characters (max. 160): the detail goes in --summary")
+    if summary and len(summary) > 800:
+        raise Error(f"summary with {len(summary)} characters (max. 800): one conclusion per item; material goes to the corpus")
+    origin = translate("origin", origin)
+    if origin and origin not in ORIGINS:
+        raise Error(f"invalid origin; use: {', '.join(ORIGINS)}")
+    p = get_node(db, parent) if parent else None
+    if typ in PARENTS and (not p or p["type"] not in PARENTS[typ]):
+        raise Error(f"{typ} needs --parent of type {' or '.join(sorted(PARENTS[typ]))}")
+    if typ == "branch" and not p:
+        raise Error("a branch needs --from: the point (question, hypothesis, target, branch…) it grows from")
+    if typ == "objective" and one(db, "SELECT 1 FROM node WHERE type='objective'"):
+        raise Error("the case already has an objective (only one); sub-problems are targets")
+    state = state_of(typ, state) if state else None
+    if typ == "front" and (state or "active") == "active" and not force:
+        n = one(db, "SELECT count(*) FROM node WHERE type='front' AND state='active'")[0]
+        if n >= MAX_FRONTS:
+            raise Error(f"there are already {n} active fronts (max. {MAX_FRONTS}): park or close one first")
+    if typ == "hypothesis" and not force:
+        n = one(db, "SELECT count(*) FROM node WHERE type='hypothesis' AND state='alive' AND parent=?", p["id"])[0]
+        if n >= MAX_HYP:
+            raise Error(f"{label(p)} already has {n} live hypotheses (max. {MAX_HYP}): refute or park one")
+    if typ == "fact" and not grade:
+        grade = "A"  # a fact is created proven (--by): checked against the source or reproduced is grade A
+    if origin == "external" and not grade:
+        grade = "C"  # subagent, another AI, community: grade C until proven (`prove --by`)
+    state = state or STATES[typ][0]
+    if state not in STATES[typ]:
+        raise Error(f"state {state!r} is invalid for {typ}; use: {', '.join(STATES[typ])}")
+    t = now()
+    node = db.execute("INSERT INTO node(type, parent, title, summary, state, origin, grade, created, updated) "
+                      "VALUES (?,?,?,?,?,?,?,?,?)", (typ, p["id"] if p else None, title, summary, state,
+                                                     origin or "agent", grade, t, t)).lastrowid
+    if typ in ("fact", "clue"):
+        nat = translate("nature", x.get("nature")) or "observation"
+        if nat not in NATURES:
+            raise Error(f"invalid nature; use: {', '.join(NATURES)}")
+        by, proof = None, x.get("proof")
+        if typ == "fact":
+            if nat not in FACT_NATURES:
+                raise Error(f"{nat} is not a fact: a fact is a proven finding. Record it as a clue "
+                            f"(`new clue \"..\" --nature {nat}`) or, if it is a testable explanation, as a hypothesis")
+            by, proof = proof_of(db, x.get("by"), proof, x.get("source") or x.get("quote") or x.get("location"))
+        source = get_node(db, x["source"], "source")["id"] if x.get("source") else None
+        db.execute("INSERT INTO fact(node, nature, source, location, quote, proof, proven_at, proven_by) "
+                   "VALUES (?,?,?,?,?,?,?,?)", (node, nat, source, x.get("location"), x.get("quote"), proof,
+                                                t if by else None, by))
+        if source:
+            db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (node, "derives", source, None, t))
+    elif typ == "hypothesis":
+        db.execute("INSERT INTO hypothesis VALUES (?,?,?)", (node, x.get("prob"), x.get("refuted_if")))
+    elif typ == "entity":
+        db.execute("INSERT INTO entity VALUES (?,?,?)", (node, translate("class", x.get("cls")), x.get("alias")))
+    elif typ == "decision":
+        db.execute("INSERT INTO decision VALUES (?,?,?)", (node, x.get("forbids"), x.get("allows")))
+    elif typ == "target":
+        db.execute("INSERT INTO target(node) VALUES (?)", (node,))
+    elif typ == "branch":
+        db.execute("INSERT INTO branch VALUES (?,?)", (node, x.get("from_step")))
+    rm = CURRENT["branch"]
+    if rm and typ not in ("branch", "objective", "source", "instrument"):  # every finding is born inside a line
+        db.execute("UPDATE node SET branch=? WHERE id=?", (rm, node))
+        add_step(db, rm, "recorded", f"{PREFIX[typ]}{node} {title}", x.get("why"), (f"{PREFIX[typ]}{node}",))
+    event(db, node, "created", f"{typ}: {title}")
+    index_node(db, node)
+    return node
 
-def sha_arquivo(c):
+
+# ---------- tests and runs ----------
+
+def file_sha(c):
     p = Path(c)
     return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None
 
 
-def versao_atual(db, inst):
-    return um(db, "SELECT * FROM versao WHERE instrumento=? ORDER BY id DESC LIMIT 1", inst)
+def current_version(db, inst):
+    return one(db, "SELECT * FROM version WHERE instrument=? ORDER BY id DESC LIMIT 1", inst)
 
 
-def ultima(db, teste):
-    """Última execução com resultado válido (falhou não conta)."""
-    return um(db, "SELECT * FROM execucao WHERE teste=? AND resultado IS NOT NULL AND resultado != 'falhou' "
-                  "ORDER BY id DESC LIMIT 1", teste)
+def last_run(db, test):
+    """Last run with a valid result (failed does not count)."""
+    return one(db, "SELECT * FROM run WHERE test=? AND result IS NOT NULL AND result != 'failed' "
+                   "ORDER BY id DESC LIMIT 1", test)
 
 
-def validade(db, teste):
-    """Selo de validade do resultado de um teste. Vazio = a conclusão está autorizada no alcance declarado.
-    Separa quatro coisas: a execução aconteceu; o resultado foi observado; o controle passou (visto, não
-    declarado); a conclusão é autorizada (instrumento atual, script versionado, teste confirmatório)."""
-    x = ultima(db, teste)
+def validity(db, test):
+    """Validity stamp of a test's result. Empty = the conclusion is authorized within the declared scope.
+    Separates four things: the run happened; the result was observed; the control passed (seen, not
+    declared); the conclusion is authorized (current instrument, versioned script, confirmatory test)."""
+    x = last_run(db, test)
     if not x:
         return ""
-    t = um(db, "SELECT * FROM teste WHERE no=?", teste)
-    if x["controle_ok"] == 0:
-        return "INVÁLIDO (controle falhou)"
-    if t["modo"] == "exploratorio":
-        return "exploratório (vale como pista; não fecha nem confirma)"
-    if x["resultado"] not in ("negativo", "positivo"):
+    t = one(db, "SELECT * FROM test WHERE node=?", test)
+    if x["control_ok"] == 0:
+        return "INVALID (control failed)"
+    if t["mode"] == "exploratory":
+        return "exploratory (counts as a clue; neither closes nor confirms)"
+    if x["result"] not in ("negative", "positive"):
         return ""
-    if x["resultado"] == "negativo" and not x["versao"]:
-        return "INDETERMINADO (sem instrumento)"
-    atual = versao_atual(db, t["instrumento"]) if t["instrumento"] else None
-    if x["resultado"] == "negativo" and atual and atual["id"] != x["versao"]:
-        return "A REVALIDAR (instrumento mudou)"
+    if x["result"] == "negative" and not x["version"]:
+        return "INDETERMINATE (no instrument)"
+    cur = current_version(db, t["instrument"]) if t["instrument"] else None
+    if x["result"] == "negative" and cur and cur["id"] != x["version"]:
+        return "TO REVALIDATE (instrument changed)"
     if t["script"] and not x["script_sha"]:
-        return "script não versionado (arquivo ausente ao rodar)"
-    if t["controle_tipo"] in (None, "nenhum", "plantado"):
-        return "sem controle real"
-    if x["controle_ok"] is None:  # declarar controle real não é o mesmo que vê-lo passar
-        return "controle não confirmado (--controle-ok)"
+        return "unversioned script (file missing when run)"
+    if t["control_type"] in (None, "none", "planted"):
+        return "no real control"
+    if x["control_ok"] is None:  # declaring a real control is not the same as seeing it pass
+        return "control not confirmed (--control-ok)"
     return ""
 
 
-def resultado_de(db, teste):
-    x = ultima(db, teste)
-    return x["resultado"] if x else None
+def result_of(db, test):
+    x = last_run(db, test)
+    return x["result"] if x else None
 
 
-def tunel(db, frente):
-    """(negativos seguidos, quantos deles válidos). O primeiro número mede estagnação: tentativa indeterminada
-    também é esforço sem avanço. O segundo é o que pode sustentar conclusão (instrumento e controle vistos)."""
-    hs = q(db, "SELECT id, criado FROM no WHERE tipo='hipotese' AND pai=?", frente)
+def tunnel(db, front):
+    """(negatives in a row, how many of them valid). The first number measures stagnation: an indeterminate
+    attempt is also effort without progress. The second is what can support a conclusion (instrument and control seen)."""
+    hs = q(db, "SELECT id, created FROM node WHERE type='hypothesis' AND parent=?", front)
     if not hs:
         return 0, 0
-    data = lambda t: (t or "")[:19].replace("T", " ")  # herdado grava '2026-11-20T03:30:26Z'; agora() usa espaço
-    marco = max(data(h["criado"]) for h in hs)
-    ex = q(db, f"SELECT x.*, tt.modo FROM execucao x JOIN no t ON t.id=x.teste JOIN teste tt ON tt.no=x.teste "
-               f"WHERE t.pai IN ({','.join('?' * len(hs))}) AND x.resultado IS NOT NULL AND x.resultado != 'falhou'",
-           *[h["id"] for h in hs])
-    n = validos = 0
-    for x in sorted(ex, key=lambda x: (data(x["fim"]), x["id"])):
-        if x["resultado"] != "negativo":
-            n, validos, marco = 0, 0, max(marco, data(x["fim"]))
-        elif x["controle_ok"] != 0 and data(x["fim"]) >= marco:
+    date = lambda t: (t or "")[:19].replace("T", " ")  # inherited rows store '2026-11-20T03:30:26Z'; now() uses a space
+    mark = max(date(h["created"]) for h in hs)
+    runs = q(db, f"SELECT x.*, tt.mode FROM run x JOIN node t ON t.id=x.test JOIN test tt ON tt.node=x.test "
+                 f"WHERE t.parent IN ({','.join('?' * len(hs))}) AND x.result IS NOT NULL AND x.result != 'failed'",
+             *[h["id"] for h in hs])
+    n = valid = 0
+    for x in sorted(runs, key=lambda x: (date(x["finished"]), x["id"])):
+        if x["result"] != "negative":
+            n, valid, mark = 0, 0, max(mark, date(x["finished"]))
+        elif x["control_ok"] != 0 and date(x["finished"]) >= mark:
             n += 1
-            validos += bool(x["versao"]) and x["controle_ok"] == 1 and x["modo"] != "exploratorio"
-    return n, validos
+            valid += bool(x["version"]) and x["control_ok"] == 1 and x["mode"] != "exploratory"
+    return n, valid
 
 
-def aviso_tunel(n, validos):
-    return (f"{n} negativos seguidos sem hipótese nova ({validos} com instrumento e controle vistos; "
-            "os outros não fecham nada, mas contam como esforço sem avanço)")
+def tunnel_warning(n, valid):
+    return (f"{n} negatives in a row without a new hypothesis ({valid} with instrument and control seen; "
+            "the others close nothing, but count as effort without progress)")
 
 
-def leitura_atual(db):
-    return um(db, "SELECT * FROM no WHERE tipo='leitura' AND estado='vigente' ORDER BY id DESC LIMIT 1")
+def current_reading(db):
+    return one(db, "SELECT * FROM node WHERE type='reading' AND state='current' ORDER BY id DESC LIMIT 1")
 
 
-def base_leitura(db, lt):
-    """A teoria de trabalho ligada ao registro: o que a sustenta, o que a enfraquece, as rivais, a questão
-    decisiva e as lacunas. Se uma base cai, a leitura aparece em 'dependem de algo que caiu'."""
-    partes = []
-    for nome, sql in (("base", "SELECT para i FROM aresta WHERE de=? AND tipo='depende'"),
-                      ("contra", "SELECT de i FROM aresta WHERE para=? AND tipo='enfraquece'"),
-                      ("rivais", "SELECT para i FROM aresta WHERE de=? AND tipo='rival'"),
-                      ("questão decisiva", "SELECT para i FROM aresta WHERE de=? AND tipo='sobre' AND nota='decisiva'"),
-                      ("lacunas", "SELECT para i FROM aresta WHERE de=? AND tipo='sobre' AND nota='lacuna'")):
-        rs = [um(db, "SELECT * FROM no WHERE id=?", x["i"]) for x in q(db, sql, lt["id"])]
+def reading_basis(db, lt):
+    """The working theory tied to the record: what supports it, what weakens it, the rivals, the decisive
+    question and the gaps. If a basis falls, the reading shows up in 'depend on something that fell'."""
+    parts = []
+    for name, sql in (("basis", "SELECT dst i FROM edge WHERE src=? AND type='depends'"),
+                      ("against", "SELECT src i FROM edge WHERE dst=? AND type='weakens'"),
+                      ("rivals", "SELECT dst i FROM edge WHERE src=? AND type='rival'"),
+                      ("decisive question", "SELECT dst i FROM edge WHERE src=? AND type='about' AND note='decisive'"),
+                      ("gaps", "SELECT dst i FROM edge WHERE src=? AND type='about' AND note='gap'")):
+        rs = [node_by_id(db, x["i"]) for x in q(db, sql, lt["id"])]
         if rs:
-            partes.append(f"{nome}: " + ", ".join(rot(r) + ("✗" if r["estado"] in CAIDOS else "") for r in rs))
-    m = um(db, "SELECT nota FROM aresta WHERE de=? AND tipo='substitui'", lt["id"])
-    if m and m["nota"]:
-        partes.append(f"mudou porque: {m['nota'][:120]}")
-    return " · ".join(partes)
+            parts.append(f"{name}: " + ", ".join(label(r) + ("✗" if r["state"] in FALLEN else "") for r in rs))
+    m = one(db, "SELECT note FROM edge WHERE src=? AND type='supersedes'", lt["id"])
+    if m and m["note"]:
+        parts.append(f"changed because: {m['note'][:120]}")
+    return " · ".join(parts)
 
 
-def resultados_sem_leitura(db):
-    """Resultados registrados depois da leitura de conjunto vigente (ou todos, sem leitura)."""
-    l = leitura_atual(db)
-    return um(db, "SELECT count(*) FROM execucao WHERE resultado IS NOT NULL AND resultado != 'falhou' "
-                  "AND replace(substr(fim, 1, 19), 'T', ' ') > ?", l["criado"] if l else "")[0]
+def results_since_reading(db):
+    """Results recorded after the current overall reading (or all of them, without a reading)."""
+    l = current_reading(db)
+    return one(db, "SELECT count(*) FROM run WHERE result IS NOT NULL AND result != 'failed' "
+                   "AND replace(substr(finished, 1, 19), 'T', ' ') > ?", l["created"] if l else "")[0]
 
 
-RELEVANTES = (("% positivo", "resultado positivo"), ("%→confirmada", "conexão confirmada"),
-              ("%→respondida", "questão respondida"), ("%→reformulada", "questão reformulada"),
-              ("%→refutada", "hipótese ou premissa refutada"), ("%→apoiada", "hipótese apoiada"),
-              ("%→retratado", "fato retratado"), ("%→contestado", "fato contestado"),
-              ("%→descartada", "pista ou frente descartada"), ("provado por %", "pista ou fato provado"),
-              ("liga contradiz", "contradição registrada"))
+RELEVANT = ((("% positive",), "positive result"), (("%→confirmed",), "connection confirmed"),
+            (("%→answered",), "question answered"), (("%→reformulated",), "question reformulated"),
+            (("%→refuted",), "hypothesis or premise refuted"), (("%→supported",), "hypothesis supported"),
+            (("%→retracted",), "fact retracted"), (("%→contested",), "fact contested"),
+            (("%→dropped", "%→discarded"), "clue dropped or front discarded"), (("proven by %", "checked"), "clue or fact proven"),
+            (("link contradicts",), "contradiction recorded"))
 
 
-def eventos_relevantes(db):
-    """O que aconteceu desde a leitura vigente que pode mudar o quadro (não só quantos testes rodaram)."""
-    l = leitura_atual(db)
-    # pelo id do evento de criação, não pelo relógio: eventos no mesmo segundo da leitura não se perdem
-    desde = um(db, "SELECT max(id) FROM evento WHERE no=? AND acao='criou'", l["id"])[0] if l else 0
-    achados = []
-    for padrao, nome in RELEVANTES:
-        rs = q(db, "SELECT e.no FROM evento e JOIN no n ON n.id=e.no WHERE e.id > ? AND e.acao LIKE ? "
-                   "AND n.legado=0 ORDER BY e.id", desde or 0, padrao)
+def relevant_events(db):
+    """What happened since the current reading that may change the picture (not just how many tests ran)."""
+    l = current_reading(db)
+    # by the creation event's id, not by the clock: events in the same second as the reading are not lost
+    since = one(db, "SELECT max(id) FROM event WHERE node=? AND action='created'", l["id"])[0] if l else 0
+    found = []
+    for patterns, name in RELEVANT:
+        rs = q(db, "SELECT e.node FROM event e JOIN node n ON n.id=e.node WHERE e.id > ? AND ("
+                   + " OR ".join("e.action LIKE ?" for _ in patterns) + ") AND n.legacy=0 ORDER BY e.id",
+               since or 0, *patterns)
         if rs:
-            achados.append(f"{len(rs)} {nome} ({', '.join(rot(um(db, 'SELECT * FROM no WHERE id=?', r['no'])) for r in rs[:3])})")
-    if l:  # hipótese central (ligada à leitura) mudou de peso em ≥ 0,2: o quadro pode ter mudado
-        centrais = {x[0] for x in q(db, "SELECT para FROM aresta WHERE de=? AND tipo IN ('rival','depende') UNION "
-                                        "SELECT a.de FROM aresta a JOIN aresta s ON s.para=a.para WHERE s.de=? AND "
-                                        "s.tipo='sobre' AND a.tipo='responde'", l["id"], l["id"])}
-        mudou = []
-        for e in q(db, "SELECT no, acao FROM evento WHERE id > ? AND acao LIKE 'prob %'", desde or 0):
-            m = re.fullmatch(r"prob (\S+)→(\S+)", e["acao"])
-            if e["no"] in centrais and m and m[1] != "None" and abs(float(m[2]) - float(m[1])) >= 0.2:
-                mudou.append(f"H{e['no']} {m[1]}→{m[2]}")
-        if mudou:
-            achados.append("hipótese central mudou de peso (" + ", ".join(mudou[:3]) + ")")
-    return achados
+            found.append(f"{len(rs)} {name} ({', '.join(label(node_by_id(db, r['node'])) for r in rs[:3])})")
+    if l:  # a central hypothesis (tied to the reading) changed weight by ≥ 0.2: the picture may have changed
+        central = {x[0] for x in q(db, "SELECT dst FROM edge WHERE src=? AND type IN ('rival','depends') UNION "
+                                       "SELECT a.src FROM edge a JOIN edge s ON s.dst=a.dst WHERE s.src=? AND "
+                                       "s.type='about' AND a.type='answers'", l["id"], l["id"])}
+        changed = []
+        for e in q(db, "SELECT node, action FROM event WHERE id > ? AND action LIKE 'prob %'", since or 0):
+            m = re.fullmatch(r"prob (\S+)→(\S+)", e["action"])
+            if e["node"] in central and m and m[1] != "None" and abs(float(m[2]) - float(m[1])) >= 0.2:
+                changed.append(f"H{e['node']} {m[1]}→{m[2]}")
+        if changed:
+            found.append("central hypothesis changed weight (" + ", ".join(changed[:3]) + ")")
+    return found
 
 
-def pede_leitura(db):
-    """Revisão da teoria de trabalho motivada por evento; a contagem de resultados é só um lembrete."""
-    ev = eventos_relevantes(db)
+def reading_request(db):
+    """Revision of the working theory triggered by an event; the result count is only a reminder."""
+    ev = relevant_events(db)
     if ev:
-        return ("LEITURA DE CONJUNTO pedida por evento: " + "; ".join(ev) + ". Isso muda o que o caso parece "
-                "contar? Se mudou, `holmes.py leitura \"...\" --sustenta .. --motivo ..`; se não, diga por quê.")
-    n = resultados_sem_leitura(db)
-    if n < LEITURA_A_CADA:
+        return ("OVERALL READING requested by event: " + "; ".join(ev) + ". Does this change what the case seems "
+                "to tell? If it did, `holmes.py reading \"...\" --supports .. --reason ..`; if not, say why.")
+    n = results_since_reading(db)
+    if n < READING_EVERY:
         return ""
-    l = leitura_atual(db)
-    pend = um(db, "SELECT count(*) FROM execucao x JOIN no t ON t.id=x.teste WHERE x.resultado IS NOT NULL AND "
-                  "x.resultado != 'falhou' AND t.legado=0 AND (x.sentido IS NULL OR x.sentido LIKE 'revisar:%') AND "
-                  "replace(substr(x.fim, 1, 19), 'T', ' ') > ?", l["criado"] if l else "")[0]
-    return (f"LEITURA DE CONJUNTO pendente: {n} resultados desde a última" + (f" ({pend} com sentido pendente)" if pend else "")
-            + ". Leia-os juntos (skill `leitura`): somados, mudam o quadro? Atualize com `holmes.py leitura`.")
+    l = current_reading(db)
+    pend = one(db, "SELECT count(*) FROM run x JOIN node t ON t.id=x.test WHERE x.result IS NOT NULL AND "
+                   "x.result != 'failed' AND t.legacy=0 AND (x.meaning IS NULL OR x.meaning LIKE 'revisit:%') AND "
+                   "replace(substr(x.finished, 1, 19), 'T', ' ') > ?", l["created"] if l else "")[0]
+    return (f"OVERALL READING pending: {n} results since the last one" + (f" ({pend} with meaning pending)" if pend else "")
+            + ". Read them together (skill `reading`): taken together, do they change the picture? Update with `holmes.py reading`.")
 
 
-def vivo(pid):
+def alive(pid):
     return bool(pid) and Path(f"/proc/{pid}").exists()
 
 
-def abre_execucao(db, t, pid=None, log=None, host=None):
-    tt = um(db, "SELECT * FROM teste WHERE no=?", t["id"])
-    v = versao_atual(db, tt["instrumento"]) if tt["instrumento"] else None
-    if tt["instrumento"] and v:
-        inst = um(db, "SELECT * FROM instrumento WHERE no=?", tt["instrumento"])
-        s = sha_arquivo(inst["caminho"])
-        if s and s != v["sha"]:  # instrumento mudou no disco sem registrar: registra antes de rodar
-            vid = db.execute("INSERT INTO versao(instrumento, sha, quando, nota) VALUES (?,?,?,?)",
-                             (tt["instrumento"], s, agora(), "detectada ao rodar")).lastrowid
-            evento(db, tt["instrumento"], "nova versão", f"{v['sha'][:12]} → {s[:12]} (detectada ao rodar)")
-            v = um(db, "SELECT * FROM versao WHERE id=?", vid)
-    sha_s = sha_arquivo(tt["script"]) if tt["script"] else None
-    if tt["script"] and not sha_s:
-        print(f"aviso: script {tt['script']} não encontrado daqui: execução sem versão do script (passe o caminho "
-              "absoluto em --script); o resultado aparece 'script não versionado'")
-    xid = db.execute("INSERT INTO execucao(teste, versao, script_sha, host, pid, log, inicio) VALUES (?,?,?,?,?,?,?)",
-                     (t["id"], v["id"] if v else None, sha_s, host or socket.gethostname(), pid, log, agora())).lastrowid
-    db.execute("UPDATE no SET estado='rodando', atualizado=? WHERE id=?", (agora(), t["id"]))
-    evento(db, t["id"], "rodando", f"X{xid}" + (f" pid {pid}" if pid else "") + (f" log {log}" if log else ""))
+def open_run(db, t, pid=None, log=None, host=None):
+    tt = one(db, "SELECT * FROM test WHERE node=?", t["id"])
+    v = current_version(db, tt["instrument"]) if tt["instrument"] else None
+    if tt["instrument"] and v:
+        inst = one(db, "SELECT * FROM instrument WHERE node=?", tt["instrument"])
+        s = file_sha(inst["path"])
+        if s and s != v["sha"]:  # the instrument changed on disk without being registered: register before running
+            vid = db.execute("INSERT INTO version(instrument, sha, at, note) VALUES (?,?,?,?)",
+                             (tt["instrument"], s, now(), "detected when running")).lastrowid
+            event(db, tt["instrument"], "new version", f"{v['sha'][:12]} → {s[:12]} (detected when running)")
+            v = one(db, "SELECT * FROM version WHERE id=?", vid)
+    script_sha = file_sha(tt["script"]) if tt["script"] else None
+    if tt["script"] and not script_sha:
+        print(f"warning: script {tt['script']} not found from here: run without a script version (pass the absolute "
+              "path in --script); the result shows 'unversioned script'")
+    xid = db.execute("INSERT INTO run(test, version, script_sha, host, pid, log, started) VALUES (?,?,?,?,?,?,?)",
+                     (t["id"], v["id"] if v else None, script_sha, host or socket.gethostname(), pid, log, now())).lastrowid
+    db.execute("UPDATE node SET state='running', updated=? WHERE id=?", (now(), t["id"]))
+    event(db, t["id"], "running", f"X{xid}" + (f" pid {pid}" if pid else "") + (f" log {log}" if log else ""))
     return xid
 
 
-# ---------- consultas ----------
+# ---------- queries ----------
 
-def selo(db, r):
-    if r["tipo"] == "teste":
-        res = resultado_de(db, r["id"])
-        v = validade(db, r["id"])
+def stamp(db, r):
+    if r["type"] == "test":
+        res = result_of(db, r["id"])
+        v = validity(db, r["id"])
         return (f"→{res}" if res else "") + (f" ⚠ {v}" if v else "")
-    if r["tipo"] == "pista":
-        f = um(db, "SELECT * FROM fato WHERE no=?", r["id"])
-        return f" {f['natureza']}/{r['origem']}/{r['grau'] or '-'}" if f else ""
-    if r["tipo"] == "fato":
-        f = um(db, "SELECT * FROM fato WHERE no=?", r["id"])
-        return f" {f['natureza']}/{r['origem']}/{r['grau'] or '-'}" + (f" provado:{f['conferido_por']}" if f["conferido"] and f["conferido_por"]
-                                                                            else "" if f["conferido"] else " não-provado")
-    if r["tipo"] == "hipotese":
-        h = um(db, "SELECT prob FROM hipotese WHERE no=?", r["id"])
+    if r["type"] == "clue":
+        f = one(db, "SELECT * FROM fact WHERE node=?", r["id"])
+        return f" {f['nature']}/{r['origin']}/{r['grade'] or '-'}" if f else ""
+    if r["type"] == "fact":
+        f = one(db, "SELECT * FROM fact WHERE node=?", r["id"])
+        return f" {f['nature']}/{r['origin']}/{r['grade'] or '-'}" + (f" proven:{f['proven_by']}" if f["proven_at"] and f["proven_by"]
+                                                                       else "" if f["proven_at"] else " unproven")
+    if r["type"] == "hypothesis":
+        h = one(db, "SELECT prob FROM hypothesis WHERE node=?", r["id"])
         return f" p={h['prob']:.2f}" if h and h["prob"] is not None else ""
     return ""
 
 
-def linha(db, r):
-    marca = "✗ " if r["estado"] in CAIDOS else ""
-    return f"{marca}{rot(r)} [{r['tipo']}:{r['estado']}{selo(db, r)}] {r['titulo']}"
+def line(db, r):
+    mark = "✗ " if r["state"] in FALLEN else ""
+    return f"{mark}{label(r)} [{r['type']}:{r['state']}{stamp(db, r)}] {r['title']}"
 
 
-def expande(db, texto):
-    """Acrescenta à consulta os aliases das entidades cujo nome ou alias aparece no texto."""
-    ws = set(C.termos(texto))
+def expand(db, text):
+    """Adds to the query the aliases of the entities whose name or alias appears in the text."""
+    ws = set(C.terms(text))
     extra = []
-    for e in q(db, "SELECT n.titulo, e.aliases FROM entidade e JOIN no n ON n.id=e.no"):
-        nomes = [e["titulo"]] + [a.strip() for a in (e["aliases"] or "").split(",") if a.strip()]
-        if any(set(C.termos(nm)) & ws for nm in nomes):
-            extra += nomes
-    return texto + " " + " ".join(extra)
+    for e in q(db, "SELECT n.title, e.aliases FROM entity e JOIN node n ON n.id=e.node"):
+        names = [e["title"]] + [a.strip() for a in (e["aliases"] or "").split(",") if a.strip()]
+        if any(set(C.terms(nm)) & ws for nm in names):
+            extra += names
+    return text + " " + " ".join(extra)
 
 
-def busca(db, texto, n=8, so_testes=False, com_corpus=True):
-    ws = C.termos(expande(db, texto))
-    saida = []
+def search(db, text, n=8, tests_only=False, with_corpus=True):
+    ws = C.terms(expand(db, text))
+    out = []
     if ws:
         for h in q(db, "SELECT ref FROM idx WHERE idx MATCH ? ORDER BY bm25(idx) LIMIT ?",
                    " OR ".join(f'"{w}"' for w in ws), n * 4):
-            r = um(db, "SELECT * FROM no WHERE id=?", int(h["ref"]))
-            if not r or (so_testes and r["tipo"] != "teste"):
+            r = node_by_id(db, int(h["ref"]))
+            if not r or (tests_only and r["type"] != "test"):
                 continue
-            s = linha(db, r)
-            if so_testes:
-                t = um(db, "SELECT * FROM teste WHERE no=?", r["id"])
-                x = ultima(db, r["id"])
-                s += f"\n    alcance: {t['alcance']}" + (f"\n    fora: {t['fora']}" if t["fora"] else "")
-                if x and x["nota"]:
-                    s += f"\n    resultado: {x['nota'][:200]}"
-            saida.append(s)
-            if len(saida) >= n:
+            s = line(db, r)
+            if tests_only:
+                t = one(db, "SELECT * FROM test WHERE node=?", r["id"])
+                x = last_run(db, r["id"])
+                s += f"\n    scope: {t['scope']}" + (f"\n    outside: {t['outside']}" if t["outside"] else "")
+                if x and x["note"]:
+                    s += f"\n    result: {x['note'][:200]}"
+            out.append(s)
+            if len(out) >= n:
                 break
-    if com_corpus and not so_testes and C.existe():
+    if with_corpus and not tests_only and C.exists():
         try:
-            with C.conecta() as cdb:
-                saida += [f"corpus {C.linha(C.pedaco(cdb, i), texto)}" for i in C.bm25(cdb, texto, n=3)]
-        except Exception as e:  # corpus é auxiliar; a busca no caso não depende dele
-            saida.append(f"(corpus indisponível: {e})")
-    return saida
+            with C.connect() as cdb:
+                out += [f"corpus {C.line(C.chunk(cdb, i), text)}" for i in C.bm25(cdb, text, n=3)]
+        except Exception as e:  # the corpus is auxiliary; searching the case does not depend on it
+            out.append(f"(corpus unavailable: {e})")
+    return out
 
 
-def dependencias_quebradas(db):
-    return q(db, "SELECT a.de, a.para, a.tipo FROM aresta a JOIN no d ON d.id=a.de JOIN no p ON p.id=a.para "
-                 f"WHERE a.tipo IN ('depende','deriva') AND p.estado IN ({','.join('?' * len(CAIDOS))}) "
-                 f"AND d.estado NOT IN ({','.join('?' * len(CAIDOS))}) AND d.estado != 'substituida'", *CAIDOS, *CAIDOS)
+def broken_dependencies(db):
+    return q(db, "SELECT a.src, a.dst, a.type FROM edge a JOIN node d ON d.id=a.src JOIN node p ON p.id=a.dst "
+                 f"WHERE a.type IN ('depends','derives') AND p.state IN ({','.join('?' * len(FALLEN))}) "
+                 f"AND d.state NOT IN ({','.join('?' * len(FALLEN))}) AND d.state != 'superseded'", *FALLEN, *FALLEN)
 
 
-def contradicoes(db):
-    return q(db, "SELECT a.de, a.para FROM aresta a JOIN no d ON d.id=a.de JOIN no p ON p.id=a.para "
-                 f"WHERE a.tipo='contradiz' AND p.estado NOT IN ({','.join('?' * len(CAIDOS))}) "
-                 f"AND d.estado NOT IN ({','.join('?' * len(CAIDOS))})", *CAIDOS, *CAIDOS)
+def contradictions(db):
+    return q(db, "SELECT a.src, a.dst FROM edge a JOIN node d ON d.id=a.src JOIN node p ON p.id=a.dst "
+                 f"WHERE a.type='contradicts' AND p.state NOT IN ({','.join('?' * len(FALLEN))}) "
+                 f"AND d.state NOT IN ({','.join('?' * len(FALLEN))})", *FALLEN, *FALLEN)
 
 
-def alvo_livre(db, a):
-    deps = q(db, "SELECT n.estado FROM aresta x JOIN no n ON n.id=x.para WHERE x.de=? AND x.tipo='depende' "
-                 "AND n.tipo='alvo'", a)
-    return all(d["estado"] == "resolvido" for d in deps)
+def target_free(db, a):
+    deps = q(db, "SELECT n.state FROM edge x JOIN node n ON n.id=x.dst WHERE x.src=? AND x.type='depends' "
+                 "AND n.type='target'", a)
+    return all(d["state"] == "solved" for d in deps)
 
 
-def mapa(db, caso, tudo=False):
-    """Plano geral em seções com orçamento fixo, na ordem do que mais importa: nada de uma seção grande
-    empurrar alertas, decisões e fios para fora (o defeito do painel do v1)."""
-    L = [f"# MAPA — {caso}  ({agora()[:16]} UTC)"]
-    rid = lambda i: rot(um(db, "SELECT * FROM no WHERE id=?", i))
-    lim = (lambda n: 10 ** 6) if tudo else (lambda n: n)
-    mais = lambda rs, n, dica: [f"    … +{len(rs) - n} ({dica})"] if len(rs) > n and not tudo else []
-    for o in q(db, "SELECT * FROM no WHERE tipo='objetivo'"):
-        L.append(f"OBJETIVO {rot(o)} [{o['estado']}]: {o['titulo']}" + (f"\n  {o['resumo'][:300]}" if o["resumo"] else ""))
-    lt = leitura_atual(db)
+def build_map(db, case, everything=False):
+    """General plan in sections with a fixed budget, in order of what matters most: no big section pushes
+    alerts, decisions and threads out (the defect of the v1 dashboard)."""
+    L = [f"# MAP — {case}  ({now()[:16]} UTC)"]
+    rid = lambda i: label(node_by_id(db, i))
+    lim = (lambda n: 10 ** 6) if everything else (lambda n: n)
+    more = lambda rs, n, hint: [f"    … +{len(rs) - n} ({hint})"] if len(rs) > n and not everything else []
+    for o in q(db, "SELECT * FROM node WHERE type='objective'"):
+        L.append(f"OBJECTIVE {label(o)} [{o['state']}]: {o['title']}" + (f"\n  {o['summary'][:300]}" if o["summary"] else ""))
+    lt = current_reading(db)
     if lt:
-        L.append(f"\nLEITURA ATUAL {rot(lt)} ({lt['criado'][:10]}; {resultados_sem_leitura(db)} resultados desde então):\n  "
-                 + " ".join((lt["resumo"] or lt["titulo"]).split())[:lim(400)] + ("…" if len(lt["resumo"] or "") > 400 and not tudo else ""))
-        base = base_leitura(db, lt)
-        L.append("  " + (base or "sem base ligada: `leitura ... --sustenta E..` liga a teoria às evidências"))
+        L.append(f"\nCURRENT READING {label(lt)} ({lt['created'][:10]}; {results_since_reading(db)} results since then):\n  "
+                 + " ".join((lt["summary"] or lt["title"]).split())[:lim(400)]
+                 + ("…" if len(lt["summary"] or "") > 400 and not everything else ""))
+        basis = reading_basis(db, lt)
+        L.append("  " + (basis or "no basis linked: `reading ... --supports E..` ties the theory to the evidence"))
     else:
-        L.append("\nLEITURA ATUAL: nenhuma. Escreva o que o caso parece contar e onde estamos nessa história: "
-                 "`holmes.py leitura \"...\"`.")
-    ra = ramo_ativo(db, caso)
-    nr = {e: c for e, c in q(db, "SELECT estado, count(*) FROM no WHERE tipo='ramo' GROUP BY estado")}
+        L.append("\nCURRENT READING: none. Write what the case seems to tell and where we are in that story: "
+                 "`holmes.py reading \"...\"`.")
+    ra = active_branch(db, case)
+    nb = {e: c for e, c in q(db, "SELECT state, count(*) FROM node WHERE type='branch' GROUP BY state")}
     if ra:
-        ps = passos_de(db, ra["id"])
-        L.append(f"\nRAMO ATIVO {rot(ra)}: {ra['titulo'][:110]}  ({nr.get('ativo', 0)} ativos, {nr.get('pausado', 0)} "
-                 "pausados; `ficha`, `trilha`, `arvore`)")
-        L += [f"  {j}. {p['tipo']}: {p['texto'][:110]}" for j, p in list(enumerate(ps, 1))[-2:]]
-    elif nr:
-        L.append(f"\nRAMO ATIVO: nenhum ({sum(nr.values())} ramos; `arvore` mostra, `ramo usa B..` escolhe)")
-    px = proximo(db)
-    L.append("PRÓXIMO (`proximo`): " + " | ".join(f"{a} — {p[:90]}" for a, p in px[:lim(2)]))
-    alvos = q(db, "SELECT * FROM no WHERE tipo='alvo' ORDER BY id")
-    abertos = [a for a in alvos if a["estado"] != "resolvido"]
-    if alvos:
-        L.append(f"\nALVOS ({len(abertos)} abertos de {len(alvos)}):")
-        for a in abertos[:lim(8)]:
-            deps = q(db, "SELECT para FROM aresta WHERE de=? AND tipo='depende'", a["id"])
-            livre = a["estado"] == "aberto" and deps and alvo_livre(db, a["id"])
-            L.append(f"  {rot(a)} [{a['estado']}{' · DESBLOQUEADO' if livre else ''}] {a['titulo'][:90]}"
-                     + (f" (depende de {', '.join(rid(d['para']) for d in deps)})" if deps else ""))
-        L += mais(abertos, 8, "`mapa --tudo`")
-        feitos = [a for a in alvos if a["estado"] == "resolvido"]
-        if feitos:
-            L.append(f"  resolvidos ({len(feitos)}): " + ", ".join(rot(a) for a in feitos) + "  (`ver <id>` dá solução e prova)")
-    frentes = q(db, "SELECT * FROM no WHERE tipo='frente' AND estado='ativa' ORDER BY id")
-    L.append(f"\nFRENTES ATIVAS ({len(frentes)}/{MAX_FRENTES}):")
-    alertas = []
-    for f in frentes:
-        L.append(f"  {rot(f)} {f['titulo'][:90]}" + (f" — {f['resumo'][:100]}" if f["resumo"] else ""))
-        hs = q(db, "SELECT n.*, h.prob FROM no n JOIN hipotese h ON h.no=n.id WHERE n.pai=? AND n.estado IN "
-                   "('viva','apoiada') ORDER BY h.prob DESC, n.id", f["id"])
+        ps = steps_of(db, ra["id"])
+        L.append(f"\nACTIVE BRANCH {label(ra)}: {ra['title'][:110]}  ({nb.get('active', 0)} active, {nb.get('paused', 0)} "
+                 "paused; `sheet`, `trail`, `tree`)")
+        L += [f"  {j}. {p['type']}: {p['text'][:110]}" for j, p in list(enumerate(ps, 1))[-2:]]
+    elif nb:
+        L.append(f"\nACTIVE BRANCH: none ({sum(nb.values())} branches; `tree` shows them, `branch use B..` picks one)")
+    px = next_steps(db)
+    L.append("NEXT (`next`): " + " | ".join(f"{a} — {p[:90]}" for a, p in px[:lim(2)]))
+    targets = q(db, "SELECT * FROM node WHERE type='target' ORDER BY id")
+    open_targets = [a for a in targets if a["state"] != "solved"]
+    if targets:
+        L.append(f"\nTARGETS ({len(open_targets)} open of {len(targets)}):")
+        for a in open_targets[:lim(8)]:
+            deps = q(db, "SELECT dst FROM edge WHERE src=? AND type='depends'", a["id"])
+            free = a["state"] == "open" and deps and target_free(db, a["id"])
+            L.append(f"  {label(a)} [{a['state']}{' · UNBLOCKED' if free else ''}] {a['title'][:90]}"
+                     + (f" (depends on {', '.join(rid(d['dst']) for d in deps)})" if deps else ""))
+        L += more(open_targets, 8, "`map --all`")
+        solved = [a for a in targets if a["state"] == "solved"]
+        if solved:
+            L.append(f"  solved ({len(solved)}): " + ", ".join(label(a) for a in solved) + "  (`show <id>` gives solution and proof)")
+    fronts = q(db, "SELECT * FROM node WHERE type='front' AND state='active' ORDER BY id")
+    L.append(f"\nACTIVE FRONTS ({len(fronts)}/{MAX_FRONTS}):")
+    alerts = []
+    for f in fronts:
+        L.append(f"  {label(f)} {f['title'][:90]}" + (f" — {f['summary'][:100]}" if f["summary"] else ""))
+        hs = q(db, "SELECT n.*, h.prob FROM node n JOIN hypothesis h ON h.node=n.id WHERE n.parent=? AND n.state IN "
+                   "('alive','supported') ORDER BY h.prob DESC, n.id", f["id"])
         for h in hs[:lim(2)]:
-            ts = q(db, "SELECT id FROM no WHERE pai=? AND tipo='teste'", h["id"])
-            neg = sum(1 for t in ts if resultado_de(db, t["id"]) == "negativo")
+            ts = q(db, "SELECT id FROM node WHERE parent=? AND type='test'", h["id"])
+            neg = sum(1 for t in ts if result_of(db, t["id"]) == "negative")
             p = f" p={h['prob']:.2f}" if h["prob"] is not None else ""
-            L.append(f"    {rot(h)} [{h['estado']}{p}] {h['titulo'][:80]}" + (f"  (formas testadas {len(ts)}, neg {neg})" if ts else ""))
-        L += mais(hs, 2, f"`ver {rot(f)}`")
-        prem = q(db, "SELECT * FROM no WHERE pai=? AND tipo='premissa' AND estado='assumida'", f["id"])
+            L.append(f"    {label(h)} [{h['state']}{p}] {h['title'][:80]}" + (f"  (forms tested {len(ts)}, neg {neg})" if ts else ""))
+        L += more(hs, 2, f"`show {label(f)}`")
+        prem = q(db, "SELECT * FROM node WHERE parent=? AND type='premise' AND state='assumed'", f["id"])
         if prem:
-            L.append(f"    premissas não verificadas: " + ", ".join(rot(r) for r in prem[:lim(6)]))
-        n, v = tunel(db, f["id"])
-        if n >= TUNEL:
-            alertas.append(("túnel", f"TÚNEL em {rot(f)}: {aviso_tunel(n, v)}. Pare de testar: LEITURA, releia premissas "
-                           "e fonte primária, procure leituras alternativas, leve ao usuário."))
-    prem_obj = q(db, "SELECT id FROM no WHERE tipo='premissa' AND estado='assumida' AND pai IN "
-                     "(SELECT id FROM no WHERE tipo IN ('objetivo','alvo'))")
+            L.append("    unverified premises: " + ", ".join(label(r) for r in prem[:lim(6)]))
+        n, v = tunnel(db, f["id"])
+        if n >= TUNNEL:
+            alerts.append(("tunnel", f"TUNNEL in {label(f)}: {tunnel_warning(n, v)}. Stop testing: READING, reread premises "
+                           "and the primary source, look for alternative readings, take it to the user."))
+    prem_obj = q(db, "SELECT id FROM node WHERE type='premise' AND state='assumed' AND parent IN "
+                     "(SELECT id FROM node WHERE type IN ('objective','target'))")
     if prem_obj:
-        L.append(f"  premissas gerais não verificadas ({len(prem_obj)}): " + ", ".join(f"R{r['id']}" for r in prem_obj[:lim(8)]))
-    qs = q(db, "SELECT * FROM no WHERE tipo='questao' AND estado='aberta' AND legado=0 ORDER BY id DESC")
+        L.append(f"  unverified general premises ({len(prem_obj)}): " + ", ".join(f"R{r['id']}" for r in prem_obj[:lim(8)]))
+    qs = q(db, "SELECT * FROM node WHERE type='question' AND state='open' AND legacy=0 ORDER BY id DESC")
     if qs:
-        L.append(f"\nQUESTÕES ABERTAS ({len(qs)}; `questoes`):")
+        L.append(f"\nOPEN QUESTIONS ({len(qs)}; `questions`):")
         for x in qs[:lim(3)]:
-            sem = not um(db, "SELECT 1 FROM aresta WHERE para=? AND tipo='responde'", x["id"])
-            L.append(f"  {rot(x)} {x['titulo'][:90]}" + (" [lacuna: sem hipótese]" if sem else ""))
-    nc = um(db, "SELECT count(*) FROM no WHERE tipo='conexao' AND estado='sugerida'")[0]
+            none_yet = not one(db, "SELECT 1 FROM edge WHERE dst=? AND type='answers'", x["id"])
+            L.append(f"  {label(x)} {x['title'][:90]}" + (" [gap: no hypothesis]" if none_yet else ""))
+    nc = one(db, "SELECT count(*) FROM node WHERE type='connection' AND state='suggested'")[0]
     if nc:
-        L.append(f"  conexões candidatas por avaliar: {nc} (`conexoes` lista; confirmar ou rejeitar com `estado C..`)")
-    abertos_t = q(db, "SELECT * FROM no WHERE tipo='teste' AND estado IN ('planejado','rodando') ORDER BY id")
-    for t in abertos_t:
-        x = um(db, "SELECT * FROM execucao WHERE teste=? AND resultado IS NULL ORDER BY id DESC", t["id"])
-        if x and x["pid"] and not vivo(x["pid"]):
-            alertas.append(("pid", f"{rot(t)} 'rodando' com PID morto: leia o log e registre o resultado."))
-    lida = pede_leitura(db)
-    if lida:
-        alertas.insert(0, ("leitura", lida))
-    # Itens herdados de outro sistema (legado=1) não entram nos alertas até alguém mexer neles: senão a dívida
-    # antiga afoga o sinal novo. Ficam numa linha de contagem, e inteiros em `saude`.
-    leg = lambda i: um(db, "SELECT legado FROM no WHERE id=?", i)[0]
-    herdado = {}
-    for d in dependencias_quebradas(db):
-        if leg(d["de"]) and leg(d["para"]):
-            herdado["dependências quebradas"] = herdado.get("dependências quebradas", 0) + 1
+        L.append(f"  candidate connections to assess: {nc} (`connections` lists them; confirm or reject with `state C..`)")
+    open_tests = q(db, "SELECT * FROM node WHERE type='test' AND state IN ('planned','running') ORDER BY id")
+    for t in open_tests:
+        x = one(db, "SELECT * FROM run WHERE test=? AND result IS NULL ORDER BY id DESC", t["id"])
+        if x and x["pid"] and not alive(x["pid"]):
+            alerts.append(("pid", f"{label(t)} 'running' with a dead PID: read the log and record the result."))
+    req = reading_request(db)
+    if req:
+        alerts.insert(0, ("reading", req))
+    # Items inherited from another system (legacy=1) stay out of the alerts until someone touches them: otherwise
+    # the old debt drowns the new signal. They get a count line, and appear in full in `health`.
+    leg = lambda i: one(db, "SELECT legacy FROM node WHERE id=?", i)[0]
+    inherited = {}
+    for d in broken_dependencies(db):
+        if leg(d["src"]) and leg(d["dst"]):
+            inherited["broken dependencies"] = inherited.get("broken dependencies", 0) + 1
         else:
-            alertas.append(("dep", f"{rid(d['de'])} {d['tipo']} de {rid(d['para'])}, que caiu: reavalie {rid(d['de'])}."))
-    for c in contradicoes(db):
-        if leg(c["de"]) and leg(c["para"]):
-            herdado["contradições"] = herdado.get("contradições", 0) + 1
+            alerts.append(("dep", f"{rid(d['src'])} {d['type']} on {rid(d['dst'])}, which fell: reassess {rid(d['src'])}."))
+    for c in contradictions(db):
+        if leg(c["src"]) and leg(c["dst"]):
+            inherited["contradictions"] = inherited.get("contradictions", 0) + 1
         else:
-            alertas.append(("contra", f"contradição aberta: {rid(c['de'])} × {rid(c['para'])} (retrate um ou resolva)."))
-    sel = [(validade(db, t["no"]), t["legado"]) for t in q(db, "SELECT t.no, n.legado FROM teste t JOIN no n ON n.id=t.no")]
-    for chave, txt in (("INDETERMINADO", "negativo(s) sem instrumento: INDETERMINADOS, não fecham nada"),
-                       ("A REVALIDAR", "negativo(s) julgados por versão antiga do instrumento: A REVALIDAR"),
-                       ("INVÁLIDO", "resultado(s) com controle falho: INVÁLIDOS")):
-        n = sum(1 for v, lg in sel if v.startswith(chave) and not lg)
+            alerts.append(("contra", f"open contradiction: {rid(c['src'])} × {rid(c['dst'])} (retract one or resolve it)."))
+    stamps = [(validity(db, t["node"]), t["legacy"]) for t in q(db, "SELECT t.node, n.legacy FROM test t JOIN node n ON n.id=t.node")]
+    for key, txt in (("INDETERMINATE", "negative(s) without an instrument: INDETERMINATE, they close nothing"),
+                     ("TO REVALIDATE", "negative(s) judged by an old instrument version: TO REVALIDATE"),
+                     ("INVALID", "result(s) with a failed control: INVALID")):
+        n = sum(1 for v, lg in stamps if v.startswith(key) and not lg)
         if n:
-            alertas.append((chave, f"{n} {txt}."))
-        nl = sum(1 for v, lg in sel if v.startswith(chave) and lg)
+            alerts.append((key, f"{n} {txt}."))
+        nl = sum(1 for v, lg in stamps if v.startswith(key) and lg)
         if nl:
-            herdado[{"INDETERMINADO": "negativos indeterminados", "A REVALIDAR": "negativos a revalidar",
-                     "INVÁLIDO": "resultados inválidos"}[chave]] = nl
-    velhos = um(db, "SELECT count(*) FROM no n JOIN fato f ON f.no=n.id WHERE n.tipo='fato' AND f.conferido IS NULL")[0]
-    if velhos:
-        alertas.append(("velho", f"{velhos} fato(s) sem prova registrada (banco anterior ao modelo fato/pista): rode "
-                                 "`reorganiza` (plano) e `reorganiza --aplica` (vira pista o que não está provado)."))
-    rasc = um(db, "SELECT count(*) FROM no WHERE tipo='pista' AND estado='aberta' AND legado=0")[0]
-    if rasc:
-        alertas.append(("rasc", f"{rasc} pista(s) aberta(s): provar (`confere K.. --por ..`, vira fato) ou descartar "
-                                "(`estado K.. descartada`)."))
-    if herdado:
-        alertas.append(("legado", "herdado, fora dos alertas: " + ", ".join(f"{v} {k}" for k, v in herdado.items())
-                        + ". Trie um alvo por vez (`saude`); mexer num item o traz de volta."))
-    if alertas:
-        # agrupa os do mesmo tipo para que um tipo repetido não esconda os outros
-        grupos = {}
-        for k, a in alertas:
-            grupos.setdefault(k, []).append(a)
-        vis = [g[0] + (f"  (+{len(g) - 1} do mesmo tipo: `saude`)" if len(g) > 1 else "")
-               for g in grupos.values()] if not tudo else [a for _, a in alertas]
-        L.append(f"\nALERTAS ({len(alertas)}):")
+            inherited[{"INDETERMINATE": "indeterminate negatives", "TO REVALIDATE": "negatives to revalidate",
+                       "INVALID": "invalid results"}[key]] = nl
+    old_facts = one(db, "SELECT count(*) FROM node n JOIN fact f ON f.node=n.id WHERE n.type='fact' AND f.proven_at IS NULL")[0]
+    if old_facts:
+        alerts.append(("old", f"{old_facts} fact(s) without a recorded proof (database older than the fact/clue model): run "
+                              "`reorganize` (plan) and `reorganize --apply` (what is not proven becomes a clue)."))
+    clues = one(db, "SELECT count(*) FROM node WHERE type='clue' AND state='open' AND legacy=0")[0]
+    if clues:
+        alerts.append(("clue", f"{clues} open clue(s): prove them (`prove K.. --by ..`, becomes a fact) or drop them "
+                               "(`state K.. dropped`)."))
+    if inherited:
+        alerts.append(("legacy", "inherited, outside the alerts: " + ", ".join(f"{v} {k}" for k, v in inherited.items())
+                       + ". Triage one target at a time (`health`); touching an item brings it back."))
+    if alerts:
+        # group the ones of the same kind so that a repeated kind does not hide the others
+        groups = {}
+        for k, a in alerts:
+            groups.setdefault(k, []).append(a)
+        vis = [g[0] + (f"  (+{len(g) - 1} of the same kind: `health`)" if len(g) > 1 else "")
+               for g in groups.values()] if not everything else [a for _, a in alerts]
+        L.append(f"\nALERTS ({len(alerts)}):")
         L += [f"  ⚠ {a}" for a in vis[:lim(7)]]
-    front = q(db, "SELECT h.* FROM no h JOIN no f ON f.id=h.pai WHERE h.tipo='hipotese' AND h.estado='viva' "
-                  "AND f.estado='ativa' AND NOT EXISTS (SELECT 1 FROM no t WHERE t.pai=h.id AND t.tipo='teste' "
-                  "AND t.estado IN ('planejado','rodando')) ORDER BY h.id")
-    if front:
-        L.append(f"\nFRONTEIRA ({len(front)} hipóteses vivas sem teste aberto): " + ", ".join(rot(h) for h in front[:lim(12)])
-                 + (" …" if len(front) > 12 and not tudo else ""))
-    if abertos_t:
-        L.append("\nTESTES ABERTOS:")
-        for t in abertos_t[:lim(5)]:
-            x = um(db, "SELECT * FROM execucao WHERE teste=? AND resultado IS NULL ORDER BY id DESC", t["id"])
-            pid = f" X{x['id']} pid {x['pid']} {'vivo' if vivo(x['pid']) else 'MORTO'}" if x and x["pid"] else ""
-            L.append(f"  {rot(t)} [{t['estado']}{pid}] {t['titulo'][:90]}" + (f" log {x['log']}" if x and x["log"] else ""))
-        L += mais(abertos_t, 5, "`jobs`")
-    for titulo, sql, n in (("DECISÕES DO USUÁRIO (valem sobre qualquer regra)",
-                            "SELECT * FROM no WHERE tipo='decisao' AND estado='vigente' AND origem='usuario' ORDER BY id DESC", 3),
-                           ("FIOS ABERTOS", "SELECT * FROM no WHERE tipo='fio' AND estado='aberto' ORDER BY id DESC", 5)):
+    frontier = q(db, "SELECT h.* FROM node h JOIN node f ON f.id=h.parent WHERE h.type='hypothesis' AND h.state='alive' "
+                     "AND f.state='active' AND NOT EXISTS (SELECT 1 FROM node t WHERE t.parent=h.id AND t.type='test' "
+                     "AND t.state IN ('planned','running')) ORDER BY h.id")
+    if frontier:
+        L.append(f"\nFRONTIER ({len(frontier)} live hypotheses without an open test): " + ", ".join(label(h) for h in frontier[:lim(12)])
+                 + (" …" if len(frontier) > 12 and not everything else ""))
+    if open_tests:
+        L.append("\nOPEN TESTS:")
+        for t in open_tests[:lim(5)]:
+            x = one(db, "SELECT * FROM run WHERE test=? AND result IS NULL ORDER BY id DESC", t["id"])
+            pid = f" X{x['id']} pid {x['pid']} {'alive' if alive(x['pid']) else 'DEAD'}" if x and x["pid"] else ""
+            L.append(f"  {label(t)} [{t['state']}{pid}] {t['title'][:90]}" + (f" log {x['log']}" if x and x["log"] else ""))
+        L += more(open_tests, 5, "`jobs`")
+    for title, sql, n in (("USER DECISIONS (override any rule)",
+                           "SELECT * FROM node WHERE type='decision' AND state='current' AND origin='user' ORDER BY id DESC", 3),
+                          ("OPEN THREADS", "SELECT * FROM node WHERE type='thread' AND state='open' ORDER BY id DESC", 5)):
         rs = q(db, sql)
         if rs:
-            L.append(f"\n{titulo} ({len(rs)}):")
+            L.append(f"\n{title} ({len(rs)}):")
             for r in rs[:lim(n)]:
-                d = um(db, "SELECT * FROM decisao WHERE no=?", r["id"])
-                L.append(f"  {rot(r)} {r['titulo'][:100]}" + (f" | proíbe: {d['proibe'][:60]}" if d and d["proibe"] else "")
-                         + (f" | permite: {d['permite'][:60]}" if d and d["permite"] else ""))
-            L += mais(rs, n, "`mapa --tudo`")
-    outras = um(db, "SELECT count(*) FROM no WHERE tipo='decisao' AND estado='vigente' AND origem!='usuario'")[0]
-    if outras:
-        L.append(f"  (+{outras} decisões de método do agente: consulte com `busca`)")
-    ev = q(db, "SELECT e.*, n.tipo, n.id nid FROM evento e LEFT JOIN no n ON n.id=e.no ORDER BY e.id DESC LIMIT ?",
-           20 if tudo else 3)
+                d = one(db, "SELECT * FROM decision WHERE node=?", r["id"])
+                L.append(f"  {label(r)} {r['title'][:100]}" + (f" | forbids: {d['forbids'][:60]}" if d and d["forbids"] else "")
+                         + (f" | allows: {d['allows'][:60]}" if d and d["allows"] else ""))
+            L += more(rs, n, "`map --all`")
+    others = one(db, "SELECT count(*) FROM node WHERE type='decision' AND state='current' AND origin!='user'")[0]
+    if others:
+        L.append(f"  (+{others} method decisions by the agent: look them up with `search`)")
+    ev = q(db, "SELECT e.*, n.type, n.id nid FROM event e LEFT JOIN node n ON n.id=e.node ORDER BY e.id DESC LIMIT ?",
+           20 if everything else 3)
     if ev:
-        L.append("\nÚLTIMOS EVENTOS:")
-        L += [f"  {e['quando'][:16]} {PREFIXO.get(e['tipo'], '')}{e['nid'] or ''} {e['acao']}: {' '.join((e['texto'] or '').split())[:90]}"
+        L.append("\nLATEST EVENTS:")
+        L += [f"  {e['at'][:16]} {PREFIX.get(e['type'], '')}{e['nid'] or ''} {e['action']}: {' '.join((e['text'] or '').split())[:90]}"
               for e in ev]
-    L.append("\nDetalhe sob demanda: `ver <id>`, `busca`, `ja`, `saude`. "
-             "Não leia documentos inteiros para se orientar.")
+    L.append("\nDetail on demand: `show <id>`, `search`, `tried`, `health`. "
+             "Do not read whole documents to get your bearings.")
     txt = "\n".join(L)
-    if not tudo and len(txt) > MAX_MAPA and "\n\nÚLTIMOS EVENTOS:" in txt:  # eventos são o que menos orienta
-        ini = txt.index("\n\nÚLTIMOS EVENTOS:")
-        txt = txt[:ini] + txt[txt.index("\n\nDetalhe sob demanda", ini):]
-    if not tudo and len(txt) > MAX_MAPA:
-        txt = txt[:MAX_MAPA - 110] + "\n… [mapa cortado para caber na abertura; inteiro: `holmes.py mapa --tudo`]"
+    if not everything and len(txt) > MAX_MAP and "\n\nLATEST EVENTS:" in txt:  # events orient the least
+        start = txt.index("\n\nLATEST EVENTS:")
+        txt = txt[:start] + txt[txt.index("\n\nDetail on demand", start):]
+    if not everything and len(txt) > MAX_MAP:
+        txt = txt[:MAX_MAP - 110] + "\n… [map cut to fit the session start; in full: `holmes.py map --all`]"
     return txt
 
 
-def ver(db, r):
-    L = [linha(db, r), f"  origem {r['origem']} · criado {r['criado'][:16]} · atualizado {r['atualizado'][:16]}"]
-    if r["resumo"]:
-        L.append(f"  {r['resumo']}")
-    p, cadeia = r, []
-    while p["pai"]:
-        p = um(db, "SELECT * FROM no WHERE id=?", p["pai"])
-        cadeia.append(f"{rot(p)} {p['titulo'][:50]}")
-    if cadeia:
-        L.append("  sob: " + " ← ".join(cadeia))
-    if r["ramo"] if "ramo" in r.keys() else None:
-        rm = um(db, "SELECT * FROM no WHERE id=?", r["ramo"])
-        L.append(f"  no ramo: {rot(rm)} [{rm['estado']}] {rm['titulo'][:80]}")
-    for tab in ("teste", "fato", "hipotese", "alvo", "decisao", "entidade", "fonte", "instrumento", "conexao"):
-        x = um(db, f"SELECT * FROM {tab} WHERE no=?", r["id"]) if tab == r["tipo"] or (tab, r["tipo"]) == ("fato", "pista") else None
+def show(db, r):
+    L = [line(db, r), f"  origin {r['origin']} · created {r['created'][:16]} · updated {r['updated'][:16]}"]
+    if r["summary"]:
+        L.append(f"  {r['summary']}")
+    p, chain_up = r, []
+    while p["parent"]:
+        p = node_by_id(db, p["parent"])
+        chain_up.append(f"{label(p)} {p['title'][:50]}")
+    if chain_up:
+        L.append("  under: " + " ← ".join(chain_up))
+    if r["branch"]:
+        rm = node_by_id(db, r["branch"])
+        L.append(f"  in branch: {label(rm)} [{rm['state']}] {rm['title'][:80]}")
+    for tab in ("test", "fact", "hypothesis", "target", "decision", "entity", "source", "instrument", "connection"):
+        x = one(db, f"SELECT * FROM {tab} WHERE node=?", r["id"]) if tab == r["type"] or (tab, r["type"]) == ("fact", "clue") else None
         if x:
-            L += [f"  {k}: {x[k]}" for k in x.keys() if k != "no" and x[k] not in (None, "")]
-    if r["tipo"] == "teste":
-        t = um(db, "SELECT * FROM teste WHERE no=?", r["id"])
-        for x in q(db, "SELECT x.*, v.sha FROM execucao x LEFT JOIN versao v ON v.id=x.versao WHERE x.teste=? "
+            L += [f"  {k}: {x[k]}" for k in x.keys() if k != "node" and x[k] not in (None, "")]
+    if r["type"] == "test":
+        t = one(db, "SELECT * FROM test WHERE node=?", r["id"])
+        for x in q(db, "SELECT x.*, v.sha FROM run x LEFT JOIN version v ON v.id=x.version WHERE x.test=? "
                        "ORDER BY x.id", r["id"]):
-            antes = ("previsão ANTES" if t["previsao_em"] and t["previsao_em"] <= (x["inicio"] or "")
-                     else "previsão depois ou ausente")
-            L.append(f"  X{x['id']} {x['inicio'][:16]}→{(x['fim'] or '…')[:16]} {x['resultado'] or 'rodando'} "
-                     f"instr {(x['sha'] or 'nenhum')[:12]} controle_ok={x['controle_ok']} n={x['n']} {antes} "
-                     f"{x['host']} pid {x['pid']} log {x['log']}" + (f"\n     {x['nota']}" if x["nota"] else "")
-                     + (f"\n     sentido: {x['sentido']}" if x["sentido"] else ""))
-        v = validade(db, r["id"])
+            before = ("prediction BEFORE" if t["predicted_at"] and t["predicted_at"] <= (x["started"] or "")
+                      else "prediction after or absent")
+            L.append(f"  X{x['id']} {x['started'][:16]}→{(x['finished'] or '…')[:16]} {x['result'] or 'running'} "
+                     f"instr {(x['sha'] or 'none')[:12]} control_ok={x['control_ok']} n={x['n']} {before} "
+                     f"{x['host']} pid {x['pid']} log {x['log']}" + (f"\n     {x['note']}" if x["note"] else "")
+                     + (f"\n     meaning: {x['meaning']}" if x["meaning"] else ""))
+        v = validity(db, r["id"])
         if v:
             L.append(f"  ⚠ {v}")
-    if r["tipo"] == "instrumento":
-        L += [f"  versão {v['id']} {v['sha'][:12]} {v['quando'][:16]} verificado={v['verificado']} {v['nota'] or ''}"
-              for v in q(db, "SELECT * FROM versao WHERE instrumento=? ORDER BY id", r["id"])]
-    if r["tipo"] == "entidade":
-        L += [f"  · {a['chave']} = {a['valor']}" + (f" (E{a['fato']})" if a["fato"] else "")
-              for a in q(db, "SELECT * FROM atributo WHERE entidade=? ORDER BY chave", r["id"])]
-    if r["tipo"] == "hipotese":
-        for a in q(db, "SELECT a.valor, n.* FROM ach a JOIN no n ON n.id=a.fato WHERE a.hipotese=?", r["id"]):
-            L.append(f"  ACH {a['valor']:>2} {rot(a)} {a['titulo'][:70]}")
-    if r["tipo"] == "conexao":
-        c = um(db, "SELECT * FROM conexao WHERE no=?", r["id"])
-        for k in ("de", "para"):
-            L.append(f"  {k}: {linha(db, um(db, 'SELECT * FROM no WHERE id=?', c[k]))[:140]}")
-    if r["tipo"] == "leitura":
-        L.append("  " + (base_leitura(db, r) or "sem base ligada"))
-    for c in q(db, "SELECT c.*, n.estado, n.titulo FROM conexao c JOIN no n ON n.id=c.no WHERE c.de=? OR c.para=?",
+    if r["type"] == "instrument":
+        L += [f"  version {v['id']} {v['sha'][:12]} {v['at'][:16]} verified={v['verified']} {v['note'] or ''}"
+              for v in q(db, "SELECT * FROM version WHERE instrument=? ORDER BY id", r["id"])]
+    if r["type"] == "entity":
+        L += [f"  · {a['key']} = {a['value']}" + (f" (E{a['fact']})" if a["fact"] else "")
+              for a in q(db, "SELECT * FROM attribute WHERE entity=? ORDER BY key", r["id"])]
+    if r["type"] == "hypothesis":
+        for a in q(db, "SELECT a.value, n.* FROM ach a JOIN node n ON n.id=a.fact WHERE a.hypothesis=?", r["id"]):
+            L.append(f"  ACH {a['value']:>2} {label(a)} {a['title'][:70]}")
+    if r["type"] == "connection":
+        c = one(db, "SELECT * FROM connection WHERE node=?", r["id"])
+        for k in ("src", "dst"):
+            L.append(f"  {k}: {line(db, node_by_id(db, c[k]))[:140]}")
+    if r["type"] == "reading":
+        L.append("  " + (reading_basis(db, r) or "no basis linked"))
+    for c in q(db, "SELECT c.*, n.state, n.title FROM connection c JOIN node n ON n.id=c.node WHERE c.src=? OR c.dst=?",
                r["id"], r["id"]):
-        L.append(f"  ~ conexão candidata C{c['no']} [{c['estado']}] {c['titulo'][:90]}")
-    fs = q(db, "SELECT * FROM no WHERE pai=? ORDER BY id", r["id"])
-    if fs:
-        L.append("  filhos:")
-        L += [f"    {linha(db, f)}" for f in fs[:30]]
-    for seta, sql in (("→", "SELECT a.tipo t, a.nota, n.* FROM aresta a JOIN no n ON n.id=a.para WHERE a.de=?"),
-                      ("←", "SELECT a.tipo t, a.nota, n.* FROM aresta a JOIN no n ON n.id=a.de WHERE a.para=?")):
+        L.append(f"  ~ candidate connection C{c['node']} [{c['state']}] {c['title'][:90]}")
+    kids = q(db, "SELECT * FROM node WHERE parent=? ORDER BY id", r["id"])
+    if kids:
+        L.append("  children:")
+        L += [f"    {line(db, f)}" for f in kids[:30]]
+    for arrow, sql in (("→", "SELECT a.type t, a.note, n.* FROM edge a JOIN node n ON n.id=a.dst WHERE a.src=?"),
+                       ("←", "SELECT a.type t, a.note, n.* FROM edge a JOIN node n ON n.id=a.src WHERE a.dst=?")):
         for x in q(db, sql, r["id"]):
-            caiu = " (CAIU)" if x["estado"] in CAIDOS else ""
-            L.append(f"  {seta} {x['t']} {rot(x)} {x['titulo'][:70]}{caiu}" + (f" — {x['nota']}" if x["nota"] else ""))
-    L += [f"  · {e['quando'][:16]} {e['acao']}: {e['texto']}"
-          for e in q(db, "SELECT * FROM evento WHERE no=? ORDER BY id DESC LIMIT 8", r["id"])]
+            fell = " (FELL)" if x["state"] in FALLEN else ""
+            L.append(f"  {arrow} {x['t']} {label(x)} {x['title'][:70]}{fell}" + (f" — {x['note']}" if x["note"] else ""))
+    L += [f"  · {e['at'][:16]} {e['action']}: {e['text']}"
+          for e in q(db, "SELECT * FROM event WHERE node=? ORDER BY id DESC LIMIT 8", r["id"])]
     return "\n".join(L)
 
 
-def matriz_ach(db, f):
-    hs = q(db, "SELECT * FROM no WHERE pai=? AND tipo='hipotese' AND estado IN ('viva','apoiada') ORDER BY id", f["id"])
+def ach_matrix(db, f):
+    hs = q(db, "SELECT * FROM node WHERE parent=? AND type='hypothesis' AND state IN ('alive','supported') ORDER BY id", f["id"])
     if not hs:
-        return f"{rot(f)} sem hipóteses vivas"
-    vals = q(db, f"SELECT * FROM ach WHERE hipotese IN ({','.join('?' * len(hs))})", *[h["id"] for h in hs])
-    fatos = sorted({v["fato"] for v in vals})
-    cel = {(v["fato"], v["hipotese"]): v["valor"] for v in vals}
-    L = ["fato/pista " + " ".join(f"{rot(h):>6}" for h in hs) + "  diagnóstico?"]
-    for e in fatos:
-        linha_v = [cel.get((e, h["id"]), "·") for h in hs]
-        diag = "sim" if len({x for x in linha_v if x != "·"}) > 1 else "não (igual para todas)"
-        L.append(f"{rot(um(db, 'SELECT * FROM no WHERE id=?', e)):<10} " + " ".join(f"{x:>6}" for x in linha_v) + f"  {diag}")
-    inc = [sum(-ACH[cel[(e, h['id'])]] for e in fatos if (e, h["id"]) in cel and ACH[cel[(e, h['id'])]] < 0) for h in hs]
-    L.append("inconsist " + " ".join(f"{x:>6}" for x in inc) + "  (menor = menos refutada; conta só I/II)")
+        return f"{label(f)} has no live hypotheses"
+    vals = q(db, f"SELECT * FROM ach WHERE hypothesis IN ({','.join('?' * len(hs))})", *[h["id"] for h in hs])
+    facts = sorted({v["fact"] for v in vals})
+    cell = {(v["fact"], v["hypothesis"]): v["value"] for v in vals}
+    L = ["fact/clue  " + " ".join(f"{label(h):>6}" for h in hs) + "  diagnostic?"]
+    for e in facts:
+        row = [cell.get((e, h["id"]), "·") for h in hs]
+        diag = "yes" if len({x for x in row if x != "·"}) > 1 else "no (same for all)"
+        L.append(f"{label(node_by_id(db, e)):<10} " + " ".join(f"{x:>6}" for x in row) + f"  {diag}")
+    inc = [sum(-ACH[cell[(e, h['id'])]] for e in facts if (e, h["id"]) in cell and ACH[cell[(e, h['id'])]] < 0) for h in hs]
+    L.append("inconsist " + " ".join(f"{x:>6}" for x in inc) + "  (lower = less refuted; counts only I/II)")
     return "\n".join(L)
 
 
-def saude(db):
+HOOK_NAMES = {"abertura": "start", "pistas": "prompt", "guarda": "guard", "pos": "post", "fim": "stop"}
+
+
+def health(db):
     L = []
-    orf = q(db, "SELECT * FROM no WHERE tipo IN ('fato','pista') AND id NOT IN (SELECT de FROM aresta UNION SELECT para FROM aresta "
-                "UNION SELECT fato FROM ach)")
-    if orf:
-        L.append(f"{len(orf)} fato(s)/pista(s) soltos, sem ligação a hipótese/entidade: " + ", ".join(rot(r) for r in orf[:15]))
-    sem_fonte = q(db, "SELECT n.* FROM no n JOIN fato f ON f.no=n.id WHERE n.origem IN ('autor','fonte') "
-                      "AND f.fonte IS NULL AND n.estado != 'retratado'")
-    if sem_fonte:
-        L.append(f"{len(sem_fonte)} fato(s)/pista(s) de origem autor/fonte sem --fonte: " + ", ".join(rot(r) for r in sem_fonte[:15]))
-    velhos = q(db, "SELECT * FROM no WHERE tipo='teste' AND estado='planejado' AND criado < datetime('now','-3 day')")
-    if velhos:
-        L.append(f"{len(velhos)} teste(s) planejados há mais de 3 dias: " + ", ".join(rot(r) for r in velhos[:15]))
-    deps = dependencias_quebradas(db)
+    loose = q(db, "SELECT * FROM node WHERE type IN ('fact','clue') AND id NOT IN (SELECT src FROM edge UNION SELECT dst FROM edge "
+                  "UNION SELECT fact FROM ach)")
+    if loose:
+        L.append(f"{len(loose)} loose fact(s)/clue(s), not linked to a hypothesis/entity: " + ", ".join(label(r) for r in loose[:15]))
+    no_source = q(db, "SELECT n.* FROM node n JOIN fact f ON f.node=n.id WHERE n.origin IN ('author','source') "
+                      "AND f.source IS NULL AND n.state != 'retracted'")
+    if no_source:
+        L.append(f"{len(no_source)} fact(s)/clue(s) of origin author/source without --source: " + ", ".join(label(r) for r in no_source[:15]))
+    stale = q(db, "SELECT * FROM node WHERE type='test' AND state='planned' AND created < datetime('now','-3 day')")
+    if stale:
+        L.append(f"{len(stale)} test(s) planned more than 3 days ago: " + ", ".join(label(r) for r in stale[:15]))
+    deps = broken_dependencies(db)
     if deps:
-        L.append(f"{len(deps)} item(ns) dependem de algo que caiu (refutado/retratado): "
-                 + ", ".join(f"{d['de']}→{d['para']}" for d in deps[:40]) + (" …" if len(deps) > 40 else ""))
-    cs = contradicoes(db)
+        L.append(f"{len(deps)} item(s) depend on something that fell (refuted/retracted): "
+                 + ", ".join(f"{d['src']}→{d['dst']}" for d in deps[:40]) + (" …" if len(deps) > 40 else ""))
+    cs = contradictions(db)
     if cs:
-        L.append(f"{len(cs)} contradição(ões) abertas: " + ", ".join(f"{c['de']}×{c['para']}" for c in cs[:40]))
-    hs = q(db, "SELECT n.* FROM no n JOIN hipotese h ON h.no=n.id WHERE n.estado='viva' AND h.refuta_se IS NULL")
+        L.append(f"{len(cs)} open contradiction(s): " + ", ".join(f"{c['src']}×{c['dst']}" for c in cs[:40]))
+    hs = q(db, "SELECT n.* FROM node n JOIN hypothesis h ON h.node=n.id WHERE n.state='alive' AND h.refuted_if IS NULL")
     if hs:
-        L.append(f"{len(hs)} hipótese(s) viva(s) sem critério de refutação (--refuta-se): " + ", ".join(rot(r) for r in hs[:15]))
-    hk = RAIZ / ".holmes" / "hooks.json"  # gravado pelos próprios hooks ao rodar: execução vista, não configuração
+        L.append(f"{len(hs)} live hypothesis(es) without a refutation criterion (--refuted-if): " + ", ".join(label(r) for r in hs[:15]))
+    hk = STATE_DIR / "hooks.json"  # written by the hooks themselves when they run: execution seen, not configuration
     try:
         import json
-        vistos = json.loads(hk.read_text()) if hk.exists() else {}
+        seen = json.loads(hk.read_text()) if hk.exists() else {}
     except (OSError, ValueError):
-        vistos = {}
-    if not isinstance(vistos, dict):
-        vistos = {}
-    falta = [h for h in ("abertura", "pistas", "guarda", "fim") if h not in vistos]
-    L.append("hooks vistos rodando: " + (", ".join(f"{k} {v}" for k, v in sorted(vistos.items())) or "nenhum")
-             + (f" · nunca vistos: {', '.join(falta)} (confira .claude/settings.json e a confiança na pasta)" if falta else ""))
+        seen = {}
+    if not isinstance(seen, dict):
+        seen = {}
+    seen = {HOOK_NAMES.get(k, k): re.sub(r" FALHOU$", " FAILED", str(v)) for k, v in sorted(seen.items(), key=lambda kv: kv[0] in HOOK_NAMES, reverse=True)}
+    missing = [h for h in ("start", "prompt", "guard", "stop") if h not in seen]
+    L.append("hooks seen running: " + (", ".join(f"{k} {v}" for k, v in sorted(seen.items())) or "none")
+             + (f" · never seen: {', '.join(missing)} (check .claude/settings.json and that the folder is trusted)" if missing else ""))
     return "\n".join(L)
 
 
-# ---------- relações: descoberta (consulta) e conexões candidatas (registro) ----------
+# ---------- relations: discovery (query) and candidate connections (record) ----------
 
-VAZIAS = set("para com que uma por como mais mas não nao das dos nas nos pelo pela este esta isso isto "
-             "ser são foi tem the and that this with from have for are was were which".split())
+# Portuguese and English stopwords: existing case material is in either language
+STOPWORDS = set("para com que uma por como mais mas não nao das dos nas nos pelo pela este esta isso isto "
+                "ser são foi tem the and that this with from have for are was were which what into than then "
+                "them they there their about would could should only also".split())
 NUM = re.compile(r"\b(?:\d{2,}|[0-9a-f]{6,})\b", re.I)
-SALIENTES = ("fato", "pista", "hipotese", "questao", "entidade", "premissa", "fio", "leitura")
+SALIENT = ("fact", "clue", "hypothesis", "question", "entity", "premise", "thread", "reading")
 
 
-def texto_de(db, r):
-    f = um(db, "SELECT citacao FROM fato WHERE no=?", r["id"])
-    return " ".join([r["titulo"], r["resumo"] or "", (f["citacao"] or "") if f else ""])
+def text_of(db, r):
+    f = one(db, "SELECT quote FROM fact WHERE node=?", r["id"])
+    return " ".join([r["title"], r["summary"] or "", (f["quote"] or "") if f else ""])
 
 
-def todos(texto):  # C.termos corta em 24 termos (bom para consulta, ruim para comparar textos longos)
-    return set(re.findall(r"\w{3,}", texto.lower()))
+def all_words(text):  # C.terms stops at 24 terms (good for a query, bad for comparing long texts)
+    return set(re.findall(r"\w{3,}", text.lower()))
 
 
-def palavras(texto):
-    return {w for w in todos(texto) if len(w) >= 4 and w not in VAZIAS and not w.isdigit()}
+def words(text):
+    return {w for w in all_words(text) if len(w) >= 4 and w not in STOPWORDS and not w.isdigit()}
 
 
-def vizinhos(db, no):
-    return {x[0] for x in q(db, "SELECT para FROM aresta WHERE de=? UNION SELECT de FROM aresta WHERE para=?", no, no)}
+def neighbours(db, node):
+    return {x[0] for x in q(db, "SELECT dst FROM edge WHERE src=? UNION SELECT src FROM edge WHERE dst=?", node, node)}
 
 
-def fts(db, termos, junta="OR", n=30):
-    if not termos:
+def fts(db, terms, join="OR", n=30):
+    if not terms:
         return []
     return [int(h["ref"]) for h in q(db, "SELECT ref FROM idx WHERE idx MATCH ? ORDER BY bm25(idx) LIMIT ?",
-                                     f" {junta} ".join(f'"{w}"' for w in termos), n)]
+                                     f" {join} ".join(f'"{w}"' for w in terms), n)]
 
 
-def candidatas(db, texto, no=None, n=8):
-    """Relações possíveis para um item (ou um texto), por cinco canais baratos. Nada é gravado: é consulta.
-    O julgamento de que a relação existe é do agente, e a confirmação, de uma evidência (`conexao`/`estado`).
-    Canais: termos em comum; ponte por entidade (nome ↔ alias da mesma entidade, a via para o que não
-    compartilha palavra); vizinho comum no grafo; mesmo número ou sequência; material do corpus."""
-    ws, nums = palavras(texto), {m.lower() for m in NUM.findall(texto)}
-    motivos = {}
+def candidates(db, text, node=None, n=8):
+    """Possible relations for an item (or a text), through five cheap channels. Nothing is stored: it is a query.
+    Judging that the relation exists is up to the agent, and confirming it, up to evidence (`connection`/`state`).
+    Channels: shared terms; bridge through an entity (name ↔ alias of the same entity, the route to what shares
+    no word); common neighbour in the graph; same number or sequence; corpus material."""
+    ws, nums = words(text), {m.lower() for m in NUM.findall(text)}
+    reasons = {}
 
-    def add(i, canal, txt):
-        if i != no:
-            motivos.setdefault(i, {}).setdefault(canal, txt)
+    def add(i, channel, txt):
+        if i != node:
+            reasons.setdefault(i, {}).setdefault(channel, txt)
 
     for i in fts(db, sorted(ws)[:60]):
-        comuns = ws & palavras(texto_de(db, um(db, "SELECT * FROM no WHERE id=?", i)))
-        if len(comuns) >= (2 if len(ws) > 6 else 1):
-            add(i, "termos", "termos em comum: " + ", ".join(sorted(comuns)[:4]))
-    for e in q(db, "SELECT n.id, n.titulo, e.aliases FROM entidade e JOIN no n ON n.id=e.no WHERE n.estado='ativa'"):
-        nomes = [e["titulo"]] + [a.strip() for a in (e["aliases"] or "").split(",") if a.strip()]
-        bate = [nm for nm in nomes if todos(nm) and todos(nm) <= todos(texto)]
-        if not bate or e["id"] == no:
+        shared = ws & words(text_of(db, node_by_id(db, i)))
+        if len(shared) >= (2 if len(ws) > 6 else 1):
+            add(i, "terms", "shared terms: " + ", ".join(sorted(shared)[:4]))
+    for e in q(db, "SELECT n.id, n.title, e.aliases FROM entity e JOIN node n ON n.id=e.node WHERE n.state='active'"):
+        names = [e["title"]] + [a.strip() for a in (e["aliases"] or "").split(",") if a.strip()]
+        hit = [nm for nm in names if all_words(nm) and all_words(nm) <= all_words(text)]
+        if not hit or e["id"] == node:
             continue
-        add(e["id"], "ponte", f"entidade de que o texto fala ('{bate[0]}')")
-        for nm in nomes:
-            if nm in bate:
+        add(e["id"], "bridge", f"entity the text talks about ('{hit[0]}')")
+        for nm in names:
+            if nm in hit:
                 continue
-            for i in fts(db, C.termos(nm), "AND", 15):
-                outro = um(db, "SELECT * FROM no WHERE id=?", i)
-                if not todos(nm) <= todos(texto_de(db, outro)):
+            for i in fts(db, C.terms(nm), "AND", 15):
+                other = node_by_id(db, i)
+                if not all_words(nm) <= all_words(text_of(db, other)):
                     continue
-                add(i, "ponte", f"ponte N{e['id']} {e['titulo']}: '{bate[0]}' ↔ '{nm}'")
-        for i in vizinhos(db, e["id"]):
-            add(i, "ponte", f"ligado à entidade N{e['id']} {e['titulo']} ('{bate[0]}')")
-    if no:
-        for v in vizinhos(db, no):
-            for i in vizinhos(db, v) - {no}:
-                add(i, "grafo", f"vizinho comum {rot(um(db, 'SELECT * FROM no WHERE id=?', v))}")
+                add(i, "bridge", f"bridge N{e['id']} {e['title']}: '{hit[0]}' ↔ '{nm}'")
+        for i in neighbours(db, e["id"]):
+            add(i, "bridge", f"linked to entity N{e['id']} {e['title']} ('{hit[0]}')")
+    if node:
+        for v in neighbours(db, node):
+            for i in neighbours(db, v) - {node}:
+                add(i, "graph", f"common neighbour {label(node_by_id(db, v))}")
     for m in nums:
         for i in fts(db, [m], n=15):
-            add(i, "numero", f"mesmo número/sequência {m}")
-    ja = vizinhos(db, no) if no else set()
-    reg = {}
-    if no:
-        for c in q(db, "SELECT c.*, n.estado FROM conexao c JOIN no n ON n.id=c.no WHERE c.de=? OR c.para=?", no, no):
-            reg[c["para"] if c["de"] == no else c["de"]] = (c["no"], c["estado"])
-    linhas, cont = [], {"ligados": 0, "rejeitadas": 0}
-    peso = {"ponte": 3, "numero": 2, "grafo": 2, "termos": 1}
-    ordem = sorted(motivos.items(), key=lambda kv: (-sum(peso[c] for c in kv[1]), -kv[0]))
-    for i, ms in ordem:
-        r = um(db, "SELECT * FROM no WHERE id=?", i)
-        if not r or r["tipo"] not in SALIENTES or r["estado"] in CAIDOS:
+            add(i, "number", f"same number/sequence {m}")
+    linked = neighbours(db, node) if node else set()
+    recorded = {}
+    if node:
+        for c in q(db, "SELECT c.*, n.state FROM connection c JOIN node n ON n.id=c.node WHERE c.src=? OR c.dst=?", node, node):
+            recorded[c["dst"] if c["src"] == node else c["src"]] = (c["node"], c["state"])
+    lines, count = [], {"linked": 0, "rejected": 0}
+    weight = {"bridge": 3, "number": 2, "graph": 2, "terms": 1}
+    order = sorted(reasons.items(), key=lambda kv: (-sum(weight[c] for c in kv[1]), -kv[0]))
+    for i, ms in order:
+        r = node_by_id(db, i)
+        if not r or r["type"] not in SALIENT or r["state"] in FALLEN:
             continue
-        if i in ja:
-            cont["ligados"] += 1
+        if i in linked:
+            count["linked"] += 1
             continue
-        nota = ""
-        if i in reg:
-            if reg[i][1] == "rejeitada":
-                cont["rejeitadas"] += 1
+        note = ""
+        if i in recorded:
+            if recorded[i][1] == "rejected":
+                count["rejected"] += 1
                 continue
-            nota = f"  (já registrada: C{reg[i][0]} {reg[i][1]})"
-        linhas.append(f"  {linha(db, r)[:150]}{' (v1)' if r['legado'] else ''}{nota}\n      ← " + "; ".join(ms.values()))
-    saida = linhas[:n]
-    rodape = [f"(+{len(linhas) - n} candidatas)"] if len(linhas) > n else []
-    rodape += [f"({cont['ligados']} já ligados no grafo, {cont['rejeitadas']} já rejeitadas: fora da lista)"] if any(cont.values()) else []
-    if C.existe():
+            note = f"  (already recorded: C{recorded[i][0]} {recorded[i][1]})"
+        lines.append(f"  {line(db, r)[:150]}{' (v1)' if r['legacy'] else ''}{note}\n      ← " + "; ".join(ms.values()))
+    out = lines[:n]
+    footer = [f"(+{len(lines) - n} candidates)"] if len(lines) > n else []
+    footer += [f"({count['linked']} already linked in the graph, {count['rejected']} already rejected: left out)"] if any(count.values()) else []
+    if C.exists():
         try:
-            with C.conecta() as cdb:
+            with C.connect() as cdb:
                 try:
-                    ids = C.busca(cdb, texto, n=3, modo="hibrido")
-                except Exception:  # sem vetores: só palavra
-                    ids = C.bm25(cdb, texto, n=3)
-                saida += [f"  material {C.linha(C.pedaco(cdb, i), texto)[:150]}  (corpus, não registrado: `cita` se importar)"
-                          for i in ids]
+                    ids = C.search(cdb, text, n=3, mode="hybrid")
+                except Exception:  # no vectors: words only
+                    ids = C.bm25(cdb, text, n=3)
+                out += [f"  material {C.line(C.chunk(cdb, i), text)[:150]}  (corpus, not recorded: `quote` it if it matters)"
+                        for i in ids]
         except Exception as e:
-            rodape.append(f"(corpus indisponível: {e})")
-    return saida, rodape
+            footer.append(f"(corpus unavailable: {e})")
+    return out, footer
 
 
-def dependentes(db, no):
-    """Tudo que se apoia em `no`, transitivamente: X depende/deriva de no, ou no sustenta X."""
-    vistos, fila = [], [no]
-    while fila:
-        a = fila.pop()
-        for x in q(db, "SELECT de i FROM aresta WHERE para=? AND tipo IN ('depende','deriva') "
-                       "UNION SELECT para FROM aresta WHERE de=? AND tipo='sustenta'", a, a):
-            if x["i"] not in vistos and x["i"] != no:
-                vistos.append(x["i"])
-                fila.append(x["i"])
-    return vistos
+def dependents(db, node):
+    """Everything that rests on `node`, transitively: X depends on/derives from node, or node supports X."""
+    seen, queue = [], [node]
+    while queue:
+        a = queue.pop()
+        for x in q(db, "SELECT src i FROM edge WHERE dst=? AND type IN ('depends','derives') "
+                       "UNION SELECT dst FROM edge WHERE src=? AND type='supports'", a, a):
+            if x["i"] not in seen and x["i"] != node:
+                seen.append(x["i"])
+                queue.append(x["i"])
+    return seen
 
 
-def cadeia(db, r, prof=0, visto=None, rotulo=""):
-    """A fundamentação de um item, descendo: de que depende, o que o sustenta ou enfraquece, até a fonte."""
-    visto = visto if visto is not None else set()
-    visto.add(r["id"])
-    caiu = "  ⚠ CAIU" if r["estado"] in CAIDOS else ""
-    L = [("    " * prof) + (f"{rotulo} " if rotulo else "") + linha(db, r)[:140] + caiu]
-    if prof >= 4:
+def chain(db, r, depth=0, seen=None, tag=""):
+    """An item's grounding, going down: what it depends on, what supports or weakens it, down to the source."""
+    seen = seen if seen is not None else set()
+    seen.add(r["id"])
+    fell = "  ⚠ FELL" if r["state"] in FALLEN else ""
+    L = [("    " * depth) + (f"{tag} " if tag else "") + line(db, r)[:140] + fell]
+    if depth >= 4:
         return L
-    filhos = [(x["tipo"], x["id"]) for x in q(db, "SELECT a.tipo, n.id FROM aresta a JOIN no n ON n.id=a.para WHERE a.de=? "
-                                                  "AND a.tipo IN ('depende','deriva','responde')", r["id"])]
-    filhos += [(f"←{x['tipo']}", x["id"]) for x in q(db, "SELECT a.tipo, n.id FROM aresta a JOIN no n ON n.id=a.de "
-                                                         "WHERE a.para=? AND a.tipo IN ('sustenta','enfraquece','refuta',"
-                                                         "'contradiz','rival')", r["id"])]
-    filhos += [(f"ACH {x['valor']}", x["fato"]) for x in q(db, "SELECT * FROM ach WHERE hipotese=?", r["id"])]
-    for rotulo_f, i in filhos:
-        if i not in visto:
-            L += cadeia(db, um(db, "SELECT * FROM no WHERE id=?", i), prof + 1, visto, rotulo_f)
+    kids = [(x["type"], x["id"]) for x in q(db, "SELECT a.type, n.id FROM edge a JOIN node n ON n.id=a.dst WHERE a.src=? "
+                                               "AND a.type IN ('depends','derives','answers')", r["id"])]
+    kids += [(f"←{x['type']}", x["id"]) for x in q(db, "SELECT a.type, n.id FROM edge a JOIN node n ON n.id=a.src "
+                                                      "WHERE a.dst=? AND a.type IN ('supports','weakens','refutes',"
+                                                      "'contradicts','rival')", r["id"])]
+    kids += [(f"ACH {x['value']}", x["fact"]) for x in q(db, "SELECT * FROM ach WHERE hypothesis=?", r["id"])]
+    for kid_tag, i in kids:
+        if i not in seen:
+            L += chain(db, node_by_id(db, i), depth + 1, seen, kid_tag)
     return L
 
 
-def questoes(db):
+def questions(db):
     L = []
-    for x in q(db, "SELECT * FROM no WHERE tipo='questao' AND estado='aberta' ORDER BY legado, id"):
-        hs = q(db, "SELECT n.*, h.prob FROM aresta a JOIN no n ON n.id=a.de JOIN hipotese h ON h.no=n.id "
-                   "WHERE a.para=? AND a.tipo='responde' AND n.estado IN ('viva','apoiada')", x["id"])
-        pistas = um(db, "SELECT count(*) FROM aresta WHERE para=? AND tipo='sobre'", x["id"])[0]
-        L.append(f"{rot(x)} {x['titulo'][:100]}" + (" (v1)" if x["legado"] else "") + "\n    "
-                 + (f"{len(hs)} hipótese(s): " + ", ".join(rot(h) + (f" p={h['prob']:.2f}" if h["prob"] is not None else "")
-                                                         for h in hs) if hs else "LACUNA: nenhuma hipótese ainda")
-                 + f" · {pistas} pista(s) ligada(s)")
-    feitas = um(db, "SELECT count(*) FROM no WHERE tipo='questao' AND estado!='aberta'")[0]
-    return "\n".join(L or ["nenhuma questão aberta: `novo questao \"<pergunta>\" --pai <frente|alvo|O>`"]) + \
-        (f"\n({feitas} respondida(s), reformulada(s) ou estacionada(s): `busca`)" if feitas else "")
+    for x in q(db, "SELECT * FROM node WHERE type='question' AND state='open' ORDER BY legacy, id"):
+        hs = q(db, "SELECT n.*, h.prob FROM edge a JOIN node n ON n.id=a.src JOIN hypothesis h ON h.node=n.id "
+                   "WHERE a.dst=? AND a.type='answers' AND n.state IN ('alive','supported')", x["id"])
+        clues = one(db, "SELECT count(*) FROM edge WHERE dst=? AND type='about'", x["id"])[0]
+        L.append(f"{label(x)} {x['title'][:100]}" + (" (v1)" if x["legacy"] else "") + "\n    "
+                 + (f"{len(hs)} hypothesis(es): " + ", ".join(label(h) + (f" p={h['prob']:.2f}" if h["prob"] is not None else "")
+                                                             for h in hs) if hs else "GAP: no hypothesis yet")
+                 + f" · {clues} clue(s) linked")
+    done = one(db, "SELECT count(*) FROM node WHERE type='question' AND state!='open'")[0]
+    return "\n".join(L or ["no open question: `new question \"<question>\" --parent <front|target|O>`"]) + \
+        (f"\n({done} answered, reformulated or parked: `search`)" if done else "")
 
 
-def proximo(db):
-    """Recomendação explicada do próximo passo, por critérios verificáveis no registro (MODELO.md, 'Próximo
-    passo'). Não é ranking numérico: a ordem é a dos critérios, do que mais muda o rumo ao que menos muda."""
+def next_steps(db):
+    """Explained recommendation of the next step, by criteria verifiable in the record (MODEL.md, 'Next
+    step'). Not a numeric ranking: the order is that of the criteria, from what changes course most to least."""
     R = []
-    for f in q(db, "SELECT * FROM no WHERE tipo='frente' AND estado='ativa' AND legado=0"):
-        n, v = tunel(db, f["id"])
-        if n >= TUNEL:
-            R.append((f"LEITURA da frente {rot(f)}, sem testar", f"túnel: {aviso_tunel(n, v)}"))
-    lt = leitura_atual(db)
+    for f in q(db, "SELECT * FROM node WHERE type='front' AND state='active' AND legacy=0"):
+        n, v = tunnel(db, f["id"])
+        if n >= TUNNEL:
+            R.append((f"READING of front {label(f)}, without testing", f"tunnel: {tunnel_warning(n, v)}"))
+    lt = current_reading(db)
     if lt:
-        caiu = [rot(um(db, "SELECT * FROM no WHERE id=?", d["para"])) for d in dependencias_quebradas(db) if d["de"] == lt["id"]]
-        if caiu:
-            R.append((f"rever a leitura {rot(lt)}", f"perdeu base: {', '.join(caiu)} caiu"))
-    ev = eventos_relevantes(db)
+        fell = [label(node_by_id(db, d["dst"])) for d in broken_dependencies(db) if d["src"] == lt["id"]]
+        if fell:
+            R.append((f"revise the reading {label(lt)}", f"lost its basis: {', '.join(fell)} fell"))
+    ev = relevant_events(db)
     if ev:
-        R.append(("rever a leitura de conjunto", "; ".join(ev)))
-    revalidar = [t for t in q(db, "SELECT n.* FROM no n JOIN teste t ON t.no=n.id WHERE n.legado=0")
-                 if validade(db, t["id"]).startswith("A REVALIDAR")]
-    if revalidar:
-        R.append((f"rodar de novo {', '.join(rot(t) for t in revalidar[:3])} com o instrumento atual (`roda`)",
-                  f"o instrumento mudou: {len(revalidar)} negativo(s) deixaram de valer e podem estar sustentando decisões"))
-    decisiva = um(db, "SELECT n.* FROM aresta a JOIN no n ON n.id=a.para WHERE a.de=? AND a.tipo='sobre' AND "
-                      "a.nota='decisiva' AND n.estado='aberta'", lt["id"]) if lt else None
-    abertas = ([decisiva] if decisiva else []) + q(db, "SELECT * FROM no WHERE tipo='questao' AND estado='aberta' "
-                                                       "AND legado=0 ORDER BY id")
-    vistas = set()
-    for x in abertas:
-        if x["id"] in vistas or len(vistas) >= 2:
+        R.append(("revise the overall reading", "; ".join(ev)))
+    revalidate = [t for t in q(db, "SELECT n.* FROM node n JOIN test t ON t.node=n.id WHERE n.legacy=0")
+                  if validity(db, t["id"]).startswith("TO REVALIDATE")]
+    if revalidate:
+        R.append((f"run {', '.join(label(t) for t in revalidate[:3])} again with the current instrument (`run`)",
+                  f"the instrument changed: {len(revalidate)} negative(s) stopped counting and may be supporting decisions"))
+    decisive = one(db, "SELECT n.* FROM edge a JOIN node n ON n.id=a.dst WHERE a.src=? AND a.type='about' AND "
+                       "a.note='decisive' AND n.state='open'", lt["id"]) if lt else None
+    open_qs = ([decisive] if decisive else []) + q(db, "SELECT * FROM node WHERE type='question' AND state='open' "
+                                                       "AND legacy=0 ORDER BY id")
+    seen = set()
+    for x in open_qs:
+        if x["id"] in seen or len(seen) >= 2:
             continue
-        vistas.add(x["id"])
-        tag = "questão decisiva" if decisiva and x["id"] == decisiva["id"] else "questão aberta"
-        hs = q(db, "SELECT n.*, h.refuta_se, h.prob FROM aresta a JOIN no n ON n.id=a.de JOIN hipotese h ON h.no=n.id "
-                   "WHERE a.para=? AND a.tipo='responde' AND n.estado IN ('viva','apoiada') ORDER BY h.prob DESC", x["id"])
+        seen.add(x["id"])
+        tag = "decisive question" if decisive and x["id"] == decisive["id"] else "open question"
+        hs = q(db, "SELECT n.*, h.refuted_if, h.prob FROM edge a JOIN node n ON n.id=a.src JOIN hypothesis h ON h.node=n.id "
+                   "WHERE a.dst=? AND a.type='answers' AND n.state IN ('alive','supported') ORDER BY h.prob DESC", x["id"])
         if not hs:
-            R.append((f"formular explicações para {rot(x)}", f"{tag} sem nenhuma hipótese (lacuna): {x['titulo'][:70]}"))
+            R.append((f"formulate explanations for {label(x)}", f"{tag} without any hypothesis (gap): {x['title'][:70]}"))
         elif len(hs) == 1:
-            R.append((f"gerar ao menos uma rival de {rot(hs[0])} para {rot(x)}", f"{tag} com uma explicação só"))
+            R.append((f"generate at least one rival of {label(hs[0])} for {label(x)}", f"{tag} with only one explanation"))
         else:
             ids = [h["id"] for h in hs]
-            cel = q(db, f"SELECT fato, group_concat(DISTINCT valor) v FROM ach WHERE hipotese IN ({','.join('?' * len(ids))}) "
-                        "GROUP BY fato", *ids)
-            if not any("," in (c["v"] or "") for c in cel):
-                R.append((f"achar o discriminador entre {', '.join(rot(h) for h in hs[:3])}",
-                          f"{tag}: nenhuma evidência registrada (ACH) pesa diferente entre elas"))
+            cells = q(db, f"SELECT fact, group_concat(DISTINCT value) v FROM ach WHERE hypothesis IN ({','.join('?' * len(ids))}) "
+                          "GROUP BY fact", *ids)
+            if not any("," in (c["v"] or "") for c in cells):
+                R.append((f"find the discriminator between {', '.join(label(h) for h in hs[:3])}",
+                          f"{tag}: no recorded evidence (ACH) weighs differently between them"))
             else:
                 h = hs[0]
-                R.append((f"teste que separe {rot(h)} das rivais" if h["refuta_se"] else f"dar --refuta-se a {rot(h)}",
-                          f"{tag}: há discriminação, a líder p={h['prob']}"))
-    cs = q(db, "SELECT c.*, n.id cid FROM conexao c JOIN no n ON n.id=c.no WHERE n.estado='sugerida' ORDER BY n.id")
+                R.append((f"a test that separates {label(h)} from the rivals" if h["refuted_if"] else f"give --refuted-if to {label(h)}",
+                          f"{tag}: there is discrimination, the leader p={h['prob']}"))
+    cs = q(db, "SELECT c.*, n.id cid FROM connection c JOIN node n ON n.id=c.node WHERE n.state='suggested' ORDER BY n.id")
     if cs:
-        cruza = [c for c in cs if raiz_frente(db, c["de"]) != raiz_frente(db, c["para"])]
-        c = (cruza or cs)[0]
-        R.append((f"avaliar a conexão C{c['cid']} ({len(cs)} sugerida(s))",
-                  "liga frentes diferentes" if cruza else "relação candidata parada, nem confirmada nem rejeitada"))
-    rasc = q(db, "SELECT DISTINCT n.* FROM no n JOIN aresta a ON a.para=n.id WHERE n.tipo='pista' AND n.estado='aberta' "
-                 "AND a.tipo IN ('depende','deriva') AND n.legado=0")
-    if rasc:
-        R.append((f"provar ou descartar a pista {', '.join(rot(r) for r in rasc[:3])}", "há raciocínio apoiado em pista não provada"))
+        crossing = [c for c in cs if front_root(db, c["src"]) != front_root(db, c["dst"])]
+        c = (crossing or cs)[0]
+        R.append((f"assess connection C{c['cid']} ({len(cs)} suggested)",
+                  "links different fronts" if crossing else "candidate relation sitting still, neither confirmed nor rejected"))
+    clues = q(db, "SELECT DISTINCT n.* FROM node n JOIN edge a ON a.dst=n.id WHERE n.type='clue' AND n.state='open' "
+                  "AND a.type IN ('depends','derives') AND n.legacy=0")
+    if clues:
+        R.append((f"prove or drop clue {', '.join(label(r) for r in clues[:3])}", "there is reasoning resting on an unproven clue"))
     if not R:
-        h = um(db, "SELECT n.*, h.prob FROM no n JOIN hipotese h ON h.no=n.id JOIN no f ON f.id=n.pai WHERE n.estado='viva' "
-                   "AND n.legado=0 AND f.estado='ativa' AND h.refuta_se IS NOT NULL AND NOT EXISTS (SELECT 1 FROM no t "
-                   "WHERE t.pai=n.id AND t.tipo='teste') ORDER BY h.prob DESC LIMIT 1")
+        h = one(db, "SELECT n.*, h.prob FROM node n JOIN hypothesis h ON h.node=n.id JOIN node f ON f.id=n.parent WHERE n.state='alive' "
+                    "AND n.legacy=0 AND f.state='active' AND h.refuted_if IS NOT NULL AND NOT EXISTS (SELECT 1 FROM node t "
+                    "WHERE t.parent=n.id AND t.type='test') ORDER BY h.prob DESC LIMIT 1")
         if h:
-            R.append((f"teste discriminativo para {rot(h)}", "hipótese viva com critério e nenhum teste"))
-    return R or [("LEITURA da fonte primária ou do último resultado", "nada no registro pede outra coisa: ler melhor "
-                  "costuma render mais que testar mais")]
+            R.append((f"a discriminating test for {label(h)}", "live hypothesis with a criterion and no test"))
+    return R or [("READING of the primary source or of the last result", "nothing in the record asks for anything else: "
+                  "reading better usually pays more than testing more")]
 
 
-def raiz_frente(db, i):
-    r = um(db, "SELECT * FROM no WHERE id=?", i)
-    while r and r["tipo"] != "frente" and r["pai"]:
-        r = um(db, "SELECT * FROM no WHERE id=?", r["pai"])
-    return r["id"] if r and r["tipo"] == "frente" else None
+def front_root(db, i):
+    r = node_by_id(db, i)
+    while r and r["type"] != "front" and r["parent"]:
+        r = node_by_id(db, r["parent"])
+    return r["id"] if r and r["type"] == "front" else None
 
 
-def cronologia(db):
-    """Acontecimentos do mundo investigado (entidade --classe evento com atributo `quando`), não o log do banco."""
-    ev = q(db, "SELECT n.*, a.valor quando, a.fato FROM no n JOIN entidade e ON e.no=n.id LEFT JOIN atributo a ON "
-               "a.entidade=n.id AND a.chave='quando' WHERE e.classe='evento' AND n.estado != 'fundida' ORDER BY a.valor IS NULL, a.valor, n.id")
-    return "\n".join(f"{e['quando'] or '????'}  {rot(e)} {e['titulo'][:110]}" + (f"  (E{e['fato']})" if e["fato"] else "  (data sem fato)")
-                     for e in ev) or ("nenhum acontecimento: `novo entidade \"<o que aconteceu>\" --classe evento` e "
-                                      "`atributo N.. quando 2019-04-01 --fato E..`")
+def timeline(db):
+    """Happenings in the investigated world (entity --class event with a `when` attribute), not the database log."""
+    ev = q(db, "SELECT n.*, a.value at, a.fact FROM node n JOIN entity e ON e.node=n.id LEFT JOIN attribute a ON "
+               "a.entity=n.id AND a.key='when' WHERE e.class='event' AND n.state != 'merged' ORDER BY a.value IS NULL, a.value, n.id")
+    return "\n".join(f"{e['at'] or '????'}  {label(e)} {e['title'][:110]}" + (f"  (E{e['fact']})" if e["fact"] else "  (date without a fact)")
+                     for e in ev) or ("no happening: `new entity \"<what happened>\" --class event` and "
+                                      "`attribute N.. when 2019-04-01 --fact E..`")
 
 
-# ---------- ramos: o percurso do raciocínio ----------
+# ---------- branches: the path of the reasoning ----------
 
-def no_id(db, i):
-    return um(db, "SELECT * FROM no WHERE id=?", i)
-
-
-def passos_de(db, ramo):
-    return q(db, "SELECT * FROM passo WHERE ramo=? ORDER BY id", ramo)
+def steps_of(db, branch):
+    return q(db, "SELECT * FROM step WHERE branch=? ORDER BY id", branch)
 
 
-def linha_passo(p, j, ind):
-    s = f"{ind}{j}. {p['tipo']}: {p['texto']}"
-    return s + (f"\n{ind}   porque: {p['porque']}" if p["porque"] else "")
+def step_line(p, j, ind):
+    s = f"{ind}{j}. {p['type']}: {p['text']}"
+    return s + (f"\n{ind}   why: {p['why']}" if p["why"] else "")
 
 
-def linha_no(db, n):
+def node_line(db, n):
     extra = ""
-    if n["tipo"] == "alvo" and n["estado"] == "resolvido":
-        a = um(db, "SELECT solucao FROM alvo WHERE no=?", n["id"])
-        extra = f" ✓ {(a['solucao'] or '')[:80]}" if a else ""
-    return f"{rot(n)} [{n['estado']}] {n['titulo'][:100]}{extra}"
+    if n["type"] == "target" and n["state"] == "solved":
+        a = one(db, "SELECT solution FROM target WHERE node=?", n["id"])
+        extra = f" ✓ {(a['solution'] or '')[:80]}" if a else ""
+    return f"{label(n)} [{n['state']}] {n['title'][:100]}{extra}"
 
 
-def ancestrais(db, r):
-    """Do tronco até r, inclusive: um galho nunca aparece sem o caminho que leva a ele."""
-    cad, i = [], r["id"]
+def ancestors(db, r):
+    """From the trunk down to r, inclusive: a twig never shows without the path that leads to it."""
+    path, i = [], r["id"]
     while i:
-        n = no_id(db, i)
-        cad.append(n)
-        i = n["pai"]
-    return cad[::-1]
+        n = node_by_id(db, i)
+        path.append(n)
+        i = n["parent"]
+    return path[::-1]
 
 
-def corte_em(db, ramo, filho):
-    """Passos de `ramo` que o `filho` herdou: até o passo de onde nasceu, ou até a bifurcação que o criou."""
-    ps = passos_de(db, ramo["id"])
-    dp = um(db, "SELECT de_passo FROM ramo WHERE no=?", filho["id"])
-    lim = dp["de_passo"] if dp and dp["de_passo"] else next(
-        (p["id"] for p in ps if p["tipo"] == "bifurcou" and f"B{filho['id']}" in (p["nos"] or "").split(",")), None)
+def cut_at(db, branch, child):
+    """Steps of `branch` that `child` inherited: up to the step it was born from, or up to the fork that created it."""
+    ps = steps_of(db, branch["id"])
+    dp = one(db, "SELECT from_step FROM branch WHERE node=?", child["id"])
+    lim = dp["from_step"] if dp and dp["from_step"] else next(
+        (p["id"] for p in ps if p["type"] == "forked" and f"B{child['id']}" in (p["nodes"] or "").split(",")), None)
     return [(j, p) for j, p in enumerate(ps, 1) if lim is None or p["id"] <= lim]
 
 
-def trilha(db, r, curto=False):
-    cad, L = ancestrais(db, r), []
-    for k, n in enumerate(cad):
+def trail(db, r, short=False):
+    path, L = ancestors(db, r), []
+    for k, n in enumerate(path):
         ind = "  " * k
-        L.append(ind + linha_no(db, n))
-        if n["tipo"] != "ramo":
+        L.append(ind + node_line(db, n))
+        if n["type"] != "branch":
             continue
-        ps = corte_em(db, n, cad[k + 1]) if k + 1 < len(cad) else list(enumerate(passos_de(db, n["id"]), 1))
-        if curto and len(ps) > 3:
-            L.append(f"{ind}  … {len(ps) - 3} passos antes (`trilha {rot(n)}`)")
+        ps = cut_at(db, n, path[k + 1]) if k + 1 < len(path) else list(enumerate(steps_of(db, n["id"]), 1))
+        if short and len(ps) > 3:
+            L.append(f"{ind}  … {len(ps) - 3} steps before (`trail {label(n)}`)")
             ps = ps[-3:]
-        L += [linha_passo(p, j, ind + "  ") for j, p in ps]
-    filhos = q(db, "SELECT * FROM no WHERE pai=? AND tipo='ramo' ORDER BY id", r["id"])
-    if filhos:
-        L.append("  " * len(cad) + "galhos daqui: " + "; ".join(f"{rot(g)} [{g['estado']}] {g['titulo'][:60]}" for g in filhos))
+        L += [step_line(p, j, ind + "  ") for j, p in ps]
+    kids = q(db, "SELECT * FROM node WHERE parent=? AND type='branch' ORDER BY id", r["id"])
+    if kids:
+        L.append("  " * len(path) + "branches from here: " + "; ".join(f"{label(g)} [{g['state']}] {g['title'][:60]}" for g in kids))
     return "\n".join(L)
 
 
-def arvore(db, caso, raiz=None):
-    ativo = ramo_ativo(db, caso)
-    mostrar = {r["id"] for r in q(db, "SELECT id FROM no WHERE tipo IN ('objetivo','alvo')")}
-    for r in q(db, "SELECT * FROM no WHERE tipo='ramo'"):
-        mostrar |= {n["id"] for n in ancestrais(db, r)}
-    nos = {i: no_id(db, i) for i in mostrar}
-    filhos = {}
-    for n in nos.values():
-        filhos.setdefault(n["pai"] if n["pai"] in nos else None, []).append(n)
+def tree(db, case, root=None):
+    act = active_branch(db, case)
+    shown = {r["id"] for r in q(db, "SELECT id FROM node WHERE type IN ('objective','target')")}
+    for r in q(db, "SELECT * FROM node WHERE type='branch'"):
+        shown |= {n["id"] for n in ancestors(db, r)}
+    nodes = {i: node_by_id(db, i) for i in shown}
+    kids = {}
+    for n in nodes.values():
+        kids.setdefault(n["parent"] if n["parent"] in nodes else None, []).append(n)
     L = []
 
-    def desce(n, ind):
-        mark = "▶ " if ativo and n["id"] == ativo["id"] else ""
-        txt = ind + mark + linha_no(db, n)
-        if n["tipo"] == "ramo":
-            ps = passos_de(db, n["id"])
-            dp = um(db, "SELECT de_passo FROM ramo WHERE no=?", n["id"])["de_passo"]
+    def down(n, ind):
+        mark = "▶ " if act and n["id"] == act["id"] else ""
+        txt = ind + mark + node_line(db, n)
+        if n["type"] == "branch":
+            ps = steps_of(db, n["id"])
+            dp = one(db, "SELECT from_step FROM branch WHERE node=?", n["id"])["from_step"]
             if dp:
-                pr = um(db, "SELECT ramo FROM passo WHERE id=?", dp)
-                j = [p["id"] for p in passos_de(db, pr["ramo"])].index(dp) + 1
-                txt += f"  (do passo {j})"
+                pr = one(db, "SELECT branch FROM step WHERE id=?", dp)
+                j = [p["id"] for p in steps_of(db, pr["branch"])].index(dp) + 1
+                txt += f"  (from step {j})"
             if ps:
-                txt += f"\n{ind}    {len(ps)} passos; último: {ps[-1]['tipo']}: {ps[-1]['texto'][:70]}"
+                txt += f"\n{ind}    {len(ps)} steps; last: {ps[-1]['type']}: {ps[-1]['text'][:70]}"
         L.append(txt)
-        for c in sorted(filhos.get(n["id"], []), key=lambda x: x["id"]):
-            desce(c, ind + "  ")
+        for c in sorted(kids.get(n["id"], []), key=lambda x: x["id"]):
+            down(c, ind + "  ")
 
-    raizes = [pega(db, raiz)] if raiz else sorted(filhos.get(None, []), key=lambda x: x["id"])
-    for n in raizes:
-        desce(n, "")
-    return "\n".join(L) or "árvore vazia"
+    roots = [get_node(db, root)] if root else sorted(kids.get(None, []), key=lambda x: x["id"])
+    for n in roots:
+        down(n, "")
+    return "\n".join(L) or "empty tree"
 
 
-def ficha(db, caso):
-    """Uma página: onde estamos, por que, o que está resolvido, o que caiu e qual é a próxima experiência."""
-    L = [f"# FICHA — {caso}  ({agora()[:16]} UTC)"]
-    for o in q(db, "SELECT * FROM no WHERE tipo='objetivo'"):
-        L.append(f"OBJETIVO {rot(o)}: {o['titulo']}")
-    r = ramo_ativo(db, caso)
+def sheet(db, case):
+    """One page: where we are, why, what is solved, what fell and what the next experiment is."""
+    L = [f"# SHEET — {case}  ({now()[:16]} UTC)"]
+    for o in q(db, "SELECT * FROM node WHERE type='objective'"):
+        L.append(f"OBJECTIVE {label(o)}: {o['title']}")
+    r = active_branch(db, case)
     if r:
-        cad = ancestrais(db, r)
-        L.append(f"\nIMEDIATO {rot(r)}: {r['titulo']}")
-        L.append("  caminho: " + " › ".join(f"{rot(n)} {n['titulo'][:40]}" for n in cad[:-1]))
-        ps = passos_de(db, r["id"])
-        L.append(f"\nÚLTIMOS PASSOS ({len(ps)} no ramo; `trilha` dá todos):")
-        L += [linha_passo(p, j, "  ") for j, p in list(enumerate(ps, 1))[-6:]]
-        prox = next((p for p in reversed(ps) if p["tipo"] == "proximo"), None)
-        L.append("\nPRÓXIMA EXPERIÊNCIA: " + (f"{prox['texto']}" + (f" — porque {prox['porque']}" if prox["porque"] else "")
-                                           if prox else "nenhuma registrada: `passo proximo \"...\" --porque \"...\"`"))
-        linhagem = {n["id"] for n in cad}
-        irmaos = q(db, "SELECT * FROM no WHERE tipo='ramo' AND estado IN ('morto','fundido','concluido') AND pai IN "
-                       f"({','.join('?' * len(linhagem))}) ORDER BY id", *linhagem)
-        if irmaos:
-            L.append("\nJÁ PERCORRIDO AQUI (não refazer sem motivo novo):")
-            for g in irmaos:
-                m = um(db, "SELECT porque FROM passo WHERE ramo=? AND tipo='mudou' ORDER BY id DESC", g["id"])
-                L.append(f"  {rot(g)} [{g['estado']}] {g['titulo'][:70]}" + (f" — {m['porque'][:100]}" if m and m["porque"] else ""))
+        path = ancestors(db, r)
+        L.append(f"\nIMMEDIATE {label(r)}: {r['title']}")
+        L.append("  path: " + " › ".join(f"{label(n)} {n['title'][:40]}" for n in path[:-1]))
+        ps = steps_of(db, r["id"])
+        L.append(f"\nLATEST STEPS ({len(ps)} in the branch; `trail` gives them all):")
+        L += [step_line(p, j, "  ") for j, p in list(enumerate(ps, 1))[-6:]]
+        nxt = next((p for p in reversed(ps) if p["type"] == "next"), None)
+        L.append("\nNEXT EXPERIMENT: " + (f"{nxt['text']}" + (f" — because {nxt['why']}" if nxt["why"] else "")
+                                          if nxt else "none recorded: `step next \"...\" --why \"...\"`"))
+        lineage = {n["id"] for n in path}
+        siblings = q(db, "SELECT * FROM node WHERE type='branch' AND state IN ('dead','merged','concluded') AND parent IN "
+                         f"({','.join('?' * len(lineage))}) ORDER BY id", *lineage)
+        if siblings:
+            L.append("\nALREADY EXPLORED HERE (do not redo without a new reason):")
+            for g in siblings:
+                m = one(db, "SELECT why FROM step WHERE branch=? AND type='changed' ORDER BY id DESC", g["id"])
+                L.append(f"  {label(g)} [{g['state']}] {g['title'][:70]}" + (f" — {m['why'][:100]}" if m and m["why"] else ""))
     else:
-        L.append("\nRAMO ATIVO: nenhum. `arvore` mostra os ramos; `ramo usa B..` ou `ramo novo \"...\" --de <id> --porque \"...\"`")
-    feitos = q(db, "SELECT n.*, a.solucao FROM no n JOIN alvo a ON a.no=n.id WHERE n.estado='resolvido' ORDER BY n.id")
-    if feitos:
-        L.append("\nRESOLVIDO (tronco):")
-        L += [f"  {rot(a)} {a['titulo'][:70]} — {(a['solucao'] or '')[:80]}" for a in feitos]
-    vivos = q(db, "SELECT * FROM no WHERE tipo='ramo' AND estado IN ('ativo','pausado') ORDER BY id")
-    outros = [g for g in vivos if not r or g["id"] != r["id"]]
-    if outros:
-        L.append(f"\nOUTRAS LINHAS ABERTAS ({len(outros)}):")
-        L += [f"  {rot(g)} [{g['estado']}] {g['titulo'][:90]}" for g in outros[:8]]
+        L.append("\nACTIVE BRANCH: none. `tree` shows the branches; `branch use B..` or `branch new \"...\" --from <id> --why \"...\"`")
+    solved = q(db, "SELECT n.*, a.solution FROM node n JOIN target a ON a.node=n.id WHERE n.state='solved' ORDER BY n.id")
+    if solved:
+        L.append("\nSOLVED (trunk):")
+        L += [f"  {label(a)} {a['title'][:70]} — {(a['solution'] or '')[:80]}" for a in solved]
+    live = q(db, "SELECT * FROM node WHERE type='branch' AND state IN ('active','paused') ORDER BY id")
+    others = [g for g in live if not r or g["id"] != r["id"]]
+    if others:
+        L.append(f"\nOTHER OPEN LINES ({len(others)}):")
+        L += [f"  {label(g)} [{g['state']}] {g['title'][:90]}" for g in others[:8]]
     return "\n".join(L)
 
 
-def reorganiza(db, aplica=False):
-    """Traz um banco antigo ao modelo: fato é só constatação provada (o resto vira pista, mesmo id e arestas) e
-    todo nó citado num passo pertence ao ramo desse passo. Sem `aplica`, só mostra o plano."""
+def reorganize(db, apply=False):
+    """Brings an old database to the model: a fact is only a proven finding (the rest becomes a clue, same id and
+    edges) and every node cited in a step belongs to that step's branch. Without `apply`, only shows the plan."""
     L = []
-    rs = q(db, "SELECT n.*, f.natureza, f.conferido, f.citacao, f.fonte FROM no n JOIN fato f ON f.no=n.id "
-               "WHERE n.tipo='fato'")
-    # citação com o texto literal gravado e a fonte ligada carrega a própria prova
-    literal = {r["id"] for r in rs if r["natureza"] == "citacao" and (r["citacao"] or "").strip() and r["fonte"]
-               and (r["conferido"] or (r["origem"] != "externo" and r["estado"] != "rascunho"))}
-    vira = [r for r in rs if r["id"] not in literal and (r["natureza"] not in NATUREZAS_FATO or not r["conferido"])]
-    por_nat = {}
-    for r in vira:
-        por_nat[r["natureza"] or "?"] = por_nat.get(r["natureza"] or "?", 0) + 1
-    L.append(f"fatos: {len(rs)}; viram pista {len(vira)} (" + ", ".join(f"{k} {v}" for k, v in sorted(por_nat.items()))
-             + f"); ficam fato {len(rs) - len(vira)} (provados)")
-    ref = {}  # nó citado → primeiro ramo que o cita
-    for p in q(db, "SELECT ramo, nos FROM passo WHERE nos IS NOT NULL ORDER BY id"):
-        for x in p["nos"].split(","):
+    rs = q(db, "SELECT n.*, f.nature, f.proven_at, f.quote, f.source FROM node n JOIN fact f ON f.node=n.id "
+               "WHERE n.type='fact'")
+    # a quote with its literal text stored and its source linked carries its own proof
+    literal = {r["id"] for r in rs if r["nature"] == "quote" and (r["quote"] or "").strip() and r["source"]
+               and (r["proven_at"] or (r["origin"] != "external" and r["state"] != "draft"))}
+    become = [r for r in rs if r["id"] not in literal and (r["nature"] not in FACT_NATURES or not r["proven_at"])]
+    by_nature = {}
+    for r in become:
+        by_nature[r["nature"] or "?"] = by_nature.get(r["nature"] or "?", 0) + 1
+    L.append(f"facts: {len(rs)}; become clues {len(become)} (" + ", ".join(f"{k} {v}" for k, v in sorted(by_nature.items()))
+             + f"); stay facts {len(rs) - len(become)} (proven)")
+    ref = {}  # cited node → first branch that cites it
+    for p in q(db, "SELECT branch, nodes FROM step WHERE nodes IS NOT NULL ORDER BY id"):
+        for x in p["nodes"].split(","):
             m = re.fullmatch(r"[A-Z](\d+)", x.strip())
             if m:
-                ref.setdefault(int(m[1]), p["ramo"])
-    sem = [i for i in ref if (um(db, "SELECT ramo FROM no WHERE id=? AND tipo != 'ramo'", i) or {"ramo": 1})["ramo"] is None]
-    L.append(f"nós citados em passos: {len(ref)}; ganham ramo {len(sem)}")
-    if aplica:
-        for r in vira:
-            est = "descartada" if r["estado"] in ("retratado", "contestado") else "aberta"
-            db.execute("UPDATE no SET tipo='pista', estado=? WHERE id=?", (est, r["id"]))
-            motivo = ("não é constatação" if r["natureza"] not in NATUREZAS_FATO else "sem prova registrada")
-            evento(db, r["id"], "reclassificado", f"fato→pista ({est}): {r['natureza']}, {motivo}")
-            indexa(db, r["id"])
-        # o confere antigo era "conferido na fonte"; prova guardada era comando de shell (re-prova por execução)
-        db.execute("UPDATE fato SET conferido_por=CASE WHEN trim(coalesce(prova, '')) != '' THEN 'medicao' ELSE 'fonte' END "
-                   "WHERE conferido IS NOT NULL AND conferido_por IS NULL AND no IN (SELECT id FROM no WHERE tipo='fato')")
-        db.execute("UPDATE no SET estado='vigente' WHERE tipo='fato' AND estado NOT IN ('vigente', 'contestado', 'retratado')")
+                ref.setdefault(int(m[1]), p["branch"])
+    orphans = [i for i in ref if (one(db, "SELECT branch FROM node WHERE id=? AND type != 'branch'", i) or {"branch": 1})["branch"] is None]
+    L.append(f"nodes cited in steps: {len(ref)}; get a branch {len(orphans)}")
+    if apply:
+        for r in become:
+            st = "dropped" if r["state"] in ("retracted", "contested") else "open"
+            db.execute("UPDATE node SET type='clue', state=? WHERE id=?", (st, r["id"]))
+            why = ("not a finding" if r["nature"] not in FACT_NATURES else "no recorded proof")
+            event(db, r["id"], "reclassified", f"fact→clue ({st}): {r['nature']}, {why}")
+            index_node(db, r["id"])
+        # the old `prove` meant "checked against the source"; a stored proof was a shell command (re-proved by running it)
+        db.execute("UPDATE fact SET proven_by=CASE WHEN trim(coalesce(proof, '')) != '' THEN 'measurement' ELSE 'source' END "
+                   "WHERE proven_at IS NOT NULL AND proven_by IS NULL AND node IN (SELECT id FROM node WHERE type='fact')")
+        db.execute("UPDATE node SET state='current' WHERE type='fact' AND state NOT IN ('current', 'contested', 'retracted')")
         for i in literal:
-            db.execute("UPDATE fato SET conferido=coalesce(conferido, ?), conferido_por=coalesce(conferido_por, 'fonte') "
-                       "WHERE no=?", (agora(), i))
-        for i in sem:
-            db.execute("UPDATE no SET ramo=? WHERE id=?", (ref[i], i))
-            evento(db, i, "religado", f"ramo B{ref[i]}")
-    soltos = um(db, "SELECT count(*) FROM no n WHERE n.tipo IN ('fato','pista','hipotese','teste','questao') AND "
-                    "n.pai IS NULL AND n.ramo IS NULL AND n.id NOT IN (SELECT de FROM aresta UNION SELECT para FROM aresta)")[0]
-    L.append(f"soltos (sem pai, sem ramo, sem aresta): {soltos}")
-    L.append("aplicado" if aplica else "plano apenas: `reorganiza --aplica` grava (faça backup do caso.db antes)")
+            db.execute("UPDATE fact SET proven_at=coalesce(proven_at, ?), proven_by=coalesce(proven_by, 'source') "
+                       "WHERE node=?", (now(), i))
+        for i in orphans:
+            db.execute("UPDATE node SET branch=? WHERE id=?", (ref[i], i))
+            event(db, i, "relinked", f"branch B{ref[i]}")
+    loose = one(db, "SELECT count(*) FROM node n WHERE n.type IN ('fact','clue','hypothesis','test','question') AND "
+                    "n.parent IS NULL AND n.branch IS NULL AND n.id NOT IN (SELECT src FROM edge UNION SELECT dst FROM edge)")[0]
+    L.append(f"loose (no parent, no branch, no edge): {loose}")
+    L.append("applied" if apply else "plan only: `reorganize --apply` writes it (back up case.db first)")
     return "\n".join(L)
 
 
-def nova_conexao(db, de, para, relacao, porque, rival=None, discriminador=None, origem="agente", motivos=(), canal=None):
-    if relacao not in ARESTAS:
-        raise Erro(f"relação inválida; use: {', '.join(ARESTAS)}")
-    if de["id"] == para["id"]:
-        raise Erro("conexão de um item com ele mesmo")
-    if not (porque or "").strip():
-        raise Erro("conexão sem justificativa: diga por que a relação parece existir")
-    igual = um(db, "SELECT c.no, n.estado FROM conexao c JOIN no n ON n.id=c.no WHERE c.relacao=? AND "
-                   "((c.de=? AND c.para=?) OR (c.de=? AND c.para=?))", relacao, de["id"], para["id"], para["id"], de["id"])
-    if igual:
-        raise Erro(f"já registrada: C{igual['no']} ({igual['estado']}); `ver C{igual['no']}`")
-    no = cria(db, "conexao", f"{rot(de)} {relacao}? {rot(para)}: {porque}"[:160], resumo=porque[:800], origem=origem)
-    db.execute("INSERT INTO conexao VALUES (?,?,?,?,?,?,?)", (no, de["id"], para["id"], relacao, rival, discriminador, canal))
-    for m in motivos:
-        db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (no, "deriva", pega(db, m)["id"], None, agora()))
-    indexa(db, no)
-    return no
+def new_connection(db, src, dst, relation, why, rival=None, discriminator=None, origin="agent", reasons=(), channel=None):
+    relation = translate("edge", relation)
+    if relation not in EDGES:
+        raise Error(f"invalid relation; use: {', '.join(EDGES)}")
+    if src["id"] == dst["id"]:
+        raise Error("connection from an item to itself")
+    if not (why or "").strip():
+        raise Error("connection without a justification: say why the relation seems to exist")
+    same = one(db, "SELECT c.node, n.state FROM connection c JOIN node n ON n.id=c.node WHERE c.relation=? AND "
+                   "((c.src=? AND c.dst=?) OR (c.src=? AND c.dst=?))", relation, src["id"], dst["id"], dst["id"], src["id"])
+    if same:
+        raise Error(f"already recorded: C{same['node']} ({same['state']}); `show C{same['node']}`")
+    node = create(db, "connection", f"{label(src)} {relation}? {label(dst)}: {why}"[:160], summary=why[:800], origin=origin)
+    db.execute("INSERT INTO connection VALUES (?,?,?,?,?,?,?)", (node, src["id"], dst["id"], relation, rival, discriminator, channel))
+    for m in reasons:
+        db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (node, "derives", get_node(db, m)["id"], None, now()))
+    index_node(db, node)
+    return node
 
 
-# ---------- extração: contrato JSON → registro (MODELO.md, "Contrato de extração") ----------
+# ---------- extraction: JSON contract → record (MODEL.md, "Extraction contract") ----------
 
-CHAVES_EXTRACAO = {"fonte", "observacoes", "pistas", "interpretacoes", "questoes", "hipoteses", "conexoes",
-                   "discriminadores", "impacto"}
+EXTRACTION_KEYS = {"source", "observations", "clues", "interpretations", "questions", "hypotheses", "connections",
+                   "discriminators", "impact"}
+# the old Portuguese contract keeps working: its keys and values are translated on input
+OLD_CONTRACT_KEYS = {
+    "fonte": "source", "observacoes": "observations", "pistas": "clues", "interpretacoes": "interpretations",
+    "questoes": "questions", "hipoteses": "hypotheses", "conexoes": "connections", "discriminadores": "discriminators",
+    "impacto": "impact", "texto": "text", "natureza": "nature", "origem": "origin", "grau": "grade", "local": "location",
+    "citacao": "quote", "pedaco": "chunk", "metodo": "method", "limites": "limits", "por": "by", "prova": "proof",
+    "existente": "existing", "pai": "parent", "resumo": "summary", "motivada_por": "motivated_by", "sobre": "about",
+    "porque": "why", "alternativas": "alternatives", "confianca": "confidence", "refuta_se": "refuted_if",
+    "responde": "answers", "premissas": "premises", "rivais": "rivals", "de": "from", "para": "to",
+    "relacao": "relation", "discriminador": "discriminator", "motivos": "reasons", "canal": "channel",
+    "estado": "state", "entre": "between", "observacao": "observation", "plano": "plan", "leitura": "reading"}
+CONTRACT_VALUES = {"nature": "nature", "origin": "origin", "by": "proof", "relation": "edge"}
 
 
-def extrai(db, dados, aplica=False, so=None, rejeita=()):
-    """Valida o contrato, mostra o plano e, com aplica, grava tudo numa transação (erro em qualquer item
-    desfaz o lote inteiro). Ids locais (o1, q1…) viram ids do caso; ids do caso (E42, ext:42) são reusados."""
-    extra = set(dados) - CHAVES_EXTRACAO
+def contract_in(data, top=True):
+    """Renames old contract keys (and translates their enum values) recursively; English keys pass through."""
+    if isinstance(data, list):
+        return [contract_in(x, False) for x in data]
+    if not isinstance(data, dict):
+        return data
+    out = {}
+    for k, v in data.items():
+        k = OLD_CONTRACT_KEYS.get(k, k) if isinstance(k, str) and not (top and k in EXTRACTION_KEYS) else k
+        if k in CONTRACT_VALUES and isinstance(v, str):
+            v = translate(CONTRACT_VALUES[k], v)
+        elif k == "state" and isinstance(v, str):
+            v = state_of("connection", v)
+        out[k] = contract_in(v, False) if isinstance(v, (dict, list)) else v
+    return out
+
+
+def extract(db, data, apply=False, only=None, reject=()):
+    """Validates the contract, shows the plan and, with apply, writes everything in one transaction (an error in
+    any item undoes the whole batch). Local ids (o1, q1…) become case ids; case ids (E42, ext:42) are reused."""
+    data = contract_in(data)
+    extra = set(data) - EXTRACTION_KEYS
     if extra:
-        raise Erro(f"chave desconhecida no contrato: {', '.join(sorted(extra))} (válidas: {', '.join(sorted(CHAVES_EXTRACAO))})")
-    mapa_ids, plano = {}, []
-    for chave in CHAVES_EXTRACAO - {"fonte", "impacto"}:
-        for d in dados.get(chave, []):
+        raise Error(f"unknown key in the contract: {', '.join(sorted(extra))} (valid: {', '.join(sorted(EXTRACTION_KEYS))})")
+    id_map, plan = {}, []
+    for key in EXTRACTION_KEYS - {"source", "impact"}:
+        for d in data.get(key, []):
             if re.fullmatch(r"[A-Z]\d+", str(d.get("id", ""))):
-                raise Erro(f"id local {d['id']!r} parece id do caso; use minúsculas (o1, q1, h1)")
-    usa = lambda loc: (so is None or loc in so) and loc not in rejeita
-    existe = lambda ref: bool(re.fullmatch(r"[A-Z]\d+", str(ref))) or ":" in str(ref)
+                raise Error(f"local id {d['id']!r} looks like a case id; use lowercase (o1, q1, h1)")
+    use = lambda loc: (only is None or loc in only) and loc not in reject
+    exists = lambda ref: bool(re.fullmatch(r"[A-Z]\d+", str(ref))) or ":" in str(ref)
 
     def ref(x):
-        if x in mapa_ids:
-            return mapa_ids[x]
-        if existe(x):
-            return pega(db, x)["id"]
-        raise Erro(f"referência {x!r} não existe no caso nem foi criada neste lote (selecionada com --so?)")
+        if x in id_map:
+            return id_map[x]
+        if exists(x):
+            return get_node(db, x)["id"]
+        raise Error(f"reference {x!r} does not exist in the case nor was created in this batch (selected with --only?)")
 
-    def mesmo(tipo, texto):
-        alvo = " ".join(texto.lower().split())[:160]
-        return next((r for r in q(db, "SELECT * FROM no WHERE tipo=? AND estado NOT IN ('retratado','rejeitada','descartada')", tipo)
-                     if " ".join(r["titulo"].lower().split()) == alvo), None)
+    def same(typ, text):
+        target = " ".join(text.lower().split())[:160]
+        return next((r for r in q(db, "SELECT * FROM node WHERE type=? AND state NOT IN ('retracted','rejected','dropped')", typ)
+                     if " ".join(r["title"].lower().split()) == target), None)
 
-    fonte = dados.get("fonte")
-    fonte_id = rot(pega(db, fonte, "fonte")) if fonte and existe(fonte) else None
-    if fonte and not fonte_id:
-        raise Erro("fonte: use o id S.. de uma fonte já registrada (`holmes.py fonte <arquivo>` antes)")
+    source = data.get("source")
+    source_id = label(get_node(db, source, "source")) if source and exists(source) else None
+    if source and not source_id:
+        raise Error("source: use the S.. id of an already registered source (`holmes.py source <file>` first)")
+
     def item(d, k):
         if not d.get(k):
-            raise Erro(f"item sem {k!r}: {d}")
+            raise Error(f"item without {k!r}: {d}")
         return d[k]
 
-    for o in dados.get("observacoes", []):
+    for o in data.get("observations", []):
         loc = item(o, "id")
-        if not usa(loc):
+        if not use(loc):
             continue
-        if o.get("existente"):
-            mapa_ids[loc] = pega(db, o["existente"], ("fato", "pista"))["id"]
-            plano.append(f"= {loc} → {rot(pega(db, mapa_ids[loc]))} (já registrado)")
+        if o.get("existing"):
+            id_map[loc] = get_node(db, o["existing"], ("fact", "clue"))["id"]
+            plan.append(f"= {loc} → {label(get_node(db, id_map[loc]))} (already recorded)")
             continue
-        nat = o.get("natureza", "observacao")
-        if nat in ("interpretacao", "inferencia"):
-            raise Erro(f"{loc}: observação não pode ter natureza {nat}; ponha em 'interpretacoes'")
-        r = mesmo("fato", item(o, "texto")) or mesmo("pista", item(o, "texto"))
+        nat = o.get("nature", "observation")
+        if nat in ("interpretation", "inference"):
+            raise Error(f"{loc}: an observation cannot have nature {nat}; put it in 'interpretations'")
+        r = same("fact", item(o, "text")) or same("clue", item(o, "text"))
         if r:
-            mapa_ids[loc] = r["id"]
-            plano.append(f"= {loc} → {rot(r)} (mesmo texto já registrado; não duplico)")
+            id_map[loc] = r["id"]
+            plan.append(f"= {loc} → {label(r)} (same text already recorded; not duplicating)")
             continue
-        if aplica:
-            citacao, local = o.get("citacao"), o.get("local")
-            if o.get("pedaco"):  # trecho literal do corpus: copiado, não parafraseado
-                with C.conecta() as cdb:
-                    p = C.pedaco(cdb, int(o["pedaco"]))
-                citacao, local = p["texto"][:1000], local or f"pedaço #{p['id']}"
-            origem = o.get("origem", "fonte" if fonte_id or o.get("pedaco") else "medido")
-            resumo = " · ".join(x for x in (o.get("metodo") and f"método: {o['metodo']}",
-                                             o.get("limites") and f"limites: {o['limites']}") if x) or None
-            # citação literal copiada já está provada; material externo nunca se declara provado sozinho
-            por = "fonte" if o.get("pedaco") else (None if origem == "externo" else o.get("por"))
-            tipo_o = "fato" if por and nat in NATUREZAS_FATO else "pista"
-            no = cria(db, tipo_o, o["texto"], resumo=resumo, origem=origem, grau=o.get("grau"), natureza=nat,
-                      fonte=o.get("fonte") or fonte_id, local=local, citacao=citacao, por=por, prova=o.get("prova"))
-            mapa_ids[loc] = no
-        provada = (o.get("pedaco") or (o.get("por") and o.get("origem") != "externo")) and nat in NATUREZAS_FATO
-        if provada and not o.get("pedaco") and not aplica:  # a prévia recusa o que a gravação recusaria
-            prova_de(db, o.get("por"), o.get("prova"), o.get("fonte") or fonte_id or o.get("citacao") or o.get("local"))
-        plano.append(f"+ {loc} {'fato' if provada else 'pista'}/{nat}: {o['texto'][:90]}")
-    for x in dados.get("questoes", []):
+        if apply:
+            quote, location = o.get("quote"), o.get("location")
+            if o.get("chunk"):  # literal corpus excerpt: copied, not paraphrased
+                with C.connect() as cdb:
+                    p = C.chunk(cdb, int(o["chunk"]))
+                quote, location = p["text"][:1000], location or f"chunk #{p['id']}"
+            origin = o.get("origin", "source" if source_id or o.get("chunk") else "measured")
+            summary = " · ".join(x for x in (o.get("method") and f"method: {o['method']}",
+                                             o.get("limits") and f"limits: {o['limits']}") if x) or None
+            # a copied literal quote is already proven; external material never declares itself proven
+            by = "source" if o.get("chunk") else (None if origin == "external" else o.get("by"))
+            typ_o = "fact" if by and nat in FACT_NATURES else "clue"
+            node = create(db, typ_o, o["text"], summary=summary, origin=origin, grade=o.get("grade"), nature=nat,
+                          source=o.get("source") or source_id, location=location, quote=quote, by=by, proof=o.get("proof"))
+            id_map[loc] = node
+        proven = (o.get("chunk") or (o.get("by") and o.get("origin") != "external")) and nat in FACT_NATURES
+        if proven and not o.get("chunk") and not apply:  # the preview refuses what writing would refuse
+            proof_of(db, o.get("by"), o.get("proof"), o.get("source") or source_id or o.get("quote") or o.get("location"))
+        plan.append(f"+ {loc} {'fact' if proven else 'clue'}/{nat}: {o['text'][:90]}")
+    for x in data.get("questions", []):
         loc = item(x, "id")
-        if not usa(loc):
+        if not use(loc):
             continue
-        r = mesmo("questao", item(x, "texto"))
+        r = same("question", item(x, "text"))
         if r:
-            mapa_ids[loc] = r["id"]
-            plano.append(f"= {loc} → {rot(r)} (questão já registrada)")
+            id_map[loc] = r["id"]
+            plan.append(f"= {loc} → {label(r)} (question already recorded)")
             continue
-        if aplica:
-            pai = x.get("pai") or rot(um(db, "SELECT * FROM no WHERE tipo='objetivo'"))
-            mapa_ids[loc] = cria(db, "questao", x["texto"], ref(pai) if pai in mapa_ids else pai, x.get("resumo"))
-            for m in x.get("motivada_por", []):
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (mapa_ids[loc], "deriva", ref(m), None, agora()))
-        plano.append(f"+ {loc} questão: {x['texto'][:90]}")
-    for p in dados.get("pistas", []):
+        if apply:
+            parent = x.get("parent") or label(one(db, "SELECT * FROM node WHERE type='objective'"))
+            id_map[loc] = create(db, "question", x["text"], ref(parent) if parent in id_map else parent, x.get("summary"))
+            for m in x.get("motivated_by", []):
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (id_map[loc], "derives", ref(m), None, now()))
+        plan.append(f"+ {loc} question: {x['text'][:90]}")
+    for p in data.get("clues", []):
         obs = item(p, "obs")
-        if not usa(obs):
+        if not use(obs):
             continue
-        sobre = p.get("sobre") or rot(um(db, "SELECT * FROM no WHERE tipo='objetivo'"))
-        if aplica:
-            db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)",
-                       (ref(obs), "sobre", ref(sobre), (p.get("porque") or "")[:200] or None, agora()))
-        plano.append(f"+ pista {obs} sobre {sobre}: {(p.get('porque') or '')[:80]}")
-    for i in dados.get("interpretacoes", []):
+        about = p.get("about") or label(one(db, "SELECT * FROM node WHERE type='objective'"))
+        if apply:
+            db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)",
+                       (ref(obs), "about", ref(about), (p.get("why") or "")[:200] or None, now()))
+        plan.append(f"+ clue {obs} about {about}: {(p.get('why') or '')[:80]}")
+    for i in data.get("interpretations", []):
         loc = item(i, "id")
-        if not usa(loc):
+        if not use(loc):
             continue
-        if aplica:
-            alt = i.get("alternativas")
-            resumo = " · ".join(x for x in (alt and f"alternativas: {alt}", i.get("confianca") and f"confiança: {i['confianca']}") if x)
-            mapa_ids[loc] = cria(db, "pista", item(i, "texto"), resumo=resumo or None, origem=i.get("origem", "agente"),
-                                 natureza="interpretacao")
-            if i.get("sobre"):
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (mapa_ids[loc], "sobre", ref(i["sobre"]), None, agora()))
-        plano.append(f"+ {loc} pista/interpretação (não é fato): {i['texto'][:80]}")
-    for h in dados.get("hipoteses", []):
+        if apply:
+            alt = i.get("alternatives")
+            summary = " · ".join(x for x in (alt and f"alternatives: {alt}", i.get("confidence") and f"confidence: {i['confidence']}") if x)
+            id_map[loc] = create(db, "clue", item(i, "text"), summary=summary or None, origin=i.get("origin", "agent"),
+                                 nature="interpretation")
+            if i.get("about"):
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (id_map[loc], "about", ref(i["about"]), None, now()))
+        plan.append(f"+ {loc} clue/interpretation (not a fact): {i['text'][:80]}")
+    for h in data.get("hypotheses", []):
         loc = item(h, "id")
-        if not usa(loc):
+        if not use(loc):
             continue
-        r = mesmo("hipotese", item(h, "texto"))
+        r = same("hypothesis", item(h, "text"))
         if r:
-            mapa_ids[loc] = r["id"]
-            plano.append(f"= {loc} → {rot(r)} (hipótese já registrada)")
+            id_map[loc] = r["id"]
+            plan.append(f"= {loc} → {label(r)} (hypothesis already recorded)")
             continue
-        if aplica:
-            mapa_ids[loc] = cria(db, "hipotese", h["texto"], item(h, "pai"), h.get("resumo"), prob=h.get("prob"),
-                                 refuta_se=h.get("refuta_se"))
-            for tipo, chave in (("responde", "responde"), ("deriva", "motivada_por"), ("depende", "premissas")):
-                vals = h.get(chave) or []
+        if apply:
+            id_map[loc] = create(db, "hypothesis", h["text"], item(h, "parent"), h.get("summary"), prob=h.get("prob"),
+                                 refuted_if=h.get("refuted_if"))
+            for typ, key in (("answers", "answers"), ("derives", "motivated_by"), ("depends", "premises")):
+                vals = h.get(key) or []
                 for v in [vals] if isinstance(vals, str) else vals:
-                    db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (mapa_ids[loc], tipo, ref(v), None, agora()))
-        plano.append(f"+ {loc} hipótese{'' if h.get('refuta_se') else ' exploratória (sem --refuta-se)'}: {h['texto'][:80]}")
-    if aplica:  # rivais depois que todas as hipóteses do lote existem
-        for h in dados.get("hipoteses", []):
-            if usa(h["id"]):
-                for v in h.get("rivais", []):
-                    if usa(v) or existe(v):
-                        db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (ref(h["id"]), "rival", ref(v), None, agora()))
-    for k, c in enumerate(dados.get("conexoes", [])):
+                    db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (id_map[loc], typ, ref(v), None, now()))
+        plan.append(f"+ {loc} hypothesis{'' if h.get('refuted_if') else ' exploratory (no --refuted-if)'}: {h['text'][:80]}")
+    if apply:  # rivals after every hypothesis of the batch exists
+        for h in data.get("hypotheses", []):
+            if use(h["id"]):
+                for v in h.get("rivals", []):
+                    if use(v) or exists(v):
+                        db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (ref(h["id"]), "rival", ref(v), None, now()))
+    for k, c in enumerate(data.get("connections", [])):
         loc = c.get("id", f"c{k + 1}")
-        if not usa(loc):
+        if not use(loc):
             continue
-        if c.get("estado", "sugerida") != "sugerida":
-            raise Erro(f"{loc}: conexão de extração entra só como 'sugerida'; confirmar exige `estado C.. confirmada`")
-        if aplica:
-            no_de = lambda k: um(db, "SELECT * FROM no WHERE id=?", ref(item(c, k)))
-            mapa_ids[loc] = nova_conexao(db, no_de("de"), no_de("para"), item(c, "relacao"), item(c, "porque"),
-                                         c.get("rival"), c.get("discriminador"), c.get("origem", "agente"),
-                                         [str(ref(m)) for m in c.get("motivos", [])], c.get("canal"))
-        plano.append(f"+ {loc} conexão candidata {c['de']} {c['relacao']}? {c['para']}: {c['porque'][:70]}")
-    for k, d in enumerate(dados.get("discriminadores", [])):
+        if c.get("state", "suggested") != "suggested":
+            raise Error(f"{loc}: a connection from extraction enters only as 'suggested'; confirming requires `state C.. confirmed`")
+        if apply:
+            node_of = lambda k: node_by_id(db, ref(item(c, k)))
+            id_map[loc] = new_connection(db, node_of("from"), node_of("to"), item(c, "relation"), item(c, "why"),
+                                         c.get("rival"), c.get("discriminator"), c.get("origin", "agent"),
+                                         [str(ref(m)) for m in c.get("reasons", [])], c.get("channel"))
+        plan.append(f"+ {loc} candidate connection {c['from']} {c['relation']}? {c['to']}: {c['why'][:70]}")
+    for k, d in enumerate(data.get("discriminators", [])):
         loc = d.get("id", f"d{k + 1}")
-        if not usa(loc):
+        if not use(loc):
             continue
-        if aplica:
-            entre = d.get("entre", [])
-            nomes = [rot(um(db, "SELECT * FROM no WHERE id=?", ref(e))) for e in entre]
-            no = cria(db, "fio", f"Discriminar {' × '.join(nomes)}: {item(d, 'observacao')}"[:160], resumo=d["observacao"][:800])
-            for e in entre:
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (no, "sobre", ref(e), None, agora()))
-            mapa_ids[loc] = no
-        plano.append(f"+ {loc} fio de discriminação: {d['observacao'][:80]}")
-    imp = dados.get("impacto") or {}
-    for k in ("plano", "leitura"):
+        if apply:
+            between = d.get("between", [])
+            names = [label(node_by_id(db, ref(e))) for e in between]
+            node = create(db, "thread", f"Discriminate {' × '.join(names)}: {item(d, 'observation')}"[:160], summary=d["observation"][:800])
+            for e in between:
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (node, "about", ref(e), None, now()))
+            id_map[loc] = node
+        plan.append(f"+ {loc} discrimination thread: {d['observation'][:80]}")
+    imp = data.get("impact") or {}
+    for k in ("plan", "reading"):
         if imp.get(k):
-            plano.append(f"! impacto no {k} (não aplicado sozinho): {imp[k][:160]}")
-    if aplica:
-        for no in set(mapa_ids.values()):
-            indexa(db, no)
-    return plano, mapa_ids
+            plan.append(f"! impact on the {k} (not applied by itself): {imp[k][:160]}")
+    if apply:
+        for node in set(id_map.values()):
+            index_node(db, node)
+    return plan, id_map
 
 
-def roda_prova(cmd):
+def run_proof(cmd):
     try:
-        r = subprocess.run(cmd, shell=True, cwd=RAIZ, capture_output=True, text=True, timeout=600)
+        r = subprocess.run(cmd, shell=True, cwd=ROOT, capture_output=True, text=True, timeout=600)
         return r.returncode == 0, (r.stdout + r.stderr).strip()[-200:]
     except subprocess.TimeoutExpired:
-        return False, "timeout de 600 s"
+        return False, "timeout of 600 s"
 
 
 # ---------- CLI ----------
 
-def main(argv=None):
+def opt(s, new, old=None, **kw):
+    """An option under its English name, with the old Portuguese spelling as an alias."""
+    s.add_argument(*([new] + ([old] if old else [])), **kw)
+
+
+def parser():
     ap = argparse.ArgumentParser(prog="holmes.py", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("init"); s.add_argument("caso"); s.add_argument("objetivo")
-    s = sub.add_parser("usa"); s.add_argument("caso")
-    for nome in ("casos", "saude", "jobs", "questoes", "proximo", "cronologia"):
-        sub.add_parser(nome)
-    s = sub.add_parser("prova"); s.add_argument("--executa", action="store_true"); s.add_argument("--legado", action="store_true")
-    s = sub.add_parser("cadeia"); s.add_argument("id")
-    s = sub.add_parser("conexoes"); s.add_argument("alvo", nargs="?"); s.add_argument("-n", type=int, default=8)
-    s = sub.add_parser("conexao"); s.add_argument("de"); s.add_argument("para"); s.add_argument("relacao", choices=ARESTAS)
-    s.add_argument("porque"); s.add_argument("--rival"); s.add_argument("--discriminador"); s.add_argument("--motivos")
-    s.add_argument("--origem", default="agente", choices=ORIGENS); s.add_argument("--canal")
-    s = sub.add_parser("extrai"); s.add_argument("arquivo"); s.add_argument("--aplica", action="store_true")
-    s.add_argument("--so"); s.add_argument("--rejeita")
-    s = sub.add_parser("mapa"); s.add_argument("--tudo", action="store_true")
-    s = sub.add_parser("novo"); s.add_argument("tipo"); s.add_argument("titulo")
-    for k in ("--pai", "--resumo", "--origem", "--grau", "--estado", "--natureza", "--fonte", "--local", "--citacao",
-              "--prova", "--refuta-se", "--classe", "--alias", "--proibe", "--permite", "--porque", "--por"):
-        s.add_argument(k)
-    s.add_argument("--prob", type=float)
-    s = sub.add_parser("edita"); s.add_argument("id"); s.add_argument("--titulo"); s.add_argument("--resumo")
-    s.add_argument("--refuta-se")
-    s = sub.add_parser("leitura"); s.add_argument("texto", nargs="?"); s.add_argument("--titulo")
-    for k in ("--sustenta", "--enfraquece", "--rival", "--questao", "--lacuna", "--motivo"):
-        s.add_argument(k)
-    s = sub.add_parser("estado"); s.add_argument("id"); s.add_argument("estado"); s.add_argument("motivo", nargs="?", default="")
-    s.add_argument("--solucao"); s.add_argument("--prova")
-    for nome in ("liga", "desliga"):
-        s = sub.add_parser(nome); s.add_argument("de"); s.add_argument("tipo", choices=ARESTAS); s.add_argument("para")
-        if nome == "liga":
-            s.add_argument("nota", nargs="?")
-    s = sub.add_parser("prob"); s.add_argument("hipotese"); s.add_argument("p", type=float); s.add_argument("motivo")
-    s = sub.add_parser("ach"); s.add_argument("alvo"); s.add_argument("hipotese", nargs="?")
-    s.add_argument("valor", nargs="?", choices=list(ACH)); s.add_argument("--nota")
-    s = sub.add_parser("teste"); s.add_argument("hipotese"); s.add_argument("titulo")
-    s.add_argument("--alcance", required=True); s.add_argument("--porque", required=True)
-    for k in ("--fora", "--previsao", "--controle", "--instrumento", "--script", "--resumo"):
-        s.add_argument(k)
-    s.add_argument("--controle-tipo", choices=["real", "plantado", "sabotagem", "nenhum"])
-    s.add_argument("--forca", action="store_true"); s.add_argument("--exploratorio", action="store_true")
-    s = sub.add_parser("roda"); s.add_argument("teste"); s.add_argument("--pid", type=int); s.add_argument("--log")
+    s = sub.add_parser("init"); s.add_argument("case"); s.add_argument("objective")
+    s = sub.add_parser("use"); s.add_argument("case")
+    for name in ("cases", "health", "jobs", "questions", "next", "timeline", "sheet"):
+        sub.add_parser(name)
+    s = sub.add_parser("proof"); opt(s, "--execute", "--executa", action="store_true"); opt(s, "--legacy", "--legado", action="store_true")
+    s = sub.add_parser("chain"); s.add_argument("id")
+    s = sub.add_parser("connections"); s.add_argument("target", nargs="?"); s.add_argument("-n", type=int, default=8)
+    s = sub.add_parser("connection"); s.add_argument("src", metavar="from"); s.add_argument("dst", metavar="to")
+    s.add_argument("relation", type=accepts("edge"), choices=EDGES); s.add_argument("why"); opt(s, "--rival")
+    opt(s, "--discriminator", "--discriminador"); opt(s, "--reasons", "--motivos")
+    opt(s, "--origin", "--origem", default="agent", type=accepts("origin"), choices=ORIGINS); opt(s, "--channel", "--canal")
+    s = sub.add_parser("extract"); s.add_argument("file"); opt(s, "--apply", "--aplica", action="store_true")
+    opt(s, "--only", "--so"); opt(s, "--reject", "--rejeita")
+    s = sub.add_parser("map"); opt(s, "--all", "--tudo", action="store_true")
+    s = sub.add_parser("new"); s.add_argument("type"); s.add_argument("title")
+    for new, old in (("--parent", "--pai"), ("--summary", "--resumo"), ("--origin", "--origem"), ("--grade", "--grau"),
+                     ("--state", "--estado"), ("--nature", "--natureza"), ("--source", "--fonte"),
+                     ("--location", "--local"), ("--quote", "--citacao"), ("--proof", "--prova"),
+                     ("--refuted-if", "--refuta-se"), ("--alias", None), ("--forbids", "--proibe"),
+                     ("--allows", "--permite"), ("--why", "--porque"), ("--by", "--por")):
+        opt(s, new, old)
+    opt(s, "--class", "--classe", dest="cls"); s.add_argument("--prob", type=float)
+    s = sub.add_parser("edit"); s.add_argument("id"); opt(s, "--title", "--titulo"); opt(s, "--summary", "--resumo")
+    opt(s, "--refuted-if", "--refuta-se"); s.add_argument("--script")
+    s = sub.add_parser("reading"); s.add_argument("text", nargs="?"); opt(s, "--title", "--titulo")
+    for new, old in (("--supports", "--sustenta"), ("--weakens", "--enfraquece"), ("--rival", None),
+                     ("--question", "--questao"), ("--gap", "--lacuna"), ("--reason", "--motivo")):
+        opt(s, new, old)
+    s = sub.add_parser("state"); s.add_argument("id"); s.add_argument("state"); s.add_argument("reason", nargs="?", default="")
+    opt(s, "--solution", "--solucao"); opt(s, "--proof", "--prova")
+    for name in ("link", "unlink"):
+        s = sub.add_parser(name); s.add_argument("src", metavar="from"); s.add_argument("type", type=accepts("edge"), choices=EDGES)
+        s.add_argument("dst", metavar="to")
+        if name == "link":
+            s.add_argument("note", nargs="?")
+    s = sub.add_parser("prob"); s.add_argument("hypothesis"); s.add_argument("p", type=float); s.add_argument("reason")
+    s = sub.add_parser("ach"); s.add_argument("target"); s.add_argument("hypothesis", nargs="?")
+    s.add_argument("value", nargs="?", choices=list(ACH)); opt(s, "--note", "--nota")
+    s = sub.add_parser("test"); s.add_argument("hypothesis"); s.add_argument("title")
+    opt(s, "--scope", "--alcance", required=True); opt(s, "--why", "--porque", required=True)
+    for new, old in (("--outside", "--fora"), ("--prediction", "--previsao"), ("--control", "--controle"),
+                     ("--instrument", "--instrumento"), ("--script", None), ("--summary", "--resumo")):
+        opt(s, new, old)
+    opt(s, "--control-type", "--controle-tipo", type=accepts("control_type"), choices=CONTROL_TYPES)
+    opt(s, "--force", "--forca", action="store_true"); opt(s, "--exploratory", "--exploratorio", action="store_true")
+    s = sub.add_parser("run"); s.add_argument("test"); s.add_argument("--pid", type=int); s.add_argument("--log")
     s.add_argument("--host")
-    s = sub.add_parser("resultado"); s.add_argument("alvo")
-    s.add_argument("resultado", choices=["positivo", "negativo", "inconclusivo", "falhou"]); s.add_argument("nota")
-    s.add_argument("--n"); s.add_argument("--controle-ok", choices=["sim", "nao"]); s.add_argument("--sentido")
-    for nome in ("busca", "ja"):
-        s = sub.add_parser(nome); s.add_argument("texto"); s.add_argument("-n", type=int, default=8)
-        s.add_argument("--sem-corpus", action="store_true")
-    s = sub.add_parser("ver"); s.add_argument("id")
-    s = sub.add_parser("fonte"); s.add_argument("caminho"); s.add_argument("--titulo")
-    s.add_argument("--procedencia", choices=["primaria", "derivada", "terceiros", "nossa"], default="primaria")
-    s.add_argument("--confiabilidade", choices=list("ABCDEF")); s.add_argument("--sem-corpus", action="store_true")
-    s = sub.add_parser("cita"); s.add_argument("pedaco", type=int); s.add_argument("afirmacao")
-    s.add_argument("--natureza", default="citacao", choices=NATUREZAS); s.add_argument("--grau", default="B")
-    s = sub.add_parser("confere"); s.add_argument("fato", help="pista K.. (vira fato) ou fato E.. (renova a prova)"); s.add_argument("nota")
-    s.add_argument("--por", required=True, choices=PROVAS); s.add_argument("--prova"); s.add_argument("--fonte"); s.add_argument("--local")
-    s = sub.add_parser("atributo"); s.add_argument("entidade"); s.add_argument("chave"); s.add_argument("valor")
-    s.add_argument("--fato")
-    s = sub.add_parser("ramo"); s.add_argument("acao", nargs="?", choices=["novo", "usa", "solta"])
-    s.add_argument("texto", nargs="?"); s.add_argument("--de"); s.add_argument("--passo", type=int)
-    s.add_argument("--porque"); s.add_argument("--resumo"); s.add_argument("--nao-usa", action="store_true")
-    s = sub.add_parser("passo"); s.add_argument("tipo", choices=PASSOS_MANUAIS); s.add_argument("texto")
-    s.add_argument("--porque"); s.add_argument("--nos"); s.add_argument("--ramo")
-    s = sub.add_parser("arvore"); s.add_argument("id", nargs="?")
-    s = sub.add_parser("trilha"); s.add_argument("id", nargs="?")
-    sub.add_parser("ficha")
-    s = sub.add_parser("reorganiza"); s.add_argument("--aplica", action="store_true")
-    s = sub.add_parser("instrumento"); s.add_argument("caminho"); s.add_argument("nome", nargs="?")
-    s.add_argument("--verificador")
-    a = ap.parse_args(argv)
+    s = sub.add_parser("result"); s.add_argument("target")
+    s.add_argument("result", type=accepts("result"), choices=RESULTS); s.add_argument("note")
+    s.add_argument("--n"); opt(s, "--control-ok", "--controle-ok", type=accepts("yesno"), choices=["yes", "no"])
+    opt(s, "--meaning", "--sentido")
+    for name in ("search", "tried"):
+        s = sub.add_parser(name); s.add_argument("text"); s.add_argument("-n", type=int, default=8)
+        opt(s, "--no-corpus", "--sem-corpus", action="store_true")
+    s = sub.add_parser("show"); s.add_argument("id")
+    s = sub.add_parser("source"); s.add_argument("path"); opt(s, "--title", "--titulo")
+    opt(s, "--provenance", "--procedencia", type=accepts("provenance"), choices=PROVENANCES, default="primary")
+    opt(s, "--reliability", "--confiabilidade", choices=list("ABCDEF")); opt(s, "--no-corpus", "--sem-corpus", action="store_true")
+    s = sub.add_parser("quote"); s.add_argument("chunk", type=int); s.add_argument("claim")
+    opt(s, "--nature", "--natureza", default="quote", type=accepts("nature"), choices=NATURES); opt(s, "--grade", "--grau", default="B")
+    s = sub.add_parser("prove"); s.add_argument("fact", help="clue K.. (becomes a fact) or fact E.. (renews the proof)"); s.add_argument("note")
+    opt(s, "--by", "--por", required=True, type=accepts("proof"), choices=PROOFS); opt(s, "--proof", "--prova")
+    opt(s, "--source", "--fonte"); opt(s, "--location", "--local")
+    s = sub.add_parser("attribute"); s.add_argument("entity"); s.add_argument("key", type=accepts("key")); s.add_argument("value")
+    opt(s, "--fact", "--fato")
+    s = sub.add_parser("branch"); s.add_argument("action", nargs="?", type=accepts("branch_action"), choices=["new", "use", "release"])
+    s.add_argument("text", nargs="?", help="new: the line's question · use: the branch id (B..)")
+    opt(s, "--from", "--de", dest="src", help="new (required): the node or branch it grows from")
+    opt(s, "--step", "--passo", type=int, help="new: fork from this step of the --from branch")
+    opt(s, "--why", "--porque", help="new (required): why this line exists")
+    opt(s, "--summary", "--resumo", help="new: longer description")
+    opt(s, "--no-use", "--nao-usa", action="store_true", help="new: open it without making it active")
+    s = sub.add_parser("step"); s.add_argument("type", type=accepts("step"), choices=MANUAL_STEPS); s.add_argument("text")
+    opt(s, "--why", "--porque"); opt(s, "--nodes", "--nos"); opt(s, "--branch", "--ramo")
+    s = sub.add_parser("tree"); s.add_argument("id", nargs="?")
+    s = sub.add_parser("trail"); s.add_argument("id", nargs="?")
+    s = sub.add_parser("reorganize"); opt(s, "--apply", "--aplica", action="store_true")
+    s = sub.add_parser("instrument"); s.add_argument("path"); s.add_argument("name", nargs="?")
+    opt(s, "--verifier", "--verificador")
+    return ap
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in OLD_COMMANDS:  # old Portuguese command name
+        argv[0] = OLD_COMMANDS[argv[0]]
+    a = parser().parse_args(argv)
 
     if a.cmd == "init":
-        if not re.fullmatch(r"[\w-]+", a.caso):
-            raise Erro("nome de caso: letras, números, _ e -")
-        d = CASOS / a.caso
-        if (d / "caso.db").exists():
-            raise Erro(f"{a.caso} já existe")
-        for sd in ("fontes", "scripts", "saidas", "notas"):
+        if not re.fullmatch(r"[\w-]+", a.case):
+            raise Error("case name: letters, digits, _ and -")
+        d = case_dir(a.case)
+        if a.case in cases():
+            raise Error(f"{a.case} already exists")
+        for sd in ("sources", "scripts", "outputs", "notes"):
             (d / sd).mkdir(parents=True, exist_ok=True)
-        (d / "CASO.md").write_text(f"# {a.caso}\n\nObjetivo: {a.objetivo}\n\n<!-- até 2 KB, à mão: o que é o caso, "
-                                   "regras locais, onde ficam as fontes. Estado e plano NÃO vão aqui: são o `mapa`. -->\n",
+        (d / "CASE.md").write_text(f"# {a.case}\n\nObjective: {a.objective}\n\n<!-- up to 2 KB, by hand: what the case is, "
+                                   "local rules, where the sources are. State and plan do NOT go here: they are the `map`. -->\n",
                                    encoding="utf-8")
-        with conecta(a.caso) as db:
-            cria(db, "objetivo", a.objetivo[:160], resumo=a.objetivo if len(a.objetivo) > 160 else None, origem="usuario")
-        ATIVO.parent.mkdir(exist_ok=True)
-        ATIVO.write_text(a.caso)
-        return print(f"caso {a.caso} criado em {d} e ativo")
-    if a.cmd == "usa":
-        if a.caso not in casos():
-            raise Erro(f"{a.caso} não existe; casos: {', '.join(casos()) or 'nenhum'}")
-        ATIVO.parent.mkdir(exist_ok=True)
-        ATIVO.write_text(a.caso)
-        return print(f"caso ativo: {a.caso}")
-    if a.cmd == "casos":
-        atual = ATIVO.read_text().strip() if ATIVO.exists() else ""
-        return print("\n".join(f"{'*' if c == atual else ' '} {c}" for c in casos()) or "nenhum caso")
+        with connect(a.case) as db:
+            create(db, "objective", a.objective[:160], summary=a.objective if len(a.objective) > 160 else None, origin="user")
+        write_active(a.case)
+        return print(f"case {a.case} created in {d} and active")
+    if a.cmd == "use":
+        if a.case not in cases():
+            raise Error(f"{a.case} does not exist; cases: {', '.join(cases()) or 'none'}")
+        write_active(a.case)
+        with connect(a.case):  # migrates an old database now, not in the middle of the next command
+            pass
+        return print(f"active case: {a.case}")
+    if a.cmd == "cases":
+        cur = read_active()
+        return print("\n".join(f"{'*' if c == cur else ' '} {c}" for c in cases()) or "no case")
 
-    caso = caso_ativo()
-    with conecta(caso) as db:
-        ra = ramo_ativo(db, caso)
-        ATUAL["ramo"] = ra["id"] if ra else None
-        if a.cmd == "mapa":
-            txt = mapa(db, caso, a.tudo)
-            (CASOS / caso / "MAPA.md").write_text(txt + "\n", encoding="utf-8")  # visão gerada; nunca editar
+    case = active_case()
+    with connect(case) as db:
+        ra = active_branch(db, case)
+        CURRENT["branch"] = ra["id"] if ra else None
+        if a.cmd == "map":
+            txt = build_map(db, case, a.all)
+            (case_dir(case) / "MAP.md").write_text(txt + "\n", encoding="utf-8")  # generated view; never edit
             print(txt)
-        elif a.cmd == "novo":
-            if a.tipo == "ramo":
-                raise Erro("ramo se abre com `ramo novo \"<pergunta>\" --de <id> --porque \"<por que esta linha>\"`")
-            no = cria(db, a.tipo, a.titulo, a.pai, a.resumo, a.origem, a.grau, a.estado, natureza=a.natureza,
-                      fonte=a.fonte, local=a.local, citacao=a.citacao, prova=a.prova, prob=a.prob,
-                      refuta_se=a.refuta_se, classe=a.classe, alias=a.alias, proibe=a.proibe, permite=a.permite,
-                      porque=a.porque, por=a.por)
-            print(f"{PREFIXO[a.tipo]}{no}")
-            if a.tipo == "hipotese" and not a.refuta_se:
-                print("dica: --refuta-se \"<o que a derrubaria>\" deixa a hipótese testável")
-        elif a.cmd == "edita":
-            r = pega(db, a.id)
-            if a.titulo:
-                if len(a.titulo) > 160:
-                    raise Erro("título máx. 160")
-                db.execute("UPDATE no SET titulo=? WHERE id=?", (a.titulo, r["id"]))
-            if a.resumo is not None:
-                if len(a.resumo) > 800:
-                    raise Erro("resumo máx. 800")
-                db.execute("UPDATE no SET resumo=? WHERE id=?", (a.resumo, r["id"]))
-            if a.refuta_se:
-                if r["tipo"] != "hipotese":
-                    raise Erro("--refuta-se é de hipótese")
-                db.execute("UPDATE hipotese SET refuta_se=? WHERE no=?", (a.refuta_se, r["id"]))
-            toca(db, r["id"], "editou", f"antes: {r['titulo']}")
-            print(f"{rot(r)} editado")
-        elif a.cmd == "leitura":
-            atual = leitura_atual(db)
-            if not a.texto:
-                if not atual:
-                    return print("nenhuma leitura de conjunto ainda: `holmes.py leitura \"<o que o caso parece contar>\"`")
-                return print(ver(db, atual) + f"\n  {resultados_sem_leitura(db)} resultado(s) desde esta leitura")
-            if len(a.texto) > 800:
-                raise Erro(f"leitura com {len(a.texto)} caracteres (máx. 800): é o quadro, não o dossiê")
-            if atual and not (a.motivo or "").strip():
-                raise Erro(f"substituir L{atual['id']} exige --motivo: que evidência ou evento mudou o quadro?")
-            ids = lambda s: [pega(db, x.strip()) for x in (s or "").split(",") if x.strip()]
-            ligs = ([("depende", e["id"], None, "de") for e in ids(a.sustenta)]
-                    + [("enfraquece", e["id"], None, "para") for e in ids(a.enfraquece)]
-                    + [("rival", h["id"], None, "de") for h in ids(a.rival)]
-                    + [("sobre", x["id"], "decisiva", "de") for x in ids(a.questao)]
-                    + [("sobre", x["id"], "lacuna", "de") for x in ids(a.lacuna)])
-            titulo = a.titulo or " ".join(a.texto.split())[:157] + ("…" if len(a.texto) > 157 else "")
-            no = cria(db, "leitura", titulo[:160], resumo=a.texto, origem="agente")
-            for tipo, outro, nota, lado in ligs:  # 'de' = a leitura aponta; 'para' = a evidência aponta para a leitura
-                par = (no, tipo, outro) if lado == "de" else (outro, tipo, no)
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (*par, nota, agora()))
-            if atual:
-                db.execute("UPDATE no SET estado='substituida' WHERE id=?", (atual["id"],))
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (no, "substitui", atual["id"], a.motivo[:200], agora()))
-                toca(db, atual["id"], "substituida", f"L{no}: {a.motivo}")
-            print(f"L{no} é a leitura atual" + (f" (substitui L{atual['id']})" if atual else ""))
-            if not a.sustenta:
-                print("aviso: leitura sem --sustenta: se uma evidência dela cair, ninguém vai avisar")
-        elif a.cmd == "estado":
-            r = pega(db, a.id)
-            if a.estado not in ESTADOS[r["tipo"]]:
-                raise Erro(f"estado inválido para {r['tipo']}; use: {', '.join(ESTADOS[r['tipo']])}")
-            if a.estado in COM_MOTIVO and not a.motivo.strip():
-                raise Erro(f"'{a.estado}' exige motivo (o id do teste, fato ou decisão que mostrou isso)")
-            if r["tipo"] == "frente" and a.estado == "ativa" and r["estado"] != "ativa":
-                if um(db, "SELECT count(*) FROM no WHERE tipo='frente' AND estado='ativa'")[0] >= MAX_FRENTES:
-                    raise Erro(f"já há {MAX_FRENTES} frentes ativas")
-            if r["tipo"] == "hipotese" and a.estado == "refutada":
-                h = um(db, "SELECT refuta_se FROM hipotese WHERE no=?", r["id"])
-                print(f"lembrete: refute {rot(r)} só se o critério foi atingido: "
-                      f"{h['refuta_se'] or '(nenhum critério registrado)'}. Se não foi, mas negativos válidos se "
-                      "acumulam, baixe a confiança com `prob` em vez de mantê-la intacta.")
-            if r["tipo"] == "conexao" and a.estado == "confirmada":
-                c = um(db, "SELECT * FROM conexao WHERE no=?", r["id"])
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)",
-                           (c["de"], c["relacao"], c["para"], f"C{r['id']}: {a.motivo}"[:200], agora()))
-                print(f"relação promovida ao grafo: {rot(um(db, 'SELECT * FROM no WHERE id=?', c['de']))} {c['relacao']} "
-                      f"{rot(um(db, 'SELECT * FROM no WHERE id=?', c['para']))}")
-            if r["tipo"] == "conexao" and r["estado"] == "confirmada" and a.estado != "confirmada":
-                c = um(db, "SELECT * FROM conexao WHERE no=?", r["id"])
-                db.execute("DELETE FROM aresta WHERE de=? AND tipo=? AND para=? AND nota LIKE ?",
-                           (c["de"], c["relacao"], c["para"], f"C{r['id']}:%"))
-            if r["tipo"] == "alvo" and a.estado == "resolvido":
-                if not a.solucao:
-                    raise Erro("alvo resolvido exige --solucao (e, se houver, --prova \"<comando que re-prova>\")")
-                db.execute("UPDATE alvo SET solucao=?, prova=? WHERE no=?", (a.solucao, a.prova, r["id"]))
-            db.execute("UPDATE no SET estado=? WHERE id=?", (a.estado, r["id"]))
-            toca(db, r["id"], f"{r['estado']}→{a.estado}", a.motivo)
-            onde = r["id"] if r["tipo"] == "ramo" else ATUAL["ramo"]
-            if onde:  # correção de rumo fica no percurso, com o porquê
-                passo(db, onde, "mudou", f"{rot(r)} {r['estado']} → {a.estado}", a.motivo.strip() or None, (rot(r),))
-            if r["tipo"] == "ramo" and a.estado != "ativo" and ATUAL["ramo"] == r["id"]:
-                arq_ramo(caso).unlink(missing_ok=True)
-                print("ramo ativo solto: `arvore` mostra os outros; `ramo usa B..` escolhe")
-            print(f"{rot(r)}: {r['estado']} → {a.estado}")
-            dep = dependentes(db, r["id"])
-            if a.estado in CAIDOS and dep:
-                print("⚠ dependem disto (direta ou indiretamente) e precisam ser reavaliados: "
-                      + ", ".join(rot(um(db, "SELECT * FROM no WHERE id=?", d)) for d in dep[:20])
+        elif a.cmd == "new":
+            typ = translate("type", a.type)
+            if typ == "branch":
+                raise Error("a branch is opened with `branch new \"<question>\" --from <id> --why \"<why this line>\"`")
+            own = {"source": "source <path>", "instrument": "instrument <path> \"<name>\"",
+                   "reading": "reading \"<picture>\" --supports ..", "connection": "connection <from> <to> <relation> \"<why>\"",
+                   "test": "test <H> \"<title>\" --scope .. --why .."}
+            if typ in own:  # these carry required data that `new` cannot collect
+                raise Error(f"{an(typ)} has its own command: `{own[typ]}`")
+            node = create(db, typ, a.title, a.parent, a.summary, a.origin, a.grade, a.state, nature=a.nature,
+                          source=a.source, location=a.location, quote=a.quote, proof=a.proof, prob=a.prob,
+                          refuted_if=a.refuted_if, cls=a.cls, alias=a.alias, forbids=a.forbids, allows=a.allows,
+                          why=a.why, by=a.by)
+            print(f"{PREFIX[typ]}{node}")
+            if typ == "hypothesis" and not a.refuted_if:
+                print("tip: --refuted-if \"<what would bring it down>\" makes the hypothesis testable")
+        elif a.cmd == "edit":
+            r = get_node(db, a.id)
+            if a.title:
+                if len(a.title) > 160:
+                    raise Error("title max. 160")
+                db.execute("UPDATE node SET title=? WHERE id=?", (a.title, r["id"]))
+            if a.summary is not None:
+                if len(a.summary) > 800:
+                    raise Error("summary max. 800")
+                db.execute("UPDATE node SET summary=? WHERE id=?", (a.summary, r["id"]))
+            if a.refuted_if:
+                if r["type"] != "hypothesis":
+                    raise Error("--refuted-if belongs to a hypothesis")
+                db.execute("UPDATE hypothesis SET refuted_if=? WHERE node=?", (a.refuted_if, r["id"]))
+            if a.script:
+                if r["type"] != "test":
+                    raise Error("--script belongs to a test")
+                db.execute("UPDATE test SET script=? WHERE node=?", (a.script, r["id"]))
+            touch(db, r["id"], "edited", f"before: {r['title']}")
+            print(f"{label(r)} edited")
+        elif a.cmd == "reading":
+            cur = current_reading(db)
+            if not a.text:
+                if not cur:
+                    return print("no overall reading yet: `holmes.py reading \"<what the case seems to tell>\"`")
+                return print(show(db, cur) + f"\n  {results_since_reading(db)} result(s) since this reading")
+            if len(a.text) > 800:
+                raise Error(f"reading with {len(a.text)} characters (max. 800): it is the picture, not the dossier")
+            if cur and not (a.reason or "").strip():
+                raise Error(f"replacing L{cur['id']} requires --reason: what evidence or event changed the picture?")
+            ids = lambda s: [get_node(db, x.strip()) for x in (s or "").split(",") if x.strip()]
+            links = ([("depends", e["id"], None, "src") for e in ids(a.supports)]
+                     + [("weakens", e["id"], None, "dst") for e in ids(a.weakens)]
+                     + [("rival", h["id"], None, "src") for h in ids(a.rival)]
+                     + [("about", x["id"], "decisive", "src") for x in ids(a.question)]
+                     + [("about", x["id"], "gap", "src") for x in ids(a.gap)])
+            title = a.title or " ".join(a.text.split())[:157] + ("…" if len(a.text) > 157 else "")
+            node = create(db, "reading", title[:160], summary=a.text, origin="agent")
+            for typ, other, note, side in links:  # 'src' = the reading points; 'dst' = the evidence points to the reading
+                pair = (node, typ, other) if side == "src" else (other, typ, node)
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (*pair, note, now()))
+            if cur:
+                db.execute("UPDATE node SET state='superseded' WHERE id=?", (cur["id"],))
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (node, "supersedes", cur["id"], a.reason[:200], now()))
+                touch(db, cur["id"], "superseded", f"L{node}: {a.reason}")
+            print(f"L{node} is the current reading" + (f" (supersedes L{cur['id']})" if cur else ""))
+            if not a.supports:
+                print("warning: reading without --supports: if one of its pieces of evidence falls, no one will warn you")
+        elif a.cmd == "state":
+            r = get_node(db, a.id)
+            new = state_of(r["type"], a.state)
+            if new not in STATES[r["type"]]:
+                raise Error(f"invalid state for {r['type']}; use: {', '.join(STATES[r['type']])}")
+            if new in NEEDS_REASON and not a.reason.strip():
+                raise Error(f"'{new}' requires a reason (the id of the test, fact or decision that showed it)")
+            if r["type"] == "front" and new == "active" and r["state"] != "active":
+                if one(db, "SELECT count(*) FROM node WHERE type='front' AND state='active'")[0] >= MAX_FRONTS:
+                    raise Error(f"there are already {MAX_FRONTS} active fronts")
+            if r["type"] == "hypothesis" and new == "refuted":
+                h = one(db, "SELECT refuted_if FROM hypothesis WHERE node=?", r["id"])
+                print(f"reminder: refute {label(r)} only if the criterion was met: "
+                      f"{h['refuted_if'] or '(no criterion recorded)'}. If it was not, but valid negatives are "
+                      "piling up, lower the confidence with `prob` instead of keeping it intact.")
+            if r["type"] == "connection" and new == "confirmed":
+                c = one(db, "SELECT * FROM connection WHERE node=?", r["id"])
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)",
+                           (c["src"], c["relation"], c["dst"], f"C{r['id']}: {a.reason}"[:200], now()))
+                print(f"relation promoted to the graph: {label(node_by_id(db, c['src']))} {c['relation']} "
+                      f"{label(node_by_id(db, c['dst']))}")
+            if r["type"] == "connection" and r["state"] == "confirmed" and new != "confirmed":
+                c = one(db, "SELECT * FROM connection WHERE node=?", r["id"])
+                db.execute("DELETE FROM edge WHERE src=? AND type=? AND dst=? AND note LIKE ?",
+                           (c["src"], c["relation"], c["dst"], f"C{r['id']}:%"))
+            if r["type"] == "target" and new == "solved":
+                if not a.solution:
+                    raise Error("a solved target requires --solution (and, if there is one, --proof \"<command that re-proves it>\")")
+                db.execute("UPDATE target SET solution=?, proof=? WHERE node=?", (a.solution, a.proof, r["id"]))
+            db.execute("UPDATE node SET state=? WHERE id=?", (new, r["id"]))
+            touch(db, r["id"], f"{r['state']}→{new}", a.reason)
+            where = r["id"] if r["type"] == "branch" else CURRENT["branch"]
+            if where:  # a course correction stays in the path, with its reason
+                add_step(db, where, "changed", f"{label(r)} {r['state']} → {new}", a.reason.strip() or None, (label(r),))
+            if r["type"] == "branch" and new != "active" and CURRENT["branch"] == r["id"]:
+                set_branch(case, None)
+                print("active branch released: `tree` shows the others; `branch use B..` picks one")
+            print(f"{label(r)}: {r['state']} → {new}")
+            dep = dependents(db, r["id"])
+            if new in FALLEN and dep:
+                print("⚠ these depend on it (directly or indirectly) and must be reassessed: "
+                      + ", ".join(label(node_by_id(db, d)) for d in dep[:20])
                       + (f" … +{len(dep) - 20}" if len(dep) > 20 else ""))
-        elif a.cmd in ("liga", "desliga"):
-            de, para = pega(db, a.de), pega(db, a.para)
-            if de["id"] == para["id"]:
-                raise Erro("aresta para si mesmo")
-            if a.cmd == "liga":
-                db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (de["id"], a.tipo, para["id"], a.nota, agora()))
+        elif a.cmd in ("link", "unlink"):
+            src, dst = get_node(db, a.src), get_node(db, a.dst)
+            if src["id"] == dst["id"]:
+                raise Error("edge to itself")
+            if a.cmd == "link":
+                db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (src["id"], a.type, dst["id"], a.note, now()))
             else:
-                db.execute("DELETE FROM aresta WHERE de=? AND tipo=? AND para=?", (de["id"], a.tipo, para["id"]))
-            evento(db, de["id"], f"{a.cmd} {a.tipo}", rot(para))
-            print(f"{rot(de)} {a.tipo} {rot(para)}" + (" (desfeita)" if a.cmd == "desliga" else ""))
+                db.execute("DELETE FROM edge WHERE src=? AND type=? AND dst=?", (src["id"], a.type, dst["id"]))
+            event(db, src["id"], f"{a.cmd} {a.type}", label(dst))
+            print(f"{label(src)} {a.type} {label(dst)}" + (" (undone)" if a.cmd == "unlink" else ""))
         elif a.cmd == "prob":
-            h = pega(db, a.hipotese, "hipotese")
+            h = get_node(db, a.hypothesis, "hypothesis")
             if not 0 <= a.p <= 1:
-                raise Erro("probabilidade entre 0 e 1")
-            velho = um(db, "SELECT prob FROM hipotese WHERE no=?", h["id"])["prob"]
-            db.execute("UPDATE hipotese SET prob=? WHERE no=?", (a.p, h["id"]))
-            toca(db, h["id"], f"prob {velho}→{a.p}", a.motivo)
-            irmas = q(db, "SELECT h.prob FROM no n JOIN hipotese h ON h.no=n.id WHERE n.pai=? AND n.estado IN "
-                          "('viva','apoiada') AND h.prob IS NOT NULL", h["pai"])
-            s = sum(x["prob"] for x in irmas)
-            # somar 1 só se exige de rivais mutuamente exclusivas; explicações que coexistem podem passar de 1
-            print(f"{rot(h)} p={a.p}" + (f"  (hipóteses vivas da frente somam {s:.2f}: se forem rivais exclusivas, "
-                                         "passa de 1 e precisa de ajuste; se podem ser verdade juntas, ignore)"
-                                         if s > 1.05 and len(irmas) > 1 else ""))
+                raise Error("probability between 0 and 1")
+            old = one(db, "SELECT prob FROM hypothesis WHERE node=?", h["id"])["prob"]
+            db.execute("UPDATE hypothesis SET prob=? WHERE node=?", (a.p, h["id"]))
+            touch(db, h["id"], f"prob {old}→{a.p}", a.reason)
+            sisters = q(db, "SELECT h.prob FROM node n JOIN hypothesis h ON h.node=n.id WHERE n.parent=? AND n.state IN "
+                            "('alive','supported') AND h.prob IS NOT NULL", h["parent"])
+            s = sum(x["prob"] for x in sisters)
+            # summing to 1 is only required of mutually exclusive rivals; explanations that coexist may exceed 1
+            print(f"{label(h)} p={a.p}" + (f"  (the front's live hypotheses add up to {s:.2f}: if they are exclusive rivals, "
+                                           "it exceeds 1 and needs adjusting; if they can be true together, ignore it)"
+                                           if s > 1.05 and len(sisters) > 1 else ""))
         elif a.cmd == "ach":
-            alvo = pega(db, a.alvo)
-            if alvo["tipo"] == "frente" and not a.hipotese:
-                print(matriz_ach(db, alvo))
+            target = get_node(db, a.target)
+            if target["type"] == "front" and not a.hypothesis:
+                print(ach_matrix(db, target))
             else:
-                if not (a.hipotese and a.valor):
-                    raise Erro("uso: ach <E> <H> CC|C|N|I|II   ou   ach <F>")
-                e, h = pega(db, a.alvo, ("fato", "pista")), pega(db, a.hipotese, "hipotese")
-                db.execute("INSERT OR REPLACE INTO ach VALUES (?,?,?,?)", (e["id"], h["id"], a.valor, a.nota))
-                evento(db, h["id"], f"ach {a.valor}", rot(e))
-                print(f"{rot(e)} × {rot(h)} = {a.valor}")
-        elif a.cmd == "teste":
-            h = pega(db, a.hipotese, "hipotese")
-            if h["estado"] not in ("viva", "apoiada"):
-                raise Erro(f"{rot(h)} está {h['estado']}: reabra antes de testar")
-            if not a.exploratorio and not um(db, "SELECT refuta_se FROM hipotese WHERE no=?", h["id"])["refuta_se"]:
-                raise Erro(f"{rot(h)} não diz o que a derrubaria. Antes de testar: `holmes.py edita {rot(h)} --refuta-se "
-                           "\"<observação que a refutaria>\"`. Sem isso, nenhum resultado pesa contra ela. Para só "
-                           "explorar um palpite barato, use --exploratorio (vale como pista, não como cobertura).")
-            receita = hashlib.sha256(" ".join(re.findall(r"\w+", (a.titulo + " " + a.alcance).lower())).encode()).hexdigest()[:16]
-            igual = um(db, "SELECT t.no FROM teste t JOIN no n ON n.id=t.no WHERE t.receita=? AND n.estado != 'cancelado' "
-                           "AND coalesce(t.modo, '') = ?", receita, "exploratorio" if a.exploratorio else "")
-            if igual and not a.forca:
-                raise Erro(f"já existe T{igual['no']} com o mesmo título+alcance (`ver T{igual['no']}`; "
-                           f"para repetir após consertar o instrumento use `roda T{igual['no']}`; --forca cria outro)")
-            parecidos = busca(db, a.titulo + " " + a.alcance, 3, so_testes=True)
-            inst = pega(db, a.instrumento, "instrumento") if a.instrumento else None
-            no = cria(db, "teste", a.titulo, h["id"], a.resumo, "agente", porque=a.porque)
-            db.execute("INSERT INTO teste(no, alcance, fora, porque, previsao, previsao_em, controle, controle_tipo, "
-                       "instrumento, script, receita, modo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                       (no, a.alcance, a.fora, a.porque, a.previsao, agora() if a.previsao else None, a.controle,
-                        a.controle_tipo or ("nenhum" if not a.controle else None), inst["id"] if inst else None,
-                        a.script, receita, "exploratorio" if a.exploratorio else None))
-            indexa(db, no)
-            print(f"T{no}")
-            if a.exploratorio:
-                print("exploratório: o resultado vale como pista. Não confirma previsão nem fecha alcance; se render "
-                      "algo, registre a ideia como hipótese e faça o teste confirmatório depois.")
-            if parecidos:
-                print("parecidos já registrados (confira se não é repetição):\n  " + "\n  ".join(parecidos))
+                if not (a.hypothesis and a.value):
+                    raise Error("usage: ach <E> <H> CC|C|N|I|II   or   ach <F>")
+                e, h = get_node(db, a.target, ("fact", "clue")), get_node(db, a.hypothesis, "hypothesis")
+                db.execute("INSERT OR REPLACE INTO ach VALUES (?,?,?,?)", (e["id"], h["id"], a.value, a.note))
+                event(db, h["id"], f"ach {a.value}", label(e))
+                print(f"{label(e)} × {label(h)} = {a.value}")
+        elif a.cmd == "test":
+            h = get_node(db, a.hypothesis, "hypothesis")
+            if h["state"] not in ("alive", "supported"):
+                raise Error(f"{label(h)} is {h['state']}: reopen it before testing")
+            if not a.exploratory and not one(db, "SELECT refuted_if FROM hypothesis WHERE node=?", h["id"])["refuted_if"]:
+                raise Error(f"{label(h)} does not say what would bring it down. Before testing: `holmes.py edit {label(h)} --refuted-if "
+                            "\"<observation that would refute it>\"`. Without it, no result weighs against it. To just "
+                            "explore a cheap hunch, use --exploratory (counts as a clue, not as coverage).")
+            recipe = hashlib.sha256(" ".join(re.findall(r"\w+", (a.title + " " + a.scope).lower())).encode()).hexdigest()[:16]
+            same = one(db, "SELECT t.node FROM test t JOIN node n ON n.id=t.node WHERE t.recipe=? AND n.state != 'cancelled' "
+                           "AND coalesce(t.mode, '') = ?", recipe, "exploratory" if a.exploratory else "")
+            if same and not a.force:
+                raise Error(f"T{same['node']} already exists with the same title+scope (`show T{same['node']}`; "
+                            f"to repeat after fixing the instrument use `run T{same['node']}`; --force creates another)")
+            similar = search(db, a.title + " " + a.scope, 3, tests_only=True)
+            inst = get_node(db, a.instrument, "instrument") if a.instrument else None
+            node = create(db, "test", a.title, h["id"], a.summary, "agent", why=a.why)
+            db.execute("INSERT INTO test(node, scope, outside, why, prediction, predicted_at, control, control_type, "
+                       "instrument, script, recipe, mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                       (node, a.scope, a.outside, a.why, a.prediction, now() if a.prediction else None, a.control,
+                        a.control_type or ("none" if not a.control else None), inst["id"] if inst else None,
+                        a.script, recipe, "exploratory" if a.exploratory else None))
+            index_node(db, node)
+            print(f"T{node}")
+            if a.exploratory:
+                print("exploratory: the result counts as a clue. It does not confirm a prediction or close a scope; if it "
+                      "yields something, record the idea as a hypothesis and do the confirmatory test later.")
+            if similar:
+                print("similar ones already recorded (check it is not a repeat):\n  " + "\n  ".join(similar))
             if not inst:
-                print("aviso: sem --instrumento, um negativo vale INDETERMINADO")
-            if not a.controle_tipo or a.controle_tipo in ("nenhum", "plantado"):
-                print("aviso: sem controle real (dado conhecido que o instrumento precisa reconhecer)")
-        elif a.cmd == "roda":
-            t = pega(db, a.teste, "teste")
-            print(f"X{abre_execucao(db, t, a.pid, a.log, a.host)}")
-        elif a.cmd == "resultado":
-            if a.alvo.startswith("X"):
-                x = um(db, "SELECT * FROM execucao WHERE id=?", int(a.alvo[1:]))
+                print("warning: without --instrument, a negative counts as INDETERMINATE")
+            if not a.control_type or a.control_type in ("none", "planted"):
+                print("warning: no real control (known data the instrument must recognize)")
+        elif a.cmd == "run":
+            t = get_node(db, a.test, "test")
+            print(f"X{open_run(db, t, a.pid, a.log, a.host)}")
+        elif a.cmd == "result":
+            if a.target.startswith("X"):
+                x = one(db, "SELECT * FROM run WHERE id=?", int(a.target[1:]))
                 if not x:
-                    raise Erro(f"{a.alvo} não existe")
-                t = pega(db, x["teste"])
+                    raise Error(f"{a.target} does not exist")
+                t = get_node(db, x["test"])
             else:
-                t = pega(db, a.alvo, "teste")
-                x = um(db, "SELECT * FROM execucao WHERE teste=? AND resultado IS NULL ORDER BY id DESC", t["id"])
-                if not x:  # tentativa rápida: abre e fecha a execução de uma vez
-                    x = um(db, "SELECT * FROM execucao WHERE id=?", abre_execucao(db, t))
-            sentido = " ".join((a.sentido or "").split()) or None
-            if sentido:  # quatro estados: substantivo · "nenhum: <por quê>" · "revisar: <o quê>" · ausente = pendente
-                pref, _, resto = sentido.partition(":")
+                t = get_node(db, a.target, "test")
+                x = one(db, "SELECT * FROM run WHERE test=? AND result IS NULL ORDER BY id DESC", t["id"])
+                if not x:  # quick attempt: opens and closes the run at once
+                    x = one(db, "SELECT * FROM run WHERE id=?", open_run(db, t))
+            meaning = translate("meaning", " ".join((a.meaning or "").split())) or None
+            if meaning:  # four states: substantive · "none: <why>" · "revisit: <what>" · absent = pending
+                pref, _, rest = meaning.partition(":")
                 pref = pref.strip().lower()
-                if pref in ("nenhum", "revisar"):
-                    sentido = f"{pref}:{resto}"
-                    if len(resto.strip()) < 8:
-                        raise Erro(f"--sentido \"{pref}: ...\" precisa dizer {'por que não há sentido legível' if pref == 'nenhum' else 'o que rever'}")
-                elif len(sentido) < 15:
-                    raise Erro("--sentido curto demais para dizer algo. Escreva o que a saída diz no contexto, ou "
-                               "\"nenhum: <por quê>\", ou \"revisar: <o quê>\", ou omita (fica pendente para a leitura de conjunto)")
-            ok = {"sim": 1, "nao": 0}.get(a.controle_ok)
-            db.execute("UPDATE execucao SET resultado=?, nota=?, n=?, controle_ok=?, fim=?, sentido=? WHERE id=?",
-                       (a.resultado, a.nota, a.n, ok, agora(), sentido, x["id"]))
-            aberta = um(db, "SELECT 1 FROM execucao WHERE teste=? AND resultado IS NULL", t["id"])
-            db.execute("UPDATE no SET estado=? WHERE id=?", ("rodando" if aberta else "feito", t["id"]))
-            toca(db, t["id"], f"X{x['id']} {a.resultado}", a.nota)
-            if ATUAL["ramo"]:
-                passo(db, ATUAL["ramo"], "testou", f"{rot(t)} X{x['id']} → {a.resultado}: {t['titulo']}",
-                      (a.sentido or a.nota or "")[:400] or None, (rot(t),))
-            v = validade(db, t["id"])
-            print(f"{rot(t)} X{x['id']} → {a.resultado}" + (f" ⚠ {v}" if v else ""))
-            print("Diga ao usuário em uma linha o que isto muda no plano (ACHADO / NEGATIVO no alcance / CONTROLE / "
-                  "INSTRUMENTO) e o que significa.")
-            if a.resultado == "negativo":
-                print("Um negativo fecha esta forma no alcance testado, não o conceito inteiro; negativos válidos que "
-                      "se acumulam devem baixar a confiança (`prob`).")
-            if not sentido and a.resultado != "falhou":
-                print("sentido pendente: será lido na leitura de conjunto (ou registre --sentido agora, se a saída "
-                      "disser algo como texto ou forma).")
-            n, v = tunel(db, pega(db, t["pai"])["pai"])
-            if a.resultado == "negativo" and n >= TUNEL:
-                print(f"⚠ TÚNEL: {aviso_tunel(n, v)}. Pare e mude para LEITURA antes do próximo teste.")
-            lida = pede_leitura(db)
-            if lida:
-                print("⚠ " + lida)
-        elif a.cmd in ("busca", "ja"):
-            r = busca(db, a.texto, a.n, so_testes=a.cmd == "ja", com_corpus=not a.sem_corpus)
-            print("\n".join(r) if r else "nada registrado com esses termos. Tente sinônimos e `corpus.py busca --modo "
-                                         "literal` antes de concluir que é novo: ausência na busca não prova ausência.")
-        elif a.cmd == "ver":
-            r = pega(db, a.id)
-            print(ver(db, r) + ("\n" + trilha(db, r, curto=True) if r["tipo"] == "ramo" else ""))
-        elif a.cmd == "ramo":
-            if a.acao == "novo":
-                if not a.texto or not a.de or not (a.porque or "").strip():
-                    raise Erro('uso: ramo novo "<pergunta da linha>" --de <id de onde nasce> --porque "<por que abrir>"'
-                               " [--passo N, se nasce de um passo de outro ramo]")
-                origem, dp = pega(db, a.de), None
-                if a.passo is not None:
-                    if origem["tipo"] != "ramo":
-                        raise Erro("--passo só vale com --de B..")
-                    ps = passos_de(db, origem["id"])
-                    if not 1 <= a.passo <= len(ps):
-                        raise Erro(f"{rot(origem)} tem {len(ps)} passos")
-                    dp = ps[a.passo - 1]["id"]
-                ATUAL["ramo"] = None  # abrir um ramo não é passo do ramo que estava ativo
-                no = cria(db, "ramo", a.texto, origem["id"], a.resumo, de_passo=dp)
-                passo(db, no, "abriu", f"nasce de {rot(origem)}" + (f" (passo {a.passo})" if dp else "")
-                      + f": {origem['titulo'][:200]}", a.porque.strip())
-                if origem["tipo"] == "ramo":
-                    passo(db, origem["id"], "bifurcou", f"→ B{no} {a.texto}", a.porque.strip(), (f"B{no}",))
-                if not a.nao_usa:
-                    arq_ramo(caso).parent.mkdir(exist_ok=True)
-                    arq_ramo(caso).write_text(str(no))
-                print(f"B{no}" + ("" if a.nao_usa else " (ativo)"))
-            elif a.acao == "usa":
-                r = pega(db, a.texto or "", "ramo")
-                if r["estado"] != "ativo":
-                    raise Erro(f"{rot(r)} está {r['estado']}: `estado {rot(r)} ativo` antes de usar")
-                arq_ramo(caso).parent.mkdir(exist_ok=True)
-                arq_ramo(caso).write_text(str(r["id"]))
-                print(f"ramo ativo: {rot(r)}\n" + trilha(db, r, curto=True))
-            elif a.acao == "solta":
-                arq_ramo(caso).unlink(missing_ok=True)
-                print("nenhum ramo ativo")
+                if pref in ("none", "revisit"):
+                    meaning = f"{pref}:{rest}"
+                    if len(rest.strip()) < 8:
+                        raise Error(f"--meaning \"{pref}: ...\" must say {'why there is no readable meaning' if pref == 'none' else 'what to revisit'}")
+                elif len(meaning) < 15:
+                    raise Error("--meaning too short to say anything. Write what the output says in context, or "
+                                "\"none: <why>\", or \"revisit: <what>\", or leave it out (it stays pending for the overall reading)")
+            ok = {"yes": 1, "no": 0}.get(a.control_ok)
+            db.execute("UPDATE run SET result=?, note=?, n=?, control_ok=?, finished=?, meaning=? WHERE id=?",
+                       (a.result, a.note, a.n, ok, now(), meaning, x["id"]))
+            still_open = one(db, "SELECT 1 FROM run WHERE test=? AND result IS NULL", t["id"])
+            db.execute("UPDATE node SET state=? WHERE id=?", ("running" if still_open else "done", t["id"]))
+            touch(db, t["id"], f"X{x['id']} {a.result}", a.note)
+            if CURRENT["branch"]:
+                add_step(db, CURRENT["branch"], "tested", f"{label(t)} X{x['id']} → {a.result}: {t['title']}",
+                         (meaning or a.note or "")[:400] or None, (label(t),))
+            v = validity(db, t["id"])
+            print(f"{label(t)} X{x['id']} → {a.result}" + (f" ⚠ {v}" if v else ""))
+            print("Tell the user in one line what this changes in the plan (FINDING / NEGATIVE within the scope / CONTROL / "
+                  "INSTRUMENT / NO CHANGE) and what it means.")
+            if a.result == "negative":
+                print("A negative closes this form within the tested scope, not the whole concept; valid negatives that "
+                      "pile up should lower the confidence (`prob`).")
+            if not meaning and a.result != "failed":
+                print("meaning pending: it will be read in the overall reading (or record --meaning now, if the output "
+                      "says something as text or form).")
+            n, v = tunnel(db, get_node(db, t["parent"])["parent"])
+            if a.result == "negative" and n >= TUNNEL:
+                print(f"⚠ TUNNEL: {tunnel_warning(n, v)}. Stop and switch to READING before the next test.")
+            req = reading_request(db)
+            if req:
+                print("⚠ " + req)
+        elif a.cmd in ("search", "tried"):
+            r = search(db, a.text, a.n, tests_only=a.cmd == "tried", with_corpus=not a.no_corpus)
+            print("\n".join(r) if r else "nothing recorded with these terms. Try synonyms and `corpus.py search --mode "
+                                         "literal` before concluding it is new: absence in a search does not prove absence.")
+        elif a.cmd == "show":
+            r = get_node(db, a.id)
+            print(show(db, r) + ("\n" + trail(db, r, short=True) if r["type"] == "branch" else ""))
+        elif a.cmd == "branch":
+            if a.action == "new":
+                if not a.text or not a.src or not (a.why or "").strip():
+                    raise Error('usage: branch new "<question of the line>" --from <id it grows from> --why "<why open it>"'
+                                " [--step N, if it grows from a step of another branch]")
+                origin, dp = get_node(db, a.src), None
+                if a.step is not None:
+                    if origin["type"] != "branch":
+                        raise Error("--step only works with --from B..")
+                    ps = steps_of(db, origin["id"])
+                    if not 1 <= a.step <= len(ps):
+                        raise Error(f"{label(origin)} has {len(ps)} steps")
+                    dp = ps[a.step - 1]["id"]
+                CURRENT["branch"] = None  # opening a branch is not a step of the branch that was active
+                node = create(db, "branch", a.text, origin["id"], a.summary, from_step=dp)
+                add_step(db, node, "opened", f"grows from {label(origin)}" + (f" (step {a.step})" if dp else "")
+                         + f": {origin['title'][:200]}", a.why.strip())
+                if origin["type"] == "branch":
+                    add_step(db, origin["id"], "forked", f"→ B{node} {a.text}", a.why.strip(), (f"B{node}",))
+                if not a.no_use:
+                    set_branch(case, node)
+                print(f"B{node}" + ("" if a.no_use else " (active)"))
+            elif a.action == "use":
+                r = get_node(db, a.text or "", "branch")
+                if r["state"] != "active":
+                    raise Error(f"{label(r)} is {r['state']}: `state {label(r)} active` before using it")
+                set_branch(case, r["id"])
+                print(f"active branch: {label(r)}\n" + trail(db, r, short=True))
+            elif a.action == "release":
+                set_branch(case, None)
+                print("no active branch")
             else:
-                print(trilha(db, ra, curto=True) if ra else "nenhum ramo ativo (`arvore`, `ramo usa B..`)")
-        elif a.cmd == "passo":
-            r = pega(db, a.ramo, "ramo") if a.ramo else ra
+                print(trail(db, ra, short=True) if ra else "no active branch (`tree`, `branch use B..`)")
+        elif a.cmd == "step":
+            r = get_node(db, a.branch, "branch") if a.branch else ra
             if not r:
-                raise Erro("nenhum ramo ativo: `ramo usa B..` ou --ramo B..")
-            if not (a.porque or "").strip():
-                raise Erro("passo sem --porque não reconstrói o raciocínio: diga o que levou a ele")
-            nos = tuple(rot(pega(db, x.strip())) for x in (a.nos or "").split(",") if x.strip())
-            passo(db, r["id"], a.tipo, a.texto, a.porque.strip(), nos)
-            print(f"{rot(r)} passo {len(passos_de(db, r['id']))}")
-        elif a.cmd == "arvore":
-            print(arvore(db, caso, a.id))
-        elif a.cmd == "trilha":
-            r = pega(db, a.id, "ramo") if a.id else ra
-            print(trilha(db, r) if r else "nenhum ramo ativo: `trilha B..`")
-        elif a.cmd == "ficha":
-            print(ficha(db, caso))
-        elif a.cmd == "reorganiza":
-            print(reorganiza(db, a.aplica))
-        elif a.cmd == "saude":
-            print(saude(db))
-        elif a.cmd == "cadeia":
-            print("\n".join(cadeia(db, pega(db, a.id))))
-        elif a.cmd == "questoes":
-            print(questoes(db))
-        elif a.cmd == "cronologia":
-            print(cronologia(db))
-        elif a.cmd == "proximo":
-            for i, (acao, porque) in enumerate(proximo(db), 1):
-                print(f"{i}. {acao}\n   porque: {porque}")
-        elif a.cmd == "conexoes":
-            if not a.alvo:
-                cs = q(db, "SELECT * FROM no WHERE tipo='conexao' AND estado='sugerida' ORDER BY id")
-                return print("\n".join(linha(db, c) for c in cs) or "nenhuma conexão candidata por avaliar")
-            alvo = pega(db, a.alvo) if re.fullmatch(r"[A-Z]?\d+|\w+:\w+", a.alvo) else None
-            saida, rodape = candidatas(db, texto_de(db, alvo) if alvo else a.alvo, alvo["id"] if alvo else None, a.n)
-            print(f"candidatas para {rot(alvo) if alvo else repr(a.alvo)} (consulta; nada foi gravado):")
-            print("\n".join(saida + rodape) if saida else "  nenhuma: ausência de conexão também é resultado. Para o que "
-                  "não compartilha palavra, descreva o conceito abstrato em texto (`conexoes \"dualidade metades\"`) ou "
-                  "registre-o como entidade com aliases.")
-            if saida:
-                print("Candidata não é relação. Para cada uma: que relação seria, que explicação rival (acaso, mesma "
-                      "fonte repetida, tema genérico) e que observação separaria. Grave só a promissora com `conexao`.")
-        elif a.cmd == "conexao":
-            no = nova_conexao(db, pega(db, a.de), pega(db, a.para), a.relacao, a.porque, a.rival, a.discriminador,
-                              a.origem, [m.strip() for m in (a.motivos or "").split(",") if m.strip()], a.canal)
-            print(f"C{no} (sugerida: não é aresta do grafo até `estado C{no} confirmada \"<evidência>\"`)")
+                raise Error("no active branch: `branch use B..` or --branch B..")
+            if not (a.why or "").strip():
+                raise Error("a step without --why does not rebuild the reasoning: say what led to it")
+            nodes = tuple(label(get_node(db, x.strip())) for x in (a.nodes or "").split(",") if x.strip())
+            add_step(db, r["id"], a.type, a.text, a.why.strip(), nodes)
+            print(f"{label(r)} step {len(steps_of(db, r['id']))}")
+        elif a.cmd == "tree":
+            print(tree(db, case, a.id))
+        elif a.cmd == "trail":
+            r = get_node(db, a.id, "branch") if a.id else ra
+            print(trail(db, r) if r else "no active branch: `trail B..`")
+        elif a.cmd == "sheet":
+            print(sheet(db, case))
+        elif a.cmd == "reorganize":
+            print(reorganize(db, a.apply))
+        elif a.cmd == "health":
+            print(health(db))
+        elif a.cmd == "chain":
+            print("\n".join(chain(db, get_node(db, a.id))))
+        elif a.cmd == "questions":
+            print(questions(db))
+        elif a.cmd == "timeline":
+            print(timeline(db))
+        elif a.cmd == "next":
+            for i, (action, why) in enumerate(next_steps(db), 1):
+                print(f"{i}. {action}\n   why: {why}")
+        elif a.cmd == "connections":
+            if not a.target:
+                cs = q(db, "SELECT * FROM node WHERE type='connection' AND state='suggested' ORDER BY id")
+                return print("\n".join(line(db, c) for c in cs) or "no candidate connection to assess")
+            target = get_node(db, a.target) if re.fullmatch(r"[A-Z]?\d+|\w+:\w+", a.target) else None
+            out, footer = candidates(db, text_of(db, target) if target else a.target, target["id"] if target else None, a.n)
+            print(f"candidates for {label(target) if target else repr(a.target)} (query; nothing was stored):")
+            print("\n".join(out + footer) if out else "  none: the absence of a connection is also a result. For what "
+                  "shares no word, describe the abstract concept in text (`connections \"duality halves\"`) or "
+                  "record it as an entity with aliases.")
+            if out:
+                print("A candidate is not a relation. For each one: what relation it would be, what rival explanation (chance, "
+                      "same source repeated, generic theme) and what observation would separate them. Store only the promising one with `connection`.")
+        elif a.cmd == "connection":
+            node = new_connection(db, get_node(db, a.src), get_node(db, a.dst), a.relation, a.why, a.rival, a.discriminator,
+                                  a.origin, [m.strip() for m in (a.reasons or "").split(",") if m.strip()], a.channel)
+            print(f"C{node} (suggested: not a graph edge until `state C{node} confirmed \"<evidence>\"`)")
             if not a.rival:
-                print("aviso: sem --rival. Qual seria a explicação sem relação (acaso, tema genérico, mesma fonte)?")
-        elif a.cmd == "extrai":
+                print("warning: no --rival. What would the explanation without a relation be (chance, generic theme, same source)?")
+        elif a.cmd == "extract":
             import json
             try:
-                dados = json.loads(Path(a.arquivo).read_text(encoding="utf-8"))
+                data = json.loads(Path(a.file).read_text(encoding="utf-8"))
             except (OSError, ValueError) as e:
-                raise Erro(f"contrato ilegível: {e}")
-            lista = lambda s: {x.strip() for x in (s or "").split(",") if x.strip()}
-            if not isinstance(dados, dict):
-                raise Erro("contrato: o JSON precisa ser um objeto com as chaves de MODELO.md")
+                raise Error(f"unreadable contract: {e}")
+            as_set = lambda s: {x.strip() for x in (s or "").split(",") if x.strip()}
+            if not isinstance(data, dict):
+                raise Error("contract: the JSON must be an object with the keys of MODEL.md")
             try:
-                plano, ids = extrai(db, dados, a.aplica, lista(a.so) or None, lista(a.rejeita))
-            except (KeyError, TypeError, ValueError, AttributeError) as e:  # erro aqui desfaz o lote inteiro
-                raise Erro(f"contrato inválido ({type(e).__name__}: {e}); nada foi gravado")
-            print("\n".join(plano) or "nada a extrair")
-            if a.aplica:
-                print("gravado: " + ", ".join(f"{k}→{rot(um(db, 'SELECT * FROM no WHERE id=?', v))}" for k, v in ids.items()))
+                plan, ids = extract(db, data, a.apply, as_set(a.only) or None, as_set(a.reject))
+            except (KeyError, TypeError, ValueError, AttributeError) as e:  # an error here undoes the whole batch
+                raise Error(f"invalid contract ({type(e).__name__}: {e}); nothing was stored")
+            print("\n".join(plan) or "nothing to extract")
+            if a.apply:
+                print("stored: " + ", ".join(f"{k}→{label(node_by_id(db, v))}" for k, v in ids.items()))
             else:
-                print("(plano apenas; nada gravado. `--aplica` grava tudo numa transação; `--so`/`--rejeita` escolhem itens)")
+                print("(plan only; nothing stored. `--apply` stores everything in one transaction; `--only`/`--reject` pick items)")
         elif a.cmd == "jobs":
-            rs = q(db, "SELECT x.*, n.titulo FROM execucao x JOIN no n ON n.id=x.teste WHERE x.resultado IS NULL")
+            rs = q(db, "SELECT x.*, n.title FROM run x JOIN node n ON n.id=x.test WHERE x.result IS NULL")
             for x in rs:
-                print(f"X{x['id']} (T{x['teste']}) pid {x['pid']} {'vivo' if vivo(x['pid']) else 'MORTO: registre'} "
-                      f"log {x['log']}: {x['titulo']}")
-            print("" if rs else "nenhuma execução aberta")
-        elif a.cmd == "fonte":
-            alvo = a.caminho
-            local = Path(alvo).exists()
-            ref = str(Path(alvo).resolve()) if local else alvo
-            r = um(db, "SELECT * FROM fonte WHERE ref=?", ref)
-            sha = sha_arquivo(ref) if local else None
+                print(f"X{x['id']} (T{x['test']}) pid {x['pid']} {'alive' if alive(x['pid']) else 'DEAD: record it'} "
+                      f"log {x['log']}: {x['title']}")
+            print("" if rs else "no open run")
+        elif a.cmd == "source":
+            target = a.path
+            is_local = Path(target).exists()
+            ref = str(Path(target).resolve()) if is_local else target
+            r = one(db, "SELECT * FROM source WHERE ref=?", ref)
+            sha = file_sha(ref) if is_local else None
             if r:
-                no = r["no"]
+                node = r["node"]
                 if sha and sha != r["sha"]:
-                    db.execute("UPDATE fonte SET sha=? WHERE no=?", (sha, no))
-                    toca(db, no, "nova versão", f"{(r['sha'] or '')[:12]} → {sha[:12]}")
+                    db.execute("UPDATE source SET sha=? WHERE node=?", (sha, node))
+                    touch(db, node, "new version", f"{(r['sha'] or '')[:12]} → {sha[:12]}")
             else:
-                no = cria(db, "fonte", (a.titulo or Path(alvo).name or alvo)[:160], resumo=ref[:800], origem="fonte",
-                          estado="catalogada")
-                db.execute("INSERT INTO fonte(no, ref, sha, procedencia, confiabilidade) VALUES (?,?,?,?,?)",
-                           (no, ref, sha, a.procedencia, a.confiabilidade))
-            print(f"S{no} {ref}")
-            if local and not a.sem_corpus:
-                with C.conecta() as cdb:
-                    for did, st, p in C.add(cdb, caso, ref):
+                node = create(db, "source", (a.title or Path(target).name or target)[:160], summary=ref[:800], origin="source",
+                              state="catalogued")
+                db.execute("INSERT INTO source(node, ref, sha, provenance, reliability) VALUES (?,?,?,?,?)",
+                           (node, ref, sha, a.provenance, a.reliability))
+            print(f"S{node} {ref}")
+            if is_local and not a.no_corpus:
+                with C.connect() as cdb:
+                    for did, st, p in C.add(cdb, case, ref):
                         print(f"  corpus doc {did} {st}: {p}")
-                        db.execute("UPDATE fonte SET documento=? WHERE no=?", (did, no)) if Path(ref).is_file() else None
-                db.execute("UPDATE no SET estado='indexada' WHERE id=?", (no,))
-        elif a.cmd == "cita":
-            with C.conecta() as cdb:
-                p = C.pedaco(cdb, a.pedaco)
+                        db.execute("UPDATE source SET document=? WHERE node=?", (did, node)) if Path(ref).is_file() else None
+                db.execute("UPDATE node SET state='indexed' WHERE id=?", (node,))
+        elif a.cmd == "quote":
+            with C.connect() as cdb:
+                p = C.chunk(cdb, a.chunk)
             ref = p["ref"]
-            f = um(db, "SELECT * FROM fonte WHERE ref=?", ref)
-            fno = f["no"] if f else None
+            f = one(db, "SELECT * FROM source WHERE ref=?", ref)
+            fno = f["node"] if f else None
             if not fno:
-                fno = cria(db, "fonte", p["titulo"][:160], resumo=ref[:800], origem="fonte", estado="indexada")
-                db.execute("INSERT INTO fonte(no, ref, procedencia, documento) VALUES (?,?,?,?)",
-                           (fno, ref, "primaria", p["documento"]))
-            local = f"pedaço #{p['id']} " + (f"msg {p['msg_id']}" if p["msg_id"] else f"{p['kind']} {p['ordem']}")
-            if a.natureza not in NATUREZAS_FATO:
-                raise Erro(f"cita registra o que a fonte diz, literal (fato). Uma {a.natureza} sobre o trecho é pista: "
-                           f"`novo pista \"..\" --natureza {a.natureza}` ligada `sobre` o fato da citação")
-            nat = a.natureza
-            no = cria(db, "fato", a.afirmacao, origem="fonte", grau=a.grau, natureza=nat, por="fonte",
-                      fonte=f"S{fno}", local=local, citacao=p["texto"][:1000])
-            print(f"E{no} (citação literal copiada do corpus, conferida agora)")
-        elif a.cmd == "confere":
-            e = pega(db, a.fato, ("fato", "pista"))
-            if e["estado"] in CAIDOS or e["estado"] == "contestado":
-                raise Erro(f"{rot(e)} está {e['estado']}: provar não desfaz isso. Se a queda estava errada, reabra "
-                           f"antes com `estado {rot(e)} {'aberta' if e['tipo'] == 'pista' else 'vigente'} \"<por quê>\"`")
-            nat = um(db, "SELECT natureza FROM fato WHERE no=?", e["id"])["natureza"]
-            if nat in ("inferencia", "interpretacao"):
-                raise Erro(f"{rot(e)} é {nat}: não vira fato. Fato é constatação provada; o que sustenta uma {nat} é "
-                           f"outro fato (`novo fato .. --por ..` e `liga E<novo> sustenta {rot(e)}`), e se ela explica "
-                           "algo testável, é hipótese")
-            ja = um(db, "SELECT fonte, citacao, local FROM fato WHERE no=?", e["id"])
-            fonte = pega(db, a.fonte, "fonte")["id"] if a.fonte else ja["fonte"]
-            onde = str(fonte or "") or ja["citacao"] or a.local or ja["local"]
-            por, prova = prova_de(db, a.por, a.prova, onde)
-            if a.fonte or a.local:
-                db.execute("UPDATE fato SET fonte=coalesce(?, fonte), local=coalesce(?, local) WHERE no=?",
-                           (fonte if a.fonte else None, a.local, e["id"]))
-                if a.fonte:
-                    db.execute("INSERT OR IGNORE INTO aresta VALUES (?,?,?,?,?)", (e["id"], "deriva", fonte, None, agora()))
-            if nat not in NATUREZAS_FATO:  # relato provado: vale o que foi constatado, não quem contou
-                nat = "citacao" if por == "fonte" else "observacao"
-            db.execute("UPDATE fato SET natureza=?, conferido=?, conferido_por=?, prova=? WHERE no=?",
-                       (nat, agora(), por, prova, e["id"]))
-            era = e["tipo"]
-            db.execute("UPDATE no SET tipo='fato', estado='vigente' WHERE id=?", (e["id"],))
-            toca(db, e["id"], f"provado por {por}", f"{a.nota}" + (f" · prova: {prova}" if prova else ""))
-            print(f"{rot(pega(db, e['id']))} provado por {por}" + (f" (era a pista K{e['id']}; agora é fato)" if era == "pista" else ""))
-        elif a.cmd == "atributo":
-            n = pega(db, a.entidade, "entidade")
-            fato = pega(db, a.fato, "fato")["id"] if a.fato else None
-            velho = um(db, "SELECT valor FROM atributo WHERE entidade=? AND chave=?", n["id"], a.chave)
-            db.execute("INSERT OR REPLACE INTO atributo VALUES (?,?,?,?,?)", (n["id"], a.chave, a.valor, fato, agora()))
-            toca(db, n["id"], f"atributo {a.chave}", f"{velho['valor'] if velho else '∅'} → {a.valor}")
-            print(f"{rot(n)}.{a.chave} = {a.valor}" + ("" if fato else "  (sem --fato: de onde vem este valor?)"))
-        elif a.cmd == "instrumento":
-            ref = a.caminho
+                fno = create(db, "source", p["title"][:160], summary=ref[:800], origin="source", state="indexed")
+                db.execute("INSERT INTO source(node, ref, provenance, document) VALUES (?,?,?,?)",
+                           (fno, ref, "primary", p["document"]))
+            location = f"chunk #{p['id']} " + (f"msg {p['msg_id']}" if p["msg_id"] else f"{p['kind']} {p['position']}")
+            if a.nature not in FACT_NATURES:
+                raise Error(f"quote records what the source says, literally (a fact). {a.nature.capitalize()} about the excerpt is a clue: "
+                            f"`new clue \"..\" --nature {a.nature}` linked `about` the quote's fact")
+            node = create(db, "fact", a.claim, origin="source", grade=a.grade, nature=a.nature, by="source",
+                          source=f"S{fno}", location=location, quote=p["text"][:1000])
+            print(f"E{node} (literal quote copied from the corpus, proven now)")
+        elif a.cmd == "prove":
+            e = get_node(db, a.fact, ("fact", "clue"))
+            if e["state"] in FALLEN or e["state"] == "contested":
+                raise Error(f"{label(e)} is {e['state']}: proving does not undo that. If the fall was wrong, reopen it "
+                            f"first with `state {label(e)} {'open' if e['type'] == 'clue' else 'current'} \"<why>\"`")
+            nat = one(db, "SELECT nature FROM fact WHERE node=?", e["id"])["nature"]
+            if nat in ("inference", "interpretation"):
+                raise Error(f"{label(e)} is an {nat}: it does not become a fact. A fact is a proven finding; what supports an {nat} is "
+                            f"another fact (`new fact .. --by ..` and `link E<new> supports {label(e)}`), and if it explains "
+                            "something testable, it is a hypothesis")
+            had = one(db, "SELECT source, quote, location FROM fact WHERE node=?", e["id"])
+            source = get_node(db, a.source, "source")["id"] if a.source else had["source"]
+            where = str(source or "") or had["quote"] or a.location or had["location"]
+            by, proof = proof_of(db, a.by, a.proof, where)
+            if a.source or a.location:
+                db.execute("UPDATE fact SET source=coalesce(?, source), location=coalesce(?, location) WHERE node=?",
+                           (source if a.source else None, a.location, e["id"]))
+                if a.source:
+                    db.execute("INSERT OR IGNORE INTO edge VALUES (?,?,?,?,?)", (e["id"], "derives", source, None, now()))
+            if nat not in FACT_NATURES:  # a proven report: what counts is what was found, not who told it
+                nat = "quote" if by == "source" else "observation"
+            db.execute("UPDATE fact SET nature=?, proven_at=?, proven_by=?, proof=? WHERE node=?",
+                       (nat, now(), by, proof, e["id"]))
+            was = e["type"]
+            # proven = checked against the primary source or reproduced: that is grade A on the scale
+            db.execute("UPDATE node SET type='fact', state='current', grade='A' WHERE id=?", (e["id"],))
+            touch(db, e["id"], f"proven by {by}", f"{a.note}" + (f" · proof: {proof}" if proof else ""))
+            if CURRENT["branch"]:
+                add_step(db, CURRENT["branch"], "changed", f"{label(e)} proven by {by}: clue → fact" if was == "clue"
+                         else f"{label(e)} re-proven by {by}", f"{a.note}" + (f" · proof: {proof}" if proof else ""),
+                         (label(get_node(db, e["id"])),))
+            print(f"{label(get_node(db, e['id']))} proven by {by}" + (f" (it was clue K{e['id']}; now it is a fact)" if was == "clue" else ""))
+        elif a.cmd == "attribute":
+            n = get_node(db, a.entity, "entity")
+            fact = get_node(db, a.fact, "fact")["id"] if a.fact else None
+            old = one(db, "SELECT value FROM attribute WHERE entity=? AND key=?", n["id"], a.key)
+            db.execute("INSERT OR REPLACE INTO attribute VALUES (?,?,?,?,?)", (n["id"], a.key, a.value, fact, now()))
+            touch(db, n["id"], f"attribute {a.key}", f"{old['value'] if old else '∅'} → {a.value}")
+            print(f"{label(n)}.{a.key} = {a.value}" + ("" if fact else "  (no --fact: where does this value come from?)"))
+        elif a.cmd == "instrument":
+            ref = a.path
             if re.fullmatch(r"I?\d+", ref) and not Path(ref).exists():
-                raise Erro("para registrar passe o caminho do arquivo; para verificar use `prova`")
+                raise Error("to register, pass the file's path; to verify, use `proof`")
             p = str(Path(ref).resolve())
-            s = sha_arquivo(p)
+            s = file_sha(p)
             if not s:
-                raise Erro(f"{p} não é arquivo")
-            r = um(db, "SELECT * FROM instrumento WHERE caminho=?", p)
+                raise Error(f"{p} is not a file")
+            r = one(db, "SELECT * FROM instrument WHERE path=?", p)
             if not r:
-                no = cria(db, "instrumento", a.nome or Path(p).name, resumo=p, origem="medido")
-                db.execute("INSERT INTO instrumento VALUES (?,?,?)", (no, p, a.verificador))
-                db.execute("INSERT INTO versao(instrumento, sha, quando) VALUES (?,?,?)", (no, s, agora()))
-                print(f"I{no} registrado ({s[:12]})")
+                node = create(db, "instrument", a.name or Path(p).name, summary=p, origin="measured")
+                db.execute("INSERT INTO instrument VALUES (?,?,?)", (node, p, a.verifier))
+                db.execute("INSERT INTO version(instrument, sha, at) VALUES (?,?,?)", (node, s, now()))
+                print(f"I{node} registered ({s[:12]})")
             else:
-                no = r["no"]
-                if a.verificador:
-                    db.execute("UPDATE instrumento SET verificador=? WHERE no=?", (a.verificador, no))
-                v = versao_atual(db, no)
+                node = r["node"]
+                if a.verifier:
+                    db.execute("UPDATE instrument SET verifier=? WHERE node=?", (a.verifier, node))
+                v = current_version(db, node)
                 if v["sha"] == s:
-                    print(f"I{no} sem mudança ({s[:12]})")
+                    print(f"I{node} unchanged ({s[:12]})")
                 else:
-                    db.execute("INSERT INTO versao(instrumento, sha, quando) VALUES (?,?,?)", (no, s, agora()))
-                    toca(db, no, "nova versão", f"{v['sha'][:12]} → {s[:12]}")
-                    n = sum(1 for t in q(db, "SELECT no FROM teste WHERE instrumento=?", no)
-                            if validade(db, t["no"]).startswith("A REVALIDAR"))
-                    print(f"I{no} mudou ({v['sha'][:12]} → {s[:12]}): {n} negativo(s) ficam A REVALIDAR")
-        elif a.cmd == "prova":
-            leg = "" if a.legado else " AND n.legado=0"
-            itens = [(f"E{r['no']}", r["prova"], "fato") for r in q(db, "SELECT f.* FROM fato f JOIN no n ON n.id=f.no AND n.tipo='fato' AND coalesce(f.conferido_por, 'medicao') = 'medicao' "
-                                                                      f"WHERE trim(coalesce(f.prova, '')) != ''{leg}")]
-            itens += [(f"A{r['no']}", r["prova"], "alvo") for r in q(db, "SELECT x.* FROM alvo x JOIN no n ON n.id=x.no "
-                                                                       f"WHERE trim(coalesce(x.prova, '')) != ''{leg}")]
-            itens += [(f"I{r['no']}", r["verificador"], "instrumento")
-                      for r in q(db, f"SELECT i.* FROM instrumento i JOIN no n ON n.id=i.no WHERE trim(coalesce(i.verificador, '')) != ''{leg}")]
-            if not itens:
-                print("nenhuma prova registrada (--prova em fato/alvo, --verificador em instrumento)"
-                      + ("" if a.legado else "; herdadas só com --legado"))
-            if itens and not a.executa:  # são comandos de shell vindos do banco: quem roda tem de ver antes
-                print("\n".join(f"  {rid} ({tipo}): {cmd}" for rid, cmd, tipo in itens))
-                return print("(listadas, não executadas: confira cada comando e rode `prova --executa`)")
-            for rid, cmd, tipo in itens:
-                ok, out = roda_prova(cmd)
-                print(f"{'OK  ' if ok else 'FALHOU'} {rid} ({tipo}): {cmd}" + ("" if ok else f"\n      {out}"))
-                no = int(rid[1:])
-                if tipo == "instrumento":
-                    db.execute("UPDATE versao SET verificado=? WHERE id=?", (int(ok), versao_atual(db, no)["id"]))
-                evento(db, no, "prova " + ("ok" if ok else "FALHOU"), cmd)
+                    db.execute("INSERT INTO version(instrument, sha, at) VALUES (?,?,?)", (node, s, now()))
+                    touch(db, node, "new version", f"{v['sha'][:12]} → {s[:12]}")
+                    n = sum(1 for t in q(db, "SELECT node FROM test WHERE instrument=?", node)
+                            if validity(db, t["node"]).startswith("TO REVALIDATE"))
+                    print(f"I{node} changed ({v['sha'][:12]} → {s[:12]}): {n} negative(s) are now TO REVALIDATE")
+        elif a.cmd == "proof":
+            leg = "" if a.legacy else " AND n.legacy=0"
+            items = [(f"E{r['node']}", r["proof"], "fact") for r in q(db, "SELECT f.* FROM fact f JOIN node n ON n.id=f.node AND n.type='fact' "
+                                                                         "AND coalesce(f.proven_by, 'measurement') = 'measurement' "
+                                                                         f"WHERE trim(coalesce(f.proof, '')) != ''{leg}")]
+            items += [(f"A{r['node']}", r["proof"], "target") for r in q(db, "SELECT x.* FROM target x JOIN node n ON n.id=x.node "
+                                                                           f"WHERE trim(coalesce(x.proof, '')) != ''{leg}")]
+            items += [(f"I{r['node']}", r["verifier"], "instrument")
+                      for r in q(db, f"SELECT i.* FROM instrument i JOIN node n ON n.id=i.node WHERE trim(coalesce(i.verifier, '')) != ''{leg}")]
+            if not items:
+                print("no proof recorded (--proof on a fact/target, --verifier on an instrument)"
+                      + ("" if a.legacy else "; inherited ones only with --legacy"))
+            if items and not a.execute:  # these are shell commands from the database: whoever runs them must see them first
+                print("\n".join(f"  {rid} ({typ}): {cmd}" for rid, cmd, typ in items))
+                return print("(listed, not executed: check each command and run `proof --execute`)")
+            for rid, cmd, typ in items:
+                ok, out = run_proof(cmd)
+                print(f"{'OK    ' if ok else 'FAILED'} {rid} ({typ}): {cmd}" + ("" if ok else f"\n      {out}"))
+                node = int(rid[1:])
+                if typ == "instrument":
+                    db.execute("UPDATE version SET verified=? WHERE id=?", (int(ok), current_version(db, node)["id"]))
+                event(db, node, "proof " + ("ok" if ok else "FAILED"), cmd)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (Erro, C.Erro) as e:
+    except (Error, C.Error) as e:
         sys.exit(f"holmes: {e}")
     except sqlite3.IntegrityError as e:
-        sys.exit(f"holmes: valor recusado pelo banco ({e})")
+        sys.exit(f"holmes: value refused by the database ({e})")

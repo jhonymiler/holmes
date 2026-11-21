@@ -1,1 +1,1 @@
-{ "name": "holmes", "version": "2.0.0", "description": "Harness de investigação: mapa do caso na abertura, pistas do banco a cada pedido, diário do raciocínio, poda de saída longa e cobrança de registro." }
+{ "name": "holmes", "version": "2.0.0", "description": "Trims long Bash output: the full output goes to a file and the context gets only the head, the tail and the path. The holmes hooks (map, clues, journal) live in .claude/settings.json, not here." }

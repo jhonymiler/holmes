@@ -1,0 +1,62 @@
+{
+  "case": "watchmaker",
+  "objective": "Open the watchmaker's safe (4-digit combination)",
+  "solution": "0347: the hour the living-room clock stopped (3h47), which the diary calls 'the hour when the halves met'",
+  "solution_words": ["0347", "3h47", "stopped"],
+  "clues": [
+    {"id": "c01", "wave": 1, "text": "The house stands on Acacia Street, number 12"},
+    {"id": "c02", "wave": 1, "text": "The watchmaker had lived alone since his daughter went abroad"},
+    {"id": "c03", "wave": 1, "text": "The living-room wall clock stopped at 3h47 and was never set right again"},
+    {"id": "c04", "wave": 1, "text": "The back door creaks when it rains"},
+    {"id": "c05", "wave": 1, "text": "Poem on the desk: two halves that seek each other keep what matters"},
+    {"id": "c06", "wave": 1, "text": "There is a collection of French stamps on the bookshelf"},
+    {"id": "c07", "wave": 1, "text": "The study key was under the vase of sunflowers"},
+    {"id": "c08", "wave": 1, "text": "The garden has two halves of flowerbed, one of roses and one of cabbages"},
+    {"id": "c09", "wave": 1, "text": "The safe has four numbered brass dials"},
+    {"id": "c10", "wave": 1, "text": "The house cat is called Pendulum"},
+    {"id": "c11", "wave": 2, "text": "Diary: I hid the secret at the instant when everything stood still"},
+    {"id": "c12", "wave": 2, "text": "Repair receipt for a clock, dated 12/05/1931"},
+    {"id": "c13", "wave": 2, "text": "The butler's bedside clock was running five minutes fast"},
+    {"id": "c14", "wave": 2, "text": "At the foot of the poem there is a yin-yang drawn in ink"},
+    {"id": "c15", "wave": 2, "text": "The fireplace has not been lit for years"},
+    {"id": "c16", "wave": 2, "text": "The neighbour heard chimes a little before four in the morning"},
+    {"id": "c17", "wave": 2, "text": "A map of Switzerland hanging in the hallway"},
+    {"id": "c18", "wave": 2, "text": "Electricity bill paid in 1931, on time"},
+    {"id": "c19", "wave": 2, "text": "Letter to the daughter: remember Van Gogh's yellow when you come back"},
+    {"id": "c20", "wave": 2, "text": "The portrait of his wife shows her holding an hourglass"},
+    {"id": "c21", "wave": 3, "text": "Kitchen mug decorated with a painted sunflower"},
+    {"id": "c22", "wave": 3, "text": "The watchmaker opened the workshop in 1931, according to the plaque"},
+    {"id": "c23", "wave": 3, "text": "The butler says the master was fond of chess"},
+    {"id": "c24", "wave": 3, "text": "In the drawer, a manual for valve radios"},
+    {"id": "c25", "wave": 3, "text": "The last page of the diary was torn out"},
+    {"id": "c26", "wave": 3, "text": "The piano is out of tune"},
+    {"id": "c27", "wave": 3, "text": "Burnt fragment in the oven: '...when the halves met...'"},
+    {"id": "c28", "wave": 3, "text": "Dust has gathered on the safe, except on the dials"},
+    {"id": "c29", "wave": 3, "text": "The daughter sent a postcard from Lisbon"},
+    {"id": "c30", "wave": 3, "text": "The watchmaker always set his appointments at odd hours"}
+  ],
+  "links": [
+    {"from": "c03", "to": "c11", "concept": "stopped time", "literal": false},
+    {"from": "c05", "to": "c14", "concept": "complementarity", "literal": false},
+    {"from": "c07", "to": "c19", "concept": "Van Gogh's sunflowers", "literal": false},
+    {"from": "c09", "to": "c03", "concept": "numeric combination", "literal": false},
+    {"from": "c16", "to": "c03", "concept": "small hours", "literal": false},
+    {"from": "c20", "to": "c11", "concept": "stopped time", "literal": false},
+    {"from": "c27", "to": "c05", "concept": "halves", "literal": true},
+    {"from": "c25", "to": "c27", "concept": "diary", "literal": false},
+    {"from": "c12", "to": "c22", "concept": "1931", "literal": true}
+  ],
+  "traps": [
+    {"from": "c08", "to": "c05", "why": "the flowerbed's 'two halves': same expression, no relation"},
+    {"from": "c13", "to": "c03", "why": "another clock, running fast, unrelated to the stop"},
+    {"from": "c21", "to": "c07", "why": "a common decorative sunflower"},
+    {"from": "c18", "to": "c12", "why": "1931 is the year of everything in the house, coincidence"}
+  ],
+  "interpreter_concepts": [
+    {"name": "stopped time", "aliases": "stopped,still,hourglass,instant"},
+    {"name": "complementarity", "aliases": "two halves,yin-yang,halves met"},
+    {"name": "Van Gogh", "aliases": "sunflowers,Van Gogh's yellow"},
+    {"name": "safe combination", "aliases": "numbered dials,3h47,four in the morning"},
+    {"name": "diary", "aliases": "diary,torn out,burnt fragment"}
+  ]
+}

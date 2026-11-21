@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Hooks de shell do holmes 2.0 (declarados em .claude/settings.json). Lê o evento JSON no stdin.
+"""holmes 2.0 shell hooks (declared in .claude/settings.json). Reads the event JSON on stdin.
 
-    abertura    SessionStart      mapa do caso ATIVO (≤ 3,5 KB) + cauda do diário após compactar/retomar
-    pistas      UserPromptSubmit  até 6 linhas do banco sobre o pedido (sem repetir na sessão) + túnel + leitura pendente
-    guarda      PreToolUse(Bash)  nega `pkill -f` (mata o próprio shell)
-    pos         PostToolUse(Bash) script do caso rodou sem teste registrado → lembrete visível ao agente
-    fim         Stop              regrava o diário; cobra registro se rodou script do caso sem chamar holmes.py
-    pre-compact PreCompact        regrava o diário antes do corte
+    start       SessionStart      map of the ACTIVE case (≤ 3.5 KB) + tail of the journal after compacting/resuming
+    prompt      UserPromptSubmit  up to 6 database lines about the request (not repeated in the session) + tunnel + pending reading
+    guard       PreToolUse(Bash)  denies `pkill -f` (it kills its own shell)
+    post        PostToolUse(Bash) a case script ran without a recorded test → reminder visible to the agent
+    stop        Stop              rewrites the journal; asks for a record if a case script ran without calling holmes.py
+    pre-compact PreCompact        rewrites the journal before the cut
 
-Tudo que um hook injeta fica abaixo de 10.000 caracteres: acima disso o Claude Code troca o texto por uma
-prévia de 2 KB. Hook nunca quebra a sessão: qualquer erro vira silêncio + linha em stderr.
+The old Portuguese arguments (abertura, pistas, guarda, pos, fim) are still accepted.
+Everything a hook injects stays under 10,000 characters: above that Claude Code swaps the text for a 2 KB
+preview. A hook never breaks the session: any error becomes silence + a line on stderr.
 """
 import json
 import os
@@ -18,219 +19,226 @@ import subprocess
 import sys
 from pathlib import Path
 
-AQUI = Path(__file__).resolve().parent
-sys.path.insert(0, str(AQUI))
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
 import holmes as H  # noqa: E402
 
-ESTADO = H.RAIZ / ".holmes"
-MAX_DIARIO = int(os.environ.get("HOLMES_MAX_DIARIO") or 120_000)
+STATE = H.STATE_DIR
+MAX_JOURNAL = int(H.env("HOLMES_MAX_JOURNAL", "HOLMES_MAX_DIARIO") or 120_000)
 SCRIPT = re.compile(r"\b(?:python3?|\S*/bin/python)\b(?:\s+-\S+)*\s+([\w./-]+\.py)\b")
 
 
-def saida(evento, texto):
-    return {"hookSpecificOutput": {"hookEventName": evento, "additionalContext": texto[:9000]}}
+def output(event, text):
+    return {"hookSpecificOutput": {"hookEventName": event, "additionalContext": text[:9000]}}
 
 
 def holmes(*args):
-    r = subprocess.run([sys.executable, "-I", str(AQUI / "holmes.py"), *args], capture_output=True, text=True,
-                       timeout=20, cwd=H.RAIZ)
+    r = subprocess.run([sys.executable, "-I", str(HERE / "holmes.py"), *args], capture_output=True, text=True,
+                       timeout=20, cwd=H.ROOT, env={**os.environ, "HOLMES_HOOK": "1"})
     return (r.stdout or r.stderr).strip()
 
 
-def diario_de(ev):
-    return ESTADO / "diario" / f"{ev.get('session_id', 'sessao')}.md"
+def journal_of(ev):
+    return STATE / "journal" / f"{ev.get('session_id', 'session')}.md"
 
 
-def atualiza_diario(ev):
-    """Só mensagens do usuário e texto do agente (o raciocínio, ~7% da janela); comandos e saídas ficam de fora.
-    Regenerado do .jsonl a cada turno, então é idempotente e sobrevive à compactação."""
-    eventos, inteiro = cauda(ev["transcript_path"], 16 << 20)
-    corpo = monta_diario(eventos)
-    if not inteiro and len(corpo) < MAX_DIARIO * 0.9:  # cauda não bastou para encher o diário: lê tudo
-        corpo = monta_diario(cauda(ev["transcript_path"], None)[0])
-    alvo = diario_de(ev)
-    alvo.parent.mkdir(parents=True, exist_ok=True)
-    alvo.write_text(f"# Diário da sessão {ev.get('session_id', '?')} (gerado; não editar)\n{corpo}", encoding="utf-8")
-    return alvo
+def update_journal(ev):
+    """Only user messages and agent text (the reasoning, ~7% of the window); commands and outputs stay out.
+    Regenerated from the .jsonl every turn, so it is idempotent and survives compaction."""
+    events, whole = tail(ev["transcript_path"], 16 << 20)
+    body = build_journal(events)
+    if not whole and len(body) < MAX_JOURNAL * 0.9:  # the tail was not enough to fill the journal: read everything
+        body = build_journal(tail(ev["transcript_path"], None)[0])
+    target = journal_of(ev)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"# Journal of session {ev.get('session_id', '?')} (generated; do not edit)\n{body}", encoding="utf-8")
+    return target
 
 
-def cauda(transcript, nbytes):
-    """Eventos do .jsonl lendo só os últimos nbytes (None = tudo). O transcript chega a 80 MB, e ler tudo a cada
-    turno custava ~4,6 s no Stop; a cauda basta quase sempre. Devolve (eventos, leu_o_arquivo_inteiro)."""
+def tail(transcript, nbytes):
+    """Events of the .jsonl reading only the last nbytes (None = everything). The transcript reaches 80 MB, and
+    reading it all every turn cost ~4.6 s at Stop; the tail is almost always enough. Returns (events, read_whole_file)."""
     with open(transcript, "rb") as f:
         f.seek(0, 2)
-        tam = f.tell()
-        ini = 0 if nbytes is None or tam <= nbytes else tam - nbytes
-        f.seek(max(ini - 1, 0))
-        dados = f.read()
-    if ini:  # descarta só o pedaço de linha cortado (lendo 1 byte antes: se o corte caiu no início, nada se perde)
-        dados = dados[dados.find(b"\n") + 1:]
-    linhas = dados.decode("utf-8", errors="replace").split("\n")  # não splitlines: U+2028 é texto válido no JSON
-    eventos = []
-    for l in linhas:
+        size = f.tell()
+        start = 0 if nbytes is None or size <= nbytes else size - nbytes
+        f.seek(max(start - 1, 0))
+        data = f.read()
+    if start:  # drop only the cut line piece (reading 1 byte before: if the cut fell at a line start, nothing is lost)
+        data = data[data.find(b"\n") + 1:]
+    lines = data.decode("utf-8", errors="replace").split("\n")  # not splitlines: U+2028 is valid text inside JSON
+    events = []
+    for l in lines:
         try:
-            eventos.append(json.loads(l))
+            events.append(json.loads(l))
         except ValueError:
             pass
-    return eventos, ini == 0
+    return events, start == 0
 
 
-def monta_diario(eventos):
-    blocos = []
-    for e in eventos:
-        c, q = (e.get("message") or {}).get("content"), (e.get("timestamp") or "")[:16].replace("T", " ")
+def build_journal(events):
+    blocks = []
+    for e in events:
+        c, when = (e.get("message") or {}).get("content"), (e.get("timestamp") or "")[:16].replace("T", " ")
         if e.get("type") == "user" and not e.get("isMeta") and not e.get("isCompactSummary"):
             for x in [c] if isinstance(c, str) else [b.get("text", "") for b in c or []
                                                      if isinstance(b, dict) and b.get("type") == "text"]:
                 if x.strip():
-                    blocos.append(f"\n## [{q}] usuário\n{x.strip()}")
+                    blocks.append(f"\n## [{when}] user\n{x.strip()}")
         elif e.get("type") == "assistant":
             for b in c or []:
                 if isinstance(b, dict) and b.get("type") == "text" and b.get("text", "").strip():
-                    blocos.append(f"\n### [{q}] agente\n{b['text'].strip()}")
-    corpo = ""
-    for b in reversed(blocos):  # mantém o mais recente; o .jsonl guarda o resto
-        if len(corpo) + len(b) > MAX_DIARIO:
-            corpo = corpo or b[-MAX_DIARIO:]  # um bloco maior que o diário: guarda a cauda dele, não nada
+                    blocks.append(f"\n### [{when}] agent\n{b['text'].strip()}")
+    body = ""
+    for b in reversed(blocks):  # keeps the most recent; the .jsonl keeps the rest
+        if len(body) + len(b) > MAX_JOURNAL:
+            body = body or b[-MAX_JOURNAL:]  # one block bigger than the journal: keep its tail, not nothing
             break
-        corpo = b + corpo
-    return corpo
+        body = b + body
+    return body
 
 
-def abertura(ev):
+def start(ev):
     try:
-        caso = H.caso_ativo()
-    except H.Erro as e:
-        casos = ", ".join(p.parent.name for p in H.CASOS.glob("*/caso.db")) or "nenhum"
-        return saida("SessionStart", f"[holmes] {e}. Casos existentes: {casos}.")
-    partes = [f"[holmes] Caso ativo: {caso}. Siga primeiro o que o usuário pedir nesta mensagem; o mapa é "
-              "orientação, não tarefa.", holmes("mapa")]
-    d = diario_de(ev)
+        case = H.active_case()
+    except H.Error as e:
+        return output("SessionStart", f"[holmes] {e}. Existing cases: {', '.join(H.cases()) or 'none'}.")
+    parts = [f"[holmes] Active case: {case}. Follow first what the user asks in this message; the map is "
+             "orientation, not a task.", holmes("map")]
+    d = journal_of(ev)
+    if not d.exists():  # a journal written before the rename
+        d = STATE / "diario" / d.name
     if ev.get("source") in ("compact", "resume") and d.exists():
-        partes.append(f"[holmes] Fim do diário desta sessão (inteiro em {d.relative_to(H.RAIZ)}):\n"
-                      + d.read_text(encoding="utf-8")[-2500:])
-    return saida("SessionStart", "\n\n".join(partes))
+        parts.append(f"[holmes] End of this session's journal (in full at {d.relative_to(H.ROOT)}):\n"
+                     + d.read_text(encoding="utf-8")[-2500:])
+    return output("SessionStart", "\n\n".join(parts))
 
 
-def pistas(ev):
-    prompt = ev.get("prompt", "")
-    if len(H.C.termos(prompt)) < 3:
+def prompt(ev):
+    text = ev.get("prompt", "")
+    if len(H.C.terms(text)) < 3:
         return None
     try:
-        caso = H.caso_ativo()
-    except H.Erro:
+        case = H.active_case()
+    except H.Error:
         return None
-    vistos_f = ESTADO / "sessoes" / f"{ev.get('session_id', 'x')}.vistos"
-    vistos = set(vistos_f.read_text().split("\n")) if vistos_f.exists() else set()
-    chave = lambda l: " ".join(l.split(" ", 2)[:2])  # "H12 [..." ou "corpus #37"
-    linhas = [l for l in holmes("busca", prompt, "-n", "6").splitlines()
-              if l and not l.startswith((" ", "(")) and chave(l) not in vistos][:6]
-    with H.conecta(caso) as db:
-        alerta = [f"⚠ túnel em F{f['id']} ({H.aviso_tunel(*t)}): leia antes de testar"
-                  for f in db.execute("SELECT id FROM no WHERE tipo='frente' AND estado='ativa'").fetchall()
-                  if (t := H.tunel(db, f["id"]))[0] >= H.TUNEL]
-        lida = H.pede_leitura(db)
-        if lida:
-            alerta.append("⚠ " + lida)
-    if not linhas and not alerta:
+    seen_f = STATE / "sessions" / f"{ev.get('session_id', 'x')}.seen"
+    old_f = STATE / "sessoes" / f"{ev.get('session_id', 'x')}.vistos"  # written before the rename
+    src = seen_f if seen_f.exists() else old_f
+    seen = set(src.read_text().split("\n")) if src.exists() else set()
+    key = lambda l: " ".join(l.split(" ", 2)[:2]) if l.startswith("corpus") else l.split(" ", 1)[0]  # "H12" or "corpus #37"
+    lines = [l for l in holmes("search", text, "-n", "6").splitlines()
+             if l and not l.startswith((" ", "(")) and key(l) not in seen][:6]
+    with H.connect(case) as db:
+        alert = [f"⚠ tunnel in F{f['id']} ({H.tunnel_warning(*t)}): read before testing"
+                 for f in db.execute("SELECT id FROM node WHERE type='front' AND state='active'").fetchall()
+                 if (t := H.tunnel(db, f["id"]))[0] >= H.TUNNEL]
+        req = H.reading_request(db)
+        if req:
+            alert.append("⚠ " + req)
+    if not lines and not alert:
         return None
-    vistos_f.parent.mkdir(parents=True, exist_ok=True)
-    vistos_f.write_text("\n".join(vistos | {chave(l) for l in linhas}))
-    corpo = "\n".join(alerta + linhas)[:1500]
-    return saida("UserPromptSubmit", f"[holmes] O banco já tem sobre isto (detalhe: `holmes.py ver <id>`):\n{corpo}")
+    seen_f.parent.mkdir(parents=True, exist_ok=True)
+    seen_f.write_text("\n".join(seen | {key(l) for l in lines}))
+    body = "\n".join(alert + lines)[:1500]
+    return output("UserPromptSubmit", f"[holmes] The database already has this about it (detail: `holmes.py show <id>`):\n{body}")
 
 
-def guarda(ev):
+def guard(ev):
     cmd = (ev.get("tool_input") or {}).get("command", "")
     if re.search(r"\bpkill\s+(-\w*\s+)*-\w*f", cmd):
         return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
-                "permissionDecisionReason": "[holmes] `pkill -f` casa com a linha do próprio shell e o mata. "
-                                            "Mate por PID explícito (registrado no teste)."}}
+                "permissionDecisionReason": "[holmes] `pkill -f` matches its own shell's command line and kills it. "
+                                            "Kill by explicit PID (recorded in the test)."}}
     return None
 
 
-def roda_script_do_caso(cmd):
+def runs_case_script(cmd):
     try:
-        caso = H.caso_ativo()
-    except H.Erro:
+        case = H.active_case()
+    except H.Error:
         return None, None
     m = SCRIPT.search(cmd)
-    if m and not m[1].endswith(("holmes.py", "hooks.py")) and (f"casos/{caso}/" in cmd or "/scripts/" in m[1]):
-        return caso, m[1]
+    if m and not m[1].endswith(("holmes.py", "hooks.py")) and (
+            any(f"{root}/{case}/" in cmd for root in ("cases", "casos", H.CASES.name)) or "/scripts/" in m[1]):
+        return case, m[1]
     return None, None
 
 
-def pos(ev):
-    caso, script = roda_script_do_caso((ev.get("tool_input") or {}).get("command", ""))
+def post(ev):
+    case, script = runs_case_script((ev.get("tool_input") or {}).get("command", ""))
     if not script:
         return None
-    with H.conecta(caso) as db:
-        ok = db.execute("SELECT 1 FROM teste t JOIN no n ON n.id=t.no WHERE n.estado IN ('planejado','rodando') "
+    with H.connect(case) as db:
+        ok = db.execute("SELECT 1 FROM test t JOIN node n ON n.id=t.node WHERE n.state IN ('planned','running') "
                         "AND t.script LIKE ?", (f"%{Path(script).name}%",)).fetchone()
     if ok:
         return None
-    return saida("PostToolUse", f"[holmes] {Path(script).name} rodou sem teste aberto que o cite. Se foi "
-                 "exploração, tudo bem; se o resultado vai sustentar ou descartar algo, registre com "
-                 "`holmes.py teste <H> ... --script` e `resultado`, com alcance, senão ele não vale como fechamento.")
+    return output("PostToolUse", f"[holmes] {Path(script).name} ran without an open test that cites it. If it was "
+                  "exploration, fine; if the result is going to support or discard something, record it with "
+                  "`holmes.py test <H> ... --script` and `result`, with a scope, otherwise it does not count as closing anything.")
 
 
-def ultimo_turno(transcript):
-    eventos, inteiro = cauda(transcript, 4 << 20)
-    if not inteiro and not any(e.get("type") == "user" and not e.get("isMeta") for e in eventos):
-        eventos = cauda(transcript, None)[0]  # turno maior que a cauda
-    inicio = max((i for i, e in enumerate(eventos) if e.get("type") == "user" and not e.get("isMeta") and (
+def last_turn(transcript):
+    events, whole = tail(transcript, 4 << 20)
+    if not whole and not any(e.get("type") == "user" and not e.get("isMeta") for e in events):
+        events = tail(transcript, None)[0]  # turn bigger than the tail
+    begin = max((i for i, e in enumerate(events) if e.get("type") == "user" and not e.get("isMeta") and (
         isinstance((e.get("message") or {}).get("content"), str) or any(
             isinstance(b, dict) and b.get("type") == "text" for b in (e.get("message") or {}).get("content") or []))),
         default=0)
-    return [b.get("input") or {} for e in eventos[inicio:] if e.get("type") == "assistant"
+    return [b.get("input") or {} for e in events[begin:] if e.get("type") == "assistant"
             for b in (e.get("message") or {}).get("content") or []
             if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Bash"]
 
 
-def fim(ev):
+def stop(ev):
     try:
-        atualiza_diario(ev)
-    except Exception as e:  # diário é bônus; nunca derruba o fim do turno
-        print(f"[holmes] diário falhou: {e}", file=sys.stderr)
+        update_journal(ev)
+    except Exception as e:  # the journal is a bonus; it never brings down the end of the turn
+        print(f"[holmes] journal failed: {e}", file=sys.stderr)
     if ev.get("stop_hook_active"):
         return None
-    cmds = [i.get("command", "") for i in ultimo_turno(ev["transcript_path"])]
-    rodou = next((s for c in cmds for _, s in [roda_script_do_caso(c)] if s), None)
-    if rodou and not any("holmes.py" in c for c in cmds):
+    cmds = [i.get("command", "") for i in last_turn(ev["transcript_path"])]
+    ran = next((s for c in cmds for _, s in [runs_case_script(c)] if s), None)
+    if ran and not any("holmes.py" in c for c in cmds):
         return {"decision": "block", "reason":
-                f"[holmes] {Path(rodou).name} rodou neste turno e nada foi registrado. Registre o que ele mostrou "
-                "(`holmes.py resultado T.. ` ou `novo fato`/`novo fio`), ou diga em uma linha por que não há o que "
-                "registrar. Se ainda está rodando, registre o PID e o log no teste."}
+                f"[holmes] {Path(ran).name} ran in this turn and nothing was recorded. Record what it showed "
+                "(`holmes.py result T.. ` or `new fact`/`new clue`/`new thread`), or say in one line why there is nothing "
+                "to record. If it is still running, record the PID and the log in the test."}
     return None
 
 
 def pre_compact(ev):
-    atualiza_diario(ev)
+    update_journal(ev)
     return None
 
 
-ACOES = {"abertura": abertura, "pistas": pistas, "guarda": guarda, "pos": pos, "fim": fim,
-         "pre-compact": pre_compact}
+ACTIONS = {"start": start, "prompt": prompt, "guard": guard, "post": post, "stop": stop, "pre-compact": pre_compact}
+OLD_ACTIONS = {"abertura": "start", "pistas": "prompt", "guarda": "guard", "pos": "post", "fim": "stop"}
 
-def marca(acao, ok):
-    """Prova de execução, não de configuração: quando cada hook rodou pela última vez (`holmes.py saude`)."""
-    arq = ESTADO / "hooks.json"
+
+def mark(action, ok):
+    """Proof of execution, not of configuration: when each hook last ran (`holmes.py health`)."""
+    f = STATE / "hooks.json"
     try:
-        v = json.loads(arq.read_text()) if arq.exists() else {}
+        v = json.loads(f.read_text()) if f.exists() else {}
         v = v if isinstance(v, dict) else {}
-        v[acao] = f"{H.agora()} {'ok' if ok else 'FALHOU'}"
-        arq.parent.mkdir(exist_ok=True)
-        arq.write_text(json.dumps(v, ensure_ascii=False))
+        v[action] = f"{H.now()} {'ok' if ok else 'FAILED'}"
+        f.parent.mkdir(exist_ok=True)
+        f.write_text(json.dumps(v, ensure_ascii=False))
     except (OSError, ValueError):
-        pass  # o registro é diagnóstico; nunca derruba o hook
+        pass  # the record is a diagnostic; it never brings down the hook
 
 
 if __name__ == "__main__":
+    name = OLD_ACTIONS.get(sys.argv[1], sys.argv[1]) if len(sys.argv) > 1 else ""
     try:
-        r = ACOES[sys.argv[1]](json.load(sys.stdin))
-        marca(sys.argv[1], True)
+        r = ACTIONS[name](json.load(sys.stdin))
+        mark(name, True)
         if r:
             print(json.dumps(r, ensure_ascii=False))
     except Exception as e:
-        marca(sys.argv[1], False)
-        print(f"[holmes] hook {sys.argv[1:]} falhou: {e}", file=sys.stderr)
+        if name in ACTIONS:  # an unknown or empty argument is not a hook that ran
+            mark(name, False)
+        print(f"[holmes] hook {sys.argv[1:]} failed: {e}", file=sys.stderr)

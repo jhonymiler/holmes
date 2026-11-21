@@ -2,24 +2,24 @@
   "hooks": {
     "SessionStart": [
       {"matcher": "startup|resume|clear|compact", "hooks": [
-        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" abertura", "timeout": 30,
-         "statusMessage": "holmes: mapa do caso..."}]}
+        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" start", "timeout": 30,
+         "statusMessage": "holmes: case map..."}]}
     ],
     "UserPromptSubmit": [
       {"hooks": [
-        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" pistas", "timeout": 20}]}
+        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" prompt", "timeout": 20}]}
     ],
     "PreToolUse": [
       {"matcher": "Bash", "hooks": [
-        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" guarda", "timeout": 10}]}
+        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" guard", "timeout": 10}]}
     ],
     "PostToolUse": [
       {"matcher": "Bash", "hooks": [
-        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" pos", "timeout": 10}]}
+        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" post", "timeout": 10}]}
     ],
     "Stop": [
       {"hooks": [
-        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" fim", "timeout": 20}]}
+        {"type": "command", "command": "python3 -I \"$CLAUDE_PROJECT_DIR/holmes/hooks.py\" stop", "timeout": 20}]}
     ],
     "PreCompact": [
       {"hooks": [
