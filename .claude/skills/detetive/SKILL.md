@@ -47,7 +47,7 @@ Every fact, hypothesis and decision goes to the record, not the conversation.
 
 | Mark | Command |
 |---|---|
-| Literal source excerpt | `cita <corpus chunk> "<claim>"` (copies the text; the fact comes out proven by the source) |
+| Literal source excerpt | `cita <corpus chunk> "<claim>"` (copies the text; the fact comes out proven by the source; an interpretation of the excerpt is refused: it is a clue) |
 | Fact (a finding already proven) | `novo fato "<t>" --natureza observacao\|medicao\|citacao --por fonte\|medicao\|teste\|reproducao [--prova "<command>"\|T..] --fonte S.. --grau A\|B\|C` |
 | Clue (not yet proven) | `novo pista "<t>" --natureza observacao\|medicao\|relato\|inferencia\|interpretacao --origem ..` |
 | Proving a clue | `confere K.. "<note>" --por ..` (an observation or report clue becomes a fact, same id; an inference or interpretation never does) |

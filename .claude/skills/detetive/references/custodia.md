@@ -53,7 +53,7 @@ not checked; C = report, agent or external, not checked). For fine analysis, use
 ## Facts and clues
 
 A fact (`fato`) is a finding already proven, and says how; the proof need not be a source:
-`--por fonte` (read in the primary source), `--por medicao --prova "<command>"` (a measurement anyone can
+`--por fonte` (read in the primary source; it must point to it with `--fonte S..`, `--citacao` or `--local`), `--por medicao --prova "<command>"` (a measurement anyone can
 rerun), `--por teste --prova T..` (a test with a recorded result), `--por reproducao --prova "<record>"`
 (reproduced independently, e.g. a second implementation or examiner). What is not yet proven is a clue
 (`novo pista`); an observation or report clue becomes a fact with `confere K.. --por ..`. An inference or

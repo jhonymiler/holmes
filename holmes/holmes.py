@@ -240,8 +240,7 @@ ATUAL = {"ramo": None}  # ramo ativo desta invocação: cria(), estado e resulta
 
 
 def passo(db, ramo, tipo, texto, porque=None, nos=()):
-    if porque and len(porque) > 400:
-        raise Erro(f"--porque com {len(porque)} caracteres (máx. 400): o porquê do passo, não o dossiê")
+    porque = (porque or "")[:400]  # o porquê integral fica no nó (teste, evento); o passo guarda o resumo
     pid = db.execute("INSERT INTO passo(ramo, tipo, texto, porque, nos, quando) VALUES (?,?,?,?,?,?)",
                      (ramo, tipo, texto[:400], porque or None, ",".join(nos) or None, agora())).lastrowid
     db.execute("UPDATE no SET atualizado=? WHERE id=?", (agora(), ramo))
@@ -275,11 +274,15 @@ def toca(db, no, acao, texto=""):
 
 # ---------- criar ----------
 
-def prova_de(db, por, prova):
-    """Fato é constatação provada: diz como (fonte, medição, teste, reprodução) e com o quê."""
+def prova_de(db, por, prova, onde=None):
+    """Fato é constatação provada: diz como (fonte, medição, teste, reprodução) e com o quê.
+    `onde`: para --por fonte, a fonte, a citação ou o localizador que a prova aponta."""
     if por not in PROVAS:
         raise Erro("fato exige --por fonte|medicao|teste|reproducao: como ele está provado. "
                    "Sem prova ainda, é pista (`novo pista`)")
+    if por == "fonte" and not (onde or "").strip():
+        raise Erro("--por fonte precisa apontar a fonte: --fonte S.., --citacao \"<trecho literal>\" ou "
+                   "--local \"<onde está>\" (citação literal do corpus: use `cita`)")
     if por in ("medicao", "reproducao") and not (prova or "").strip():
         raise Erro(f"--por {por} exige --prova \"<comando ou registro que reproduz a constatação>\"")
     if por == "teste":
@@ -332,7 +335,7 @@ def cria(db, tipo, titulo, pai=None, resumo=None, origem=None, grau=None, estado
             if nat not in NATUREZAS_FATO:
                 raise Erro(f"{nat} não é fato: fato é constatação provada. Registre como pista "
                            f"(`novo pista \"..\" --natureza {nat}`) ou, se for explicação testável, como hipótese")
-            por, prova = prova_de(db, x.get("por"), prova)
+            por, prova = prova_de(db, x.get("por"), prova, x.get("fonte") or x.get("citacao") or x.get("local"))
         fonte = pega(db, x["fonte"], "fonte")["id"] if x.get("fonte") else None
         db.execute("INSERT INTO fato(no, natureza, fonte, local, citacao, prova, conferido, conferido_por) "
                    "VALUES (?,?,?,?,?,?,?,?)", (no, nat, fonte, x.get("local"), x.get("citacao"), prova,
@@ -1308,8 +1311,10 @@ def reorganiza(db, aplica=False):
             motivo = ("não é constatação" if r["natureza"] not in NATUREZAS_FATO else "sem prova registrada")
             evento(db, r["id"], "reclassificado", f"fato→pista ({est}): {r['natureza']}, {motivo}")
             indexa(db, r["id"])
-        db.execute("UPDATE fato SET conferido_por='fonte' WHERE conferido IS NOT NULL AND conferido_por IS NULL AND "
-                   "no IN (SELECT id FROM no WHERE tipo='fato')")  # o confere antigo era "conferido na fonte"
+        # o confere antigo era "conferido na fonte"; prova guardada era comando de shell (re-prova por execução)
+        db.execute("UPDATE fato SET conferido_por=CASE WHEN trim(coalesce(prova, '')) != '' THEN 'medicao' ELSE 'fonte' END "
+                   "WHERE conferido IS NOT NULL AND conferido_por IS NULL AND no IN (SELECT id FROM no WHERE tipo='fato')")
+        db.execute("UPDATE no SET estado='vigente' WHERE tipo='fato' AND estado NOT IN ('vigente', 'contestado', 'retratado')")
         for i in literal:
             db.execute("UPDATE fato SET conferido=coalesce(conferido, ?), conferido_por=coalesce(conferido_por, 'fonte') "
                        "WHERE no=?", (agora(), i))
@@ -1389,7 +1394,7 @@ def extrai(db, dados, aplica=False, so=None, rejeita=()):
             continue
         if o.get("existente"):
             mapa_ids[loc] = pega(db, o["existente"], ("fato", "pista"))["id"]
-            plano.append(f"= {loc} → E{mapa_ids[loc]} (já registrado)")
+            plano.append(f"= {loc} → {rot(pega(db, mapa_ids[loc]))} (já registrado)")
             continue
         nat = o.get("natureza", "observacao")
         if nat in ("interpretacao", "inferencia"):
@@ -1408,12 +1413,13 @@ def extrai(db, dados, aplica=False, so=None, rejeita=()):
             origem = o.get("origem", "fonte" if fonte_id or o.get("pedaco") else "medido")
             resumo = " · ".join(x for x in (o.get("metodo") and f"método: {o['metodo']}",
                                              o.get("limites") and f"limites: {o['limites']}") if x) or None
-            por = "fonte" if o.get("pedaco") else o.get("por")  # citação literal copiada já está provada
+            # citação literal copiada já está provada; material externo nunca se declara provado sozinho
+            por = "fonte" if o.get("pedaco") else (None if origem == "externo" else o.get("por"))
             tipo_o = "fato" if por and nat in NATUREZAS_FATO else "pista"
             no = cria(db, tipo_o, o["texto"], resumo=resumo, origem=origem, grau=o.get("grau"), natureza=nat,
                       fonte=o.get("fonte") or fonte_id, local=local, citacao=citacao, por=por, prova=o.get("prova"))
             mapa_ids[loc] = no
-        provada = (o.get("pedaco") or o.get("por")) and nat in NATUREZAS_FATO
+        provada = (o.get("pedaco") or (o.get("por") and o.get("origem") != "externo")) and nat in NATUREZAS_FATO
         plano.append(f"+ {loc} {'fato' if provada else 'pista'}/{nat}: {o['texto'][:90]}")
     for x in dados.get("questoes", []):
         loc = item(x, "id")
@@ -1986,18 +1992,26 @@ def main(argv=None):
                 db.execute("INSERT INTO fonte(no, ref, procedencia, documento) VALUES (?,?,?,?)",
                            (fno, ref, "primaria", p["documento"]))
             local = f"pedaço #{p['id']} " + (f"msg {p['msg_id']}" if p["msg_id"] else f"{p['kind']} {p['ordem']}")
-            nat = a.natureza if a.natureza in NATUREZAS_FATO else "citacao"
+            if a.natureza not in NATUREZAS_FATO:
+                raise Erro(f"cita registra o que a fonte diz, literal (fato). Uma {a.natureza} sobre o trecho é pista: "
+                           f"`novo pista \"..\" --natureza {a.natureza}` ligada `sobre` o fato da citação")
+            nat = a.natureza
             no = cria(db, "fato", a.afirmacao, origem="fonte", grau=a.grau, natureza=nat, por="fonte",
                       fonte=f"S{fno}", local=local, citacao=p["texto"][:1000])
             print(f"E{no} (citação literal copiada do corpus, conferida agora)")
         elif a.cmd == "confere":
             e = pega(db, a.fato, ("fato", "pista"))
+            if e["estado"] in CAIDOS or e["estado"] == "contestado":
+                raise Erro(f"{rot(e)} está {e['estado']}: provar não desfaz isso. Se a queda estava errada, reabra "
+                           f"antes com `estado {rot(e)} {'aberta' if e['tipo'] == 'pista' else 'vigente'} \"<por quê>\"`")
             nat = um(db, "SELECT natureza FROM fato WHERE no=?", e["id"])["natureza"]
             if nat in ("inferencia", "interpretacao"):
                 raise Erro(f"{rot(e)} é {nat}: não vira fato. Fato é constatação provada; o que sustenta uma {nat} é "
                            f"outro fato (`novo fato .. --por ..` e `liga E<novo> sustenta {rot(e)}`), e se ela explica "
                            "algo testável, é hipótese")
-            por, prova = prova_de(db, a.por, a.prova)
+            por, prova = prova_de(db, a.por, a.prova, a.nota)
+            if por == "fonte":  # a nota diz onde foi conferido: vira o localizador se não havia outro
+                db.execute("UPDATE fato SET local=coalesce(nullif(local, ''), ?) WHERE no=?", (a.nota[:300], e["id"]))
             if nat not in NATUREZAS_FATO:  # relato provado: vale o que foi constatado, não quem contou
                 nat = "citacao" if por == "fonte" else "observacao"
             db.execute("UPDATE fato SET natureza=?, conferido=?, conferido_por=?, prova=coalesce(?, prova) WHERE no=?",
@@ -2005,7 +2019,7 @@ def main(argv=None):
             era = e["tipo"]
             db.execute("UPDATE no SET tipo='fato', estado='vigente' WHERE id=?", (e["id"],))
             toca(db, e["id"], f"provado por {por}", f"{a.nota}" + (f" · prova: {prova}" if prova else ""))
-            print(f"E{e['id']} provado por {por}" + (f" (era a pista K{e['id']}; agora é fato)" if era == "pista" else ""))
+            print(f"{rot(pega(db, e['id']))} provado por {por}" + (f" (era a pista K{e['id']}; agora é fato)" if era == "pista" else ""))
         elif a.cmd == "atributo":
             n = pega(db, a.entidade, "entidade")
             fato = pega(db, a.fato, "fato")["id"] if a.fato else None

@@ -124,6 +124,15 @@ def test_fatos_fontes_corpus_e_entidades():
     assert "provado:medicao" in roda(r, "ver", kmed) or "medicao" in roda(r, "ver", kmed)
     assert "fato:vigente medicao" in roda(r, "busca", "reage ferro", "--sem-corpus")        # a pista virou fato
     assert roda(r, "ver", "E" + kmed[1:]).startswith("E")                                   # mesmo nó, prefixo novo
+    roda(r, "novo", "fato", "Sem lastro", "--por", "fonte", ok=False)                       # fonte que aponta para nada
+    assert "pista" in roda(r, "cita", pid, "O autor quis dizer X", "--natureza", "interpretacao", ok=False)
+    kdesc = roda(r, "novo", "pista", "Talvez a tinta seja posterior", "--natureza", "observacao").strip()
+    roda(r, "estado", kdesc, "descartada", "não há como datar a tinta")
+    assert "provar não desfaz" in roda(r, "confere", kdesc, "relido", "--por", "fonte", ok=False)  # não ressuscita
+    j = r / "ext.json"
+    j.write_text('{"observacoes": [{"id": "o1", "texto": "Agente externo diz que a chave confere", '
+                 '"origem": "externo", "por": "medicao", "prova": "true"}]}')
+    assert "pista/observacao" in roda(r, "extrai", str(j))                                  # externo não se autoprova
     # entidade com alias: buscar "lock" acha o que foi escrito como "fechadura"
     roda(r, "novo", "entidade", "fechadura", "--classe", "conceito", "--alias", "lock,tumbler")
     roda(r, "novo", "fio", "Medir os pinos da fechadura do porão")
@@ -144,8 +153,8 @@ def test_dependencias_contradicoes_ach_saude():
     assert "premissas não verificadas: R3" in roda(r, "mapa")
     assert "dependem disto" in roda(r, "estado", "R3", "refutada", "duas caligrafias (E9)")
     assert "H4 depende de R3, que caiu" in roda(r, "mapa")
-    roda(r, "novo", "fato", "Assinatura em tinta ferrogálica", "--estado", "vigente", "--por", "fonte")   # E6
-    roda(r, "novo", "fato", "Assinatura em tinta de anilina", "--estado", "vigente", "--por", "fonte")    # E7
+    roda(r, "novo", "fato", "Assinatura em tinta ferrogálica", "--estado", "vigente", "--por", "fonte", "--local", "folha 1")   # E6
+    roda(r, "novo", "fato", "Assinatura em tinta de anilina", "--estado", "vigente", "--por", "fonte", "--local", "folha 1")    # E7
     roda(r, "liga", "E6", "contradiz", "E7")
     assert "contradição aberta: E6 × E7" in roda(r, "mapa")
     roda(r, "estado", "E7", "retratado", "li errado")
@@ -186,8 +195,8 @@ def test_leitura_sentido_e_legado():
     assert "LEITURA DE CONJUNTO" not in roda(r, "mapa")
     assert "critério foi atingido: tinta moderna" in roda(r, "estado", "H3", "refutada", "T4")
     # herdado de outro sistema: a contradição sai dos alertas até alguém mexer num dos lados
-    roda(r, "novo", "fato", "Tinta ferrogálica", "--estado", "vigente", "--por", "fonte")             # E11
-    roda(r, "novo", "fato", "Tinta de anilina", "--estado", "vigente", "--por", "fonte")              # E12
+    roda(r, "novo", "fato", "Tinta ferrogálica", "--estado", "vigente", "--por", "fonte", "--local", "folha 1")             # E11
+    roda(r, "novo", "fato", "Tinta de anilina", "--estado", "vigente", "--por", "fonte", "--local", "folha 1")              # E12
     roda(r, "liga", "E11", "contradiz", "E12")
     import sqlite3
     with sqlite3.connect(r / "casos/demo/caso.db") as db:
@@ -259,7 +268,7 @@ def test_integridade_exploratorio_script_controle():
          "--controle", "folha conhecida", "--controle-tipo", "real")                                 # T7
     assert "controle não confirmado" in roda(r, "resultado", "T7", "positivo", "achou")              # positivo também
     roda(r, "resultado", "T7", "negativo", "x", "--sentido", "nenhum: x", ok=False)                  # motivo curto demais
-    roda(r, "novo", "fato", "Prova vazia", "--prova", "", "--por", "fonte")
+    roda(r, "novo", "fato", "Prova vazia", "--prova", "", "--por", "fonte", "--local", "folha 1")
     assert "OK" not in roda(r, "prova", "--executa")                                                # vazio não prova nada
 
 
@@ -268,7 +277,7 @@ def test_extracao_conexao_e_leitura():
     com uma relação que não compartilha palavra (yin-yang ↔ duas metades)."""
     r = caso()
     roda(r, "novo", "frente", "Poema e desenho", "--pai", "O1")                                     # F2
-    velho = roda(r, "novo", "fato", "O poema fala de duas metades que se buscam", "--estado", "vigente", "--por", "fonte").strip()
+    velho = roda(r, "novo", "fato", "O poema fala de duas metades que se buscam", "--estado", "vigente", "--por", "fonte", "--local", "folha 1").strip()
     q = roda(r, "novo", "questao", "O que o poema quer que se junte?", "--pai", "F2").strip()
     assert q.startswith("Q")
     assert "LACUNA: nenhuma hipótese" in roda(r, "questoes")
@@ -349,7 +358,7 @@ def test_aval_sintetico():
     r = caso()
     g = json.loads((AQUI / "aval/relojoeiro.json").read_text(encoding="utf-8"))
     txt = {p["id"]: p["texto"] for p in g["pistas"]}
-    e = {k: roda(r, "novo", "fato", txt[k], "--estado", "vigente", "--origem", "fonte", "--por", "fonte").strip() for k in ("c05", "c14", "c08")}
+    e = {k: roda(r, "novo", "fato", txt[k], "--estado", "vigente", "--origem", "fonte", "--por", "fonte", "--local", "folha 1").strip() for k in ("c05", "c14", "c08")}
     c = roda(r, "conexao", e["c14"], e["c05"], "sustenta", "yin-yang e duas metades: complementaridade").split()[0]
     roda(r, "estado", c, "confirmada", "o símbolo está no rodapé do próprio poema")
     t = roda(r, "conexao", e["c08"], e["c05"], "sobre", "mesma expressão 'duas metades'", "--rival", "coincidência").split()[0]
@@ -368,7 +377,7 @@ def test_ramos_passos_trilha_ficha():
     roda(r, "novo", "ramo", "x", "--pai", "Q4", ok=False)                          # ramo só via `ramo novo`
     roda(r, "ramo", "novo", "J. = John", "--de", "Q4", ok=False)                   # sem --porque
     assert roda(r, "ramo", "novo", "J. = John", "--de", "Q4", "--porque", "o carimbo diz John & Co").startswith("B5")
-    assert roda(r, "novo", "fato", "Carimbo John & Co no verso", "--porque", "li o verso", "--por", "fonte").strip() == "E6"
+    assert roda(r, "novo", "fato", "Carimbo John & Co no verso", "--porque", "li o verso", "--por", "fonte", "--local", "folha 1").strip() == "E6"
     roda(r, "passo", "pensou", "John era sócio, não autor", ok=False)              # passo sem porquê
     roda(r, "passo", "pensou", "John era sócio, não autor", "--porque", "E6 é carimbo comercial")
     # volta ao passo 1 e abre outra direção: o galho herda só o que veio antes
@@ -393,12 +402,18 @@ def test_ramos_passos_trilha_ficha():
     assert "RAMO ATIVO: nenhum" in roda(r, "mapa")
     assert "abriu: nasce de B5 (passo 1)" in roda(r, "ver", "B7")
     assert "B7" in roda(r, "busca", "copista")                                     # o passo é pesquisável
+    roda(r, "estado", "B7", "ativo")                                                        # porquê longo não trava o ramo
+    roda(r, "ramo", "usa", "B7")
+    roda(r, "novo", "frente", "Letra", "--pai", "A3")
+    h = roda(r, "novo", "hipotese", "Jane escreveu", "--pai", "F" + roda(r, "busca", "Letra", "--sem-corpus").split("F")[1].split(" ")[0],
+             "--refuta-se", "letra diferente").strip()
+    assert roda(r, "teste", h, "Letra igual?", "--alcance", "3 cartas", "--porque", "x" * 550).strip().startswith("T")
 
 
 def test_reorganiza_banco_antigo():
     import sqlite3
     r = caso()
-    roda(r, "novo", "fato", "Papel de 1897", "--por", "fonte")                    # E2, fora de ramo
+    roda(r, "novo", "fato", "Papel de 1897", "--por", "fonte", "--local", "folha 1")                    # E2, fora de ramo
     roda(r, "ramo", "novo", "Linha do papel", "--de", "O1", "--porque", "começar")  # B3
     roda(r, "passo", "pensou", "O papel data a carta", "--porque", "marca d'água", "--nos", "E2")
     db = sqlite3.connect(r / "casos" / "demo" / "caso.db")                          # banco de antes do modelo
@@ -418,7 +433,7 @@ def test_releitura_revalidacao_e_retomada():
     """plano.md §7 (releitura por contradição e por hipótese central), §16 (instrumento) e §14 (compactação)."""
     r = caso()
     roda(r, "novo", "frente", "F", "--pai", "O1")
-    roda(r, "novo", "fato", "A", "--por", "fonte"); roda(r, "novo", "fato", "B", "--por", "fonte")   # E3 E4
+    roda(r, "novo", "fato", "A", "--por", "fonte", "--local", "folha 1"); roda(r, "novo", "fato", "B", "--por", "fonte", "--local", "folha 1")   # E3 E4
     roda(r, "novo", "hipotese", "Central", "--pai", "F2", "--prob", "0.5", "--refuta-se", "r")              # H5
     roda(r, "leitura", "quadro", "--sustenta", "E3", "--rival", "H5")
     assert "rever a leitura de conjunto" not in roda(r, "proximo")
