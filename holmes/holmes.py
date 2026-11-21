@@ -60,7 +60,7 @@ MAX_FRENTES, MAX_HIP, MAX_MAPA = 5, 7, 3500
 
 PREFIXO = {"objetivo": "O", "alvo": "A", "frente": "F", "hipotese": "H", "premissa": "R", "teste": "T",
            "fato": "E", "entidade": "N", "decisao": "D", "fio": "P", "fonte": "S", "instrumento": "I",
-           "leitura": "L", "questao": "Q", "conexao": "C"}
+           "leitura": "L", "questao": "Q", "conexao": "C", "ramo": "B"}
 TIPO_DE = {v: k for k, v in PREFIXO.items()}
 ESTADOS = {  # o primeiro é o inicial
     "objetivo": ["aberto", "atingido", "abandonado"],
@@ -78,13 +78,16 @@ ESTADOS = {  # o primeiro é o inicial
     "leitura": ["vigente", "substituida"],
     "questao": ["aberta", "respondida", "reformulada", "estacionada"],
     "conexao": ["sugerida", "confirmada", "rejeitada"],
+    "ramo": ["ativo", "pausado", "morto", "fundido", "concluido"],
 }
 COM_MOTIVO = {"atingido", "abandonado", "resolvido", "bloqueado", "estacionada", "fechada", "descartada",
               "refutada", "verificada", "cancelado", "contestado", "retratado", "fundida", "revogada", "fechado",
-              "estacionado", "obsoleto", "respondida", "reformulada", "confirmada", "rejeitada"}
-CAIDOS = {"refutada", "retratado", "contestado", "descartada", "revogada", "abandonado", "cancelado", "rejeitada"}
+              "estacionado", "obsoleto", "respondida", "reformulada", "confirmada", "rejeitada", "pausado", "morto",
+              "fundido", "concluido"}
+CAIDOS = {"refutada", "retratado", "contestado", "descartada", "revogada", "abandonado", "cancelado", "rejeitada", "morto"}
 VIVOS = {"aberto", "ativa", "viva", "apoiada", "assumida", "verificada", "planejado", "rodando", "feito",
-         "rascunho", "vigente", "bloqueado", "resolvido", "aberta", "respondida", "sugerida", "confirmada"}
+         "rascunho", "vigente", "bloqueado", "resolvido", "aberta", "respondida", "sugerida", "confirmada", "ativo",
+         "pausado"}
 PAIS = {"alvo": {"objetivo", "alvo"}, "frente": {"alvo", "objetivo"}, "hipotese": {"frente"},
         "premissa": {"frente", "alvo", "objetivo"}, "teste": {"hipotese"},
         "questao": {"objetivo", "alvo", "frente", "questao"}}
@@ -93,6 +96,8 @@ NATUREZAS = ["observacao", "medicao", "citacao", "inferencia", "interpretacao", 
 # responde: hipótese → questão que ela tenta responder · rival: explicação concorrente (leitura/hipótese → hipótese)
 ARESTAS = ["sustenta", "enfraquece", "contradiz", "refuta", "depende", "duplica", "substitui", "sobre", "deriva",
            "responde", "rival"]
+# passo: o "commit" de um ramo. Os manuais exigem --porque; registrou/mudou/abriu/bifurcou são automáticos.
+PASSOS_MANUAIS = ["leu", "pensou", "testou", "achou", "corrigiu", "decidiu", "proximo"]
 ACH = {"CC": 2, "C": 1, "N": 0, "I": -1, "II": -2}
 
 ESQUEMA = """
@@ -137,6 +142,11 @@ CREATE TABLE IF NOT EXISTS conexao(no INTEGER PRIMARY KEY REFERENCES no(id), de 
   discriminador TEXT CHECK(length(discriminador) <= 400), canal TEXT);
 CREATE TABLE IF NOT EXISTS evento(id INTEGER PRIMARY KEY, no INTEGER, acao TEXT NOT NULL, texto TEXT, quando TEXT NOT NULL);
 CREATE VIRTUAL TABLE IF NOT EXISTS idx USING fts5(ref UNINDEXED, texto, tokenize='unicode61 remove_diacritics 2');
+CREATE TABLE IF NOT EXISTS ramo(no INTEGER PRIMARY KEY REFERENCES no(id), de_passo INTEGER REFERENCES passo(id));
+CREATE TABLE IF NOT EXISTS passo(id INTEGER PRIMARY KEY, ramo INTEGER NOT NULL REFERENCES no(id), tipo TEXT NOT NULL,
+  texto TEXT NOT NULL CHECK(length(texto) <= 400), porque TEXT CHECK(length(porque) <= 400), nos TEXT,
+  quando TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS passo_ramo ON passo(ramo, id);
 """
 
 
@@ -166,7 +176,7 @@ def conecta(caso=None):
     db.row_factory = sqlite3.Row
     db.executescript(ESQUEMA)
     for tab, col, tipo in (("no", "legado", "INTEGER NOT NULL DEFAULT 0"), ("execucao", "sentido", "TEXT"),
-                           ("teste", "modo", "TEXT")):
+                           ("teste", "modo", "TEXT"), ("no", "ramo", "INTEGER")):
         if col not in {r[1] for r in db.execute(f"PRAGMA table_info({tab})")}:  # banco criado antes da coluna
             db.execute(f"ALTER TABLE {tab} ADD COLUMN {col} {tipo}")
     return db
@@ -207,6 +217,34 @@ def evento(db, no, acao, texto=""):
     db.execute("INSERT INTO evento(no, acao, texto, quando) VALUES (?,?,?,?)", (no, acao, (texto or "")[:300], agora()))
 
 
+def arq_ramo(caso):
+    return RAIZ / ".holmes" / f"ramo-{caso}"
+
+
+def ramo_ativo(db, caso):
+    f = arq_ramo(caso)
+    if not f.exists():
+        return None
+    try:
+        r = um(db, "SELECT * FROM no WHERE id=? AND tipo='ramo'", int(f.read_text().strip()))
+    except ValueError:
+        return None
+    return r if r and r["estado"] == "ativo" else None
+
+
+ATUAL = {"ramo": None}  # ramo ativo desta invocação: cria(), estado e resultado gravam passos nele
+
+
+def passo(db, ramo, tipo, texto, porque=None, nos=()):
+    if porque and len(porque) > 400:
+        raise Erro(f"--porque com {len(porque)} caracteres (máx. 400): o porquê do passo, não o dossiê")
+    pid = db.execute("INSERT INTO passo(ramo, tipo, texto, porque, nos, quando) VALUES (?,?,?,?,?,?)",
+                     (ramo, tipo, texto[:400], porque or None, ",".join(nos) or None, agora())).lastrowid
+    db.execute("UPDATE no SET atualizado=? WHERE id=?", (agora(), ramo))
+    indexa(db, ramo)
+    return pid
+
+
 def indexa(db, no):
     r = um(db, "SELECT * FROM no WHERE id=?", no)
     partes = [r["titulo"], r["resumo"] or ""] + [x["ref"] for x in q(db, "SELECT ref FROM legado WHERE no=?", no)]
@@ -218,6 +256,8 @@ def indexa(db, no):
                 "SELECT relacao, rival, discriminador FROM conexao WHERE no=?"):
         for x in q(db, sql, no):
             partes += [str(v) for v in x if v]
+    if r["tipo"] == "ramo":  # o percurso é pesquisável: "como foi resolvido X?" acha o ramo pelos passos
+        partes += [f"{p['texto']} {p['porque'] or ''}" for p in q(db, "SELECT texto, porque FROM passo WHERE ramo=?", no)]
     db.execute("DELETE FROM idx WHERE ref=?", (str(no),))
     db.execute("INSERT INTO idx(ref, texto) VALUES (?,?)", (str(no), " ".join(partes)))
 
@@ -243,6 +283,8 @@ def cria(db, tipo, titulo, pai=None, resumo=None, origem=None, grau=None, estado
     p = pega(db, pai) if pai else None
     if tipo in PAIS and (not p or p["tipo"] not in PAIS[tipo]):
         raise Erro(f"{tipo} precisa de --pai do tipo {' ou '.join(sorted(PAIS[tipo]))}")
+    if tipo == "ramo" and not p:
+        raise Erro("ramo precisa de --de: o ponto (questão, hipótese, alvo, ramo…) de onde ele nasce")
     if tipo == "objetivo" and um(db, "SELECT 1 FROM no WHERE tipo='objetivo'"):
         raise Erro("o caso já tem objetivo (um só); sub-problemas são alvos")
     if tipo == "frente" and (estado or "ativa") == "ativa" and not forca:
@@ -280,6 +322,12 @@ def cria(db, tipo, titulo, pai=None, resumo=None, origem=None, grau=None, estado
         db.execute("INSERT INTO decisao VALUES (?,?,?)", (no, x.get("proibe"), x.get("permite")))
     elif tipo == "alvo":
         db.execute("INSERT INTO alvo(no) VALUES (?)", (no,))
+    elif tipo == "ramo":
+        db.execute("INSERT INTO ramo VALUES (?,?)", (no, x.get("de_passo")))
+    rm = ATUAL["ramo"]
+    if rm and tipo not in ("ramo", "objetivo", "fonte", "instrumento"):  # todo achado nasce dentro de uma linha
+        db.execute("UPDATE no SET ramo=? WHERE id=?", (rm, no))
+        passo(db, rm, "registrou", f"{PREFIXO[tipo]}{no} {titulo}", x.get("porque"), (f"{PREFIXO[tipo]}{no}",))
     evento(db, no, "criou", f"{tipo}: {titulo}")
     indexa(db, no)
     return no
@@ -561,6 +609,15 @@ def mapa(db, caso, tudo=False):
     else:
         L.append("\nLEITURA ATUAL: nenhuma. Escreva o que o caso parece contar e onde estamos nessa história: "
                  "`holmes.py leitura \"...\"`.")
+    ra = ramo_ativo(db, caso)
+    nr = {e: c for e, c in q(db, "SELECT estado, count(*) FROM no WHERE tipo='ramo' GROUP BY estado")}
+    if ra:
+        ps = passos_de(db, ra["id"])
+        L.append(f"\nRAMO ATIVO {rot(ra)}: {ra['titulo'][:110]}  ({nr.get('ativo', 0)} ativos, {nr.get('pausado', 0)} "
+                 "pausados; `ficha`, `trilha`, `arvore`)")
+        L += [f"  {j}. {p['tipo']}: {p['texto'][:110]}" for j, p in list(enumerate(ps, 1))[-2:]]
+    elif nr:
+        L.append(f"\nRAMO ATIVO: nenhum ({sum(nr.values())} ramos; `arvore` mostra, `ramo usa B..` escolhe)")
     px = proximo(db)
     L.append("PRÓXIMO (`proximo`): " + " | ".join(f"{a} — {p[:90]}" for a, p in px[:lim(2)]))
     alvos = q(db, "SELECT * FROM no WHERE tipo='alvo' ORDER BY id")
@@ -1056,6 +1113,137 @@ def cronologia(db):
                                       "`atributo N.. quando 2019-04-01 --fato E..`")
 
 
+# ---------- ramos: o percurso do raciocínio ----------
+
+def no_id(db, i):
+    return um(db, "SELECT * FROM no WHERE id=?", i)
+
+
+def passos_de(db, ramo):
+    return q(db, "SELECT * FROM passo WHERE ramo=? ORDER BY id", ramo)
+
+
+def linha_passo(p, j, ind):
+    s = f"{ind}{j}. {p['tipo']}: {p['texto']}"
+    return s + (f"\n{ind}   porque: {p['porque']}" if p["porque"] else "")
+
+
+def linha_no(db, n):
+    extra = ""
+    if n["tipo"] == "alvo" and n["estado"] == "resolvido":
+        a = um(db, "SELECT solucao FROM alvo WHERE no=?", n["id"])
+        extra = f" ✓ {(a['solucao'] or '')[:80]}" if a else ""
+    return f"{rot(n)} [{n['estado']}] {n['titulo'][:100]}{extra}"
+
+
+def ancestrais(db, r):
+    """Do tronco até r, inclusive: um galho nunca aparece sem o caminho que leva a ele."""
+    cad, i = [], r["id"]
+    while i:
+        n = no_id(db, i)
+        cad.append(n)
+        i = n["pai"]
+    return cad[::-1]
+
+
+def corte_em(db, ramo, filho):
+    """Passos de `ramo` que o `filho` herdou: até o passo de onde nasceu, ou até a bifurcação que o criou."""
+    ps = passos_de(db, ramo["id"])
+    dp = um(db, "SELECT de_passo FROM ramo WHERE no=?", filho["id"])
+    lim = dp["de_passo"] if dp and dp["de_passo"] else next(
+        (p["id"] for p in ps if p["tipo"] == "bifurcou" and f"B{filho['id']}" in (p["nos"] or "").split(",")), None)
+    return [(j, p) for j, p in enumerate(ps, 1) if lim is None or p["id"] <= lim]
+
+
+def trilha(db, r, curto=False):
+    cad, L = ancestrais(db, r), []
+    for k, n in enumerate(cad):
+        ind = "  " * k
+        L.append(ind + linha_no(db, n))
+        if n["tipo"] != "ramo":
+            continue
+        ps = corte_em(db, n, cad[k + 1]) if k + 1 < len(cad) else list(enumerate(passos_de(db, n["id"]), 1))
+        if curto and len(ps) > 3:
+            L.append(f"{ind}  … {len(ps) - 3} passos antes (`trilha {rot(n)}`)")
+            ps = ps[-3:]
+        L += [linha_passo(p, j, ind + "  ") for j, p in ps]
+    filhos = q(db, "SELECT * FROM no WHERE pai=? AND tipo='ramo' ORDER BY id", r["id"])
+    if filhos:
+        L.append("  " * len(cad) + "galhos daqui: " + "; ".join(f"{rot(g)} [{g['estado']}] {g['titulo'][:60]}" for g in filhos))
+    return "\n".join(L)
+
+
+def arvore(db, caso, raiz=None):
+    ativo = ramo_ativo(db, caso)
+    mostrar = {r["id"] for r in q(db, "SELECT id FROM no WHERE tipo IN ('objetivo','alvo')")}
+    for r in q(db, "SELECT * FROM no WHERE tipo='ramo'"):
+        mostrar |= {n["id"] for n in ancestrais(db, r)}
+    nos = {i: no_id(db, i) for i in mostrar}
+    filhos = {}
+    for n in nos.values():
+        filhos.setdefault(n["pai"] if n["pai"] in nos else None, []).append(n)
+    L = []
+
+    def desce(n, ind):
+        mark = "▶ " if ativo and n["id"] == ativo["id"] else ""
+        txt = ind + mark + linha_no(db, n)
+        if n["tipo"] == "ramo":
+            ps = passos_de(db, n["id"])
+            dp = um(db, "SELECT de_passo FROM ramo WHERE no=?", n["id"])["de_passo"]
+            if dp:
+                pr = um(db, "SELECT ramo FROM passo WHERE id=?", dp)
+                j = [p["id"] for p in passos_de(db, pr["ramo"])].index(dp) + 1
+                txt += f"  (do passo {j})"
+            if ps:
+                txt += f"\n{ind}    {len(ps)} passos; último: {ps[-1]['tipo']}: {ps[-1]['texto'][:70]}"
+        L.append(txt)
+        for c in sorted(filhos.get(n["id"], []), key=lambda x: x["id"]):
+            desce(c, ind + "  ")
+
+    raizes = [pega(db, raiz)] if raiz else sorted(filhos.get(None, []), key=lambda x: x["id"])
+    for n in raizes:
+        desce(n, "")
+    return "\n".join(L) or "árvore vazia"
+
+
+def ficha(db, caso):
+    """Uma página: onde estamos, por que, o que está resolvido, o que caiu e qual é a próxima experiência."""
+    L = [f"# FICHA — {caso}  ({agora()[:16]} UTC)"]
+    for o in q(db, "SELECT * FROM no WHERE tipo='objetivo'"):
+        L.append(f"OBJETIVO {rot(o)}: {o['titulo']}")
+    r = ramo_ativo(db, caso)
+    if r:
+        cad = ancestrais(db, r)
+        L.append(f"\nIMEDIATO {rot(r)}: {r['titulo']}")
+        L.append("  caminho: " + " › ".join(f"{rot(n)} {n['titulo'][:40]}" for n in cad[:-1]))
+        ps = passos_de(db, r["id"])
+        L.append(f"\nÚLTIMOS PASSOS ({len(ps)} no ramo; `trilha` dá todos):")
+        L += [linha_passo(p, j, "  ") for j, p in list(enumerate(ps, 1))[-6:]]
+        prox = next((p for p in reversed(ps) if p["tipo"] == "proximo"), None)
+        L.append("\nPRÓXIMA EXPERIÊNCIA: " + (f"{prox['texto']}" + (f" — porque {prox['porque']}" if prox["porque"] else "")
+                                           if prox else "nenhuma registrada: `passo proximo \"...\" --porque \"...\"`"))
+        linhagem = {n["id"] for n in cad}
+        irmaos = q(db, "SELECT * FROM no WHERE tipo='ramo' AND estado IN ('morto','fundido','concluido') AND pai IN "
+                       f"({','.join('?' * len(linhagem))}) ORDER BY id", *linhagem)
+        if irmaos:
+            L.append("\nJÁ PERCORRIDO AQUI (não refazer sem motivo novo):")
+            for g in irmaos:
+                m = um(db, "SELECT porque FROM passo WHERE ramo=? AND tipo='mudou' ORDER BY id DESC", g["id"])
+                L.append(f"  {rot(g)} [{g['estado']}] {g['titulo'][:70]}" + (f" — {m['porque'][:100]}" if m and m["porque"] else ""))
+    else:
+        L.append("\nRAMO ATIVO: nenhum. `arvore` mostra os ramos; `ramo usa B..` ou `ramo novo \"...\" --de <id> --porque \"...\"`")
+    feitos = q(db, "SELECT n.*, a.solucao FROM no n JOIN alvo a ON a.no=n.id WHERE n.estado='resolvido' ORDER BY n.id")
+    if feitos:
+        L.append("\nRESOLVIDO (tronco):")
+        L += [f"  {rot(a)} {a['titulo'][:70]} — {(a['solucao'] or '')[:80]}" for a in feitos]
+    vivos = q(db, "SELECT * FROM no WHERE tipo='ramo' AND estado IN ('ativo','pausado') ORDER BY id")
+    outros = [g for g in vivos if not r or g["id"] != r["id"]]
+    if outros:
+        L.append(f"\nOUTRAS LINHAS ABERTAS ({len(outros)}):")
+        L += [f"  {rot(g)} [{g['estado']}] {g['titulo'][:90]}" for g in outros[:8]]
+    return "\n".join(L)
+
+
 def nova_conexao(db, de, para, relacao, porque, rival=None, discriminador=None, origem="agente", motivos=(), canal=None):
     if relacao not in ARESTAS:
         raise Erro(f"relação inválida; use: {', '.join(ARESTAS)}")
@@ -1269,7 +1457,7 @@ def main(argv=None):
     s = sub.add_parser("mapa"); s.add_argument("--tudo", action="store_true")
     s = sub.add_parser("novo"); s.add_argument("tipo"); s.add_argument("titulo")
     for k in ("--pai", "--resumo", "--origem", "--grau", "--estado", "--natureza", "--fonte", "--local", "--citacao",
-              "--prova", "--refuta-se", "--classe", "--alias", "--proibe", "--permite"):
+              "--prova", "--refuta-se", "--classe", "--alias", "--proibe", "--permite", "--porque"):
         s.add_argument(k)
     s.add_argument("--prob", type=float)
     s = sub.add_parser("edita"); s.add_argument("id"); s.add_argument("--titulo"); s.add_argument("--resumo")
@@ -1309,6 +1497,14 @@ def main(argv=None):
     s = sub.add_parser("confere"); s.add_argument("fato"); s.add_argument("nota")
     s = sub.add_parser("atributo"); s.add_argument("entidade"); s.add_argument("chave"); s.add_argument("valor")
     s.add_argument("--fato")
+    s = sub.add_parser("ramo"); s.add_argument("acao", nargs="?", choices=["novo", "usa", "solta"])
+    s.add_argument("texto", nargs="?"); s.add_argument("--de"); s.add_argument("--passo", type=int)
+    s.add_argument("--porque"); s.add_argument("--resumo"); s.add_argument("--nao-usa", action="store_true")
+    s = sub.add_parser("passo"); s.add_argument("tipo", choices=PASSOS_MANUAIS); s.add_argument("texto")
+    s.add_argument("--porque"); s.add_argument("--nos"); s.add_argument("--ramo")
+    s = sub.add_parser("arvore"); s.add_argument("id", nargs="?")
+    s = sub.add_parser("trilha"); s.add_argument("id", nargs="?")
+    sub.add_parser("ficha")
     s = sub.add_parser("instrumento"); s.add_argument("caminho"); s.add_argument("nome", nargs="?")
     s.add_argument("--verificador")
     a = ap.parse_args(argv)
@@ -1341,14 +1537,19 @@ def main(argv=None):
 
     caso = caso_ativo()
     with conecta(caso) as db:
+        ra = ramo_ativo(db, caso)
+        ATUAL["ramo"] = ra["id"] if ra else None
         if a.cmd == "mapa":
             txt = mapa(db, caso, a.tudo)
             (CASOS / caso / "MAPA.md").write_text(txt + "\n", encoding="utf-8")  # visão gerada; nunca editar
             print(txt)
         elif a.cmd == "novo":
+            if a.tipo == "ramo":
+                raise Erro("ramo se abre com `ramo novo \"<pergunta>\" --de <id> --porque \"<por que esta linha>\"`")
             no = cria(db, a.tipo, a.titulo, a.pai, a.resumo, a.origem, a.grau, a.estado, natureza=a.natureza,
                       fonte=a.fonte, local=a.local, citacao=a.citacao, prova=a.prova, prob=a.prob,
-                      refuta_se=a.refuta_se, classe=a.classe, alias=a.alias, proibe=a.proibe, permite=a.permite)
+                      refuta_se=a.refuta_se, classe=a.classe, alias=a.alias, proibe=a.proibe, permite=a.permite,
+                      porque=a.porque)
             print(f"{PREFIXO[a.tipo]}{no}")
             if a.tipo == "hipotese" and not a.refuta_se:
                 print("dica: --refuta-se \"<o que a derrubaria>\" deixa a hipótese testável")
@@ -1426,6 +1627,12 @@ def main(argv=None):
                 db.execute("UPDATE alvo SET solucao=?, prova=? WHERE no=?", (a.solucao, a.prova, r["id"]))
             db.execute("UPDATE no SET estado=? WHERE id=?", (a.estado, r["id"]))
             toca(db, r["id"], f"{r['estado']}→{a.estado}", a.motivo)
+            onde = r["id"] if r["tipo"] == "ramo" else ATUAL["ramo"]
+            if onde:  # correção de rumo fica no percurso, com o porquê
+                passo(db, onde, "mudou", f"{rot(r)} {r['estado']} → {a.estado}", a.motivo.strip() or None, (rot(r),))
+            if r["tipo"] == "ramo" and a.estado != "ativo" and ATUAL["ramo"] == r["id"]:
+                arq_ramo(caso).unlink(missing_ok=True)
+                print("ramo ativo solto: `arvore` mostra os outros; `ramo usa B..` escolhe")
             print(f"{rot(r)}: {r['estado']} → {a.estado}")
             dep = dependentes(db, r["id"])
             if a.estado in CAIDOS and dep:
@@ -1483,7 +1690,7 @@ def main(argv=None):
                            f"para repetir após consertar o instrumento use `roda T{igual['no']}`; --forca cria outro)")
             parecidos = busca(db, a.titulo + " " + a.alcance, 3, so_testes=True)
             inst = pega(db, a.instrumento, "instrumento") if a.instrumento else None
-            no = cria(db, "teste", a.titulo, h["id"], a.resumo, "agente")
+            no = cria(db, "teste", a.titulo, h["id"], a.resumo, "agente", porque=a.porque)
             db.execute("INSERT INTO teste(no, alcance, fora, porque, previsao, previsao_em, controle, controle_tipo, "
                        "instrumento, script, receita, modo) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                        (no, a.alcance, a.fora, a.porque, a.previsao, agora() if a.previsao else None, a.controle,
@@ -1531,6 +1738,9 @@ def main(argv=None):
             aberta = um(db, "SELECT 1 FROM execucao WHERE teste=? AND resultado IS NULL", t["id"])
             db.execute("UPDATE no SET estado=? WHERE id=?", ("rodando" if aberta else "feito", t["id"]))
             toca(db, t["id"], f"X{x['id']} {a.resultado}", a.nota)
+            if ATUAL["ramo"]:
+                passo(db, ATUAL["ramo"], "testou", f"{rot(t)} X{x['id']} → {a.resultado}: {t['titulo']}",
+                      (a.sentido or a.nota or "")[:400] or None, (rot(t),))
             v = validade(db, t["id"])
             print(f"{rot(t)} X{x['id']} → {a.resultado}" + (f" ⚠ {v}" if v else ""))
             print("Diga ao usuário em uma linha o que isto muda no plano (ACHADO / NEGATIVO no alcance / CONTROLE / "
@@ -1552,7 +1762,59 @@ def main(argv=None):
             print("\n".join(r) if r else "nada registrado com esses termos. Tente sinônimos e `corpus.py busca --modo "
                                          "literal` antes de concluir que é novo: ausência na busca não prova ausência.")
         elif a.cmd == "ver":
-            print(ver(db, pega(db, a.id)))
+            r = pega(db, a.id)
+            print(ver(db, r) + ("\n" + trilha(db, r, curto=True) if r["tipo"] == "ramo" else ""))
+        elif a.cmd == "ramo":
+            if a.acao == "novo":
+                if not a.texto or not a.de or not (a.porque or "").strip():
+                    raise Erro('uso: ramo novo "<pergunta da linha>" --de <id de onde nasce> --porque "<por que abrir>"'
+                               " [--passo N, se nasce de um passo de outro ramo]")
+                origem, dp = pega(db, a.de), None
+                if a.passo is not None:
+                    if origem["tipo"] != "ramo":
+                        raise Erro("--passo só vale com --de B..")
+                    ps = passos_de(db, origem["id"])
+                    if not 1 <= a.passo <= len(ps):
+                        raise Erro(f"{rot(origem)} tem {len(ps)} passos")
+                    dp = ps[a.passo - 1]["id"]
+                ATUAL["ramo"] = None  # abrir um ramo não é passo do ramo que estava ativo
+                no = cria(db, "ramo", a.texto, origem["id"], a.resumo, de_passo=dp)
+                passo(db, no, "abriu", f"nasce de {rot(origem)}" + (f" (passo {a.passo})" if dp else "")
+                      + f": {origem['titulo'][:200]}", a.porque.strip())
+                if origem["tipo"] == "ramo":
+                    passo(db, origem["id"], "bifurcou", f"→ B{no} {a.texto}", a.porque.strip(), (f"B{no}",))
+                if not a.nao_usa:
+                    arq_ramo(caso).parent.mkdir(exist_ok=True)
+                    arq_ramo(caso).write_text(str(no))
+                print(f"B{no}" + ("" if a.nao_usa else " (ativo)"))
+            elif a.acao == "usa":
+                r = pega(db, a.texto or "", "ramo")
+                if r["estado"] != "ativo":
+                    raise Erro(f"{rot(r)} está {r['estado']}: `estado {rot(r)} ativo` antes de usar")
+                arq_ramo(caso).parent.mkdir(exist_ok=True)
+                arq_ramo(caso).write_text(str(r["id"]))
+                print(f"ramo ativo: {rot(r)}\n" + trilha(db, r, curto=True))
+            elif a.acao == "solta":
+                arq_ramo(caso).unlink(missing_ok=True)
+                print("nenhum ramo ativo")
+            else:
+                print(trilha(db, ra, curto=True) if ra else "nenhum ramo ativo (`arvore`, `ramo usa B..`)")
+        elif a.cmd == "passo":
+            r = pega(db, a.ramo, "ramo") if a.ramo else ra
+            if not r:
+                raise Erro("nenhum ramo ativo: `ramo usa B..` ou --ramo B..")
+            if not (a.porque or "").strip():
+                raise Erro("passo sem --porque não reconstrói o raciocínio: diga o que levou a ele")
+            nos = tuple(rot(pega(db, x.strip())) for x in (a.nos or "").split(",") if x.strip())
+            passo(db, r["id"], a.tipo, a.texto, a.porque.strip(), nos)
+            print(f"{rot(r)} passo {len(passos_de(db, r['id']))}")
+        elif a.cmd == "arvore":
+            print(arvore(db, caso, a.id))
+        elif a.cmd == "trilha":
+            r = pega(db, a.id, "ramo") if a.id else ra
+            print(trilha(db, r) if r else "nenhum ramo ativo: `trilha B..`")
+        elif a.cmd == "ficha":
+            print(ficha(db, caso))
         elif a.cmd == "saude":
             print(saude(db))
         elif a.cmd == "cadeia":

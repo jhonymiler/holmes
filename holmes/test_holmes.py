@@ -345,6 +345,42 @@ def test_aval_sintetico():
     assert p["armadilhas_rejeitadas_explicitamente"] == 1 and p["pistas_registradas"] == "3/30"
 
 
+def test_ramos_passos_trilha_ficha():
+    r = caso()
+    roda(r, "novo", "alvo", "Datar o papel", "--pai", "O1")                       # A2
+    roda(r, "estado", "A2", "resolvido", "marca d'água", "--solucao", "papel de 1897")
+    roda(r, "novo", "alvo", "Achar o autor", "--pai", "O1")                       # A3
+    roda(r, "novo", "questao", "Quem assina 'J.'?", "--pai", "A3")                 # Q4
+    roda(r, "novo", "ramo", "x", "--pai", "Q4", ok=False)                          # ramo só via `ramo novo`
+    roda(r, "ramo", "novo", "J. = John", "--de", "Q4", ok=False)                   # sem --porque
+    assert roda(r, "ramo", "novo", "J. = John", "--de", "Q4", "--porque", "o carimbo diz John & Co").startswith("B5")
+    assert roda(r, "novo", "fato", "Carimbo John & Co no verso", "--porque", "li o verso").strip() == "E6"
+    roda(r, "passo", "pensou", "John era sócio, não autor", ok=False)              # passo sem porquê
+    roda(r, "passo", "pensou", "John era sócio, não autor", "--porque", "E6 é carimbo comercial")
+    # volta ao passo 1 e abre outra direção: o galho herda só o que veio antes
+    assert roda(r, "ramo", "novo", "J. = Jane", "--de", "B5", "--passo", "1", "--porque",
+                "a letra é a mesma das cartas de Jane").startswith("B7")
+    roda(r, "estado", "B5", "morto", ok=False)                                     # morrer exige motivo
+    roda(r, "estado", "B5", "morto", "E6: John era só a firma")
+    t = roda(r, "trilha", "B7")
+    assert "Q4" in t and "1. abriu" in t and "porque: o carimbo diz John" in t
+    assert "John era sócio" not in t                                               # passo 3 de B5 é posterior ao corte
+    assert "a letra é a mesma" in t
+    t5 = roda(r, "trilha", "B5")
+    assert "registrou: E6" in t5 and "bifurcou: → B7" in t5 and "mudou: B5 ativo → morto" in t5
+    a = roda(r, "arvore")
+    assert "▶ B7 [ativo]" in a and "B5 [morto]" in a and "(do passo 1)" in a and "A2 [resolvido] Datar o papel ✓" in a
+    roda(r, "passo", "proximo", "comparar a letra com 3 cartas de Jane", "--porque", "discrimina Jane de um copista")
+    fi = roda(r, "ficha")
+    assert "IMEDIATO B7" in fi and "PRÓXIMA EXPERIÊNCIA: comparar a letra" in fi
+    assert "JÁ PERCORRIDO" in fi and "B5 [morto]" in fi and "John era só a firma" in fi and "papel de 1897" in fi
+    assert "RAMO ATIVO B7" in roda(r, "mapa")
+    roda(r, "estado", "B7", "pausado", "esperando as cartas")
+    assert "RAMO ATIVO: nenhum" in roda(r, "mapa")
+    assert "abriu: nasce de B5 (passo 1)" in roda(r, "ver", "B7")
+    assert "B7" in roda(r, "busca", "copista")                                     # o passo é pesquisável
+
+
 def test_releitura_revalidacao_e_retomada():
     """plano.md §7 (releitura por contradição e por hipótese central), §16 (instrumento) e §14 (compactação)."""
     r = caso()

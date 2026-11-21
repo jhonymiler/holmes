@@ -151,6 +151,7 @@ Modelo de dados completo, com diagramas: [MODELO.md](MODELO.md).
 | Para | Comando |
 |---|---|
 | caso | `init <caso> "<objetivo>"` · `usa <caso>` · `casos` |
+| percurso | `ficha` (uma página) · `arvore [id]` · `trilha [B..]` · `ramo novo "<pergunta>" --de <id> [--passo N] --porque ".."` · `ramo usa B..` · `passo <leu\|pensou\|testou\|achou\|corrigiu\|decidiu\|proximo> ".." --porque ".."` |
 | orientar-se | `mapa [--tudo]` · `proximo` · `ver <id>` · `cadeia <id>` · `questoes` · `cronologia` · `busca "<txt>"` · `ja "<txt>"` (já testado?) · `saude` |
 | ler o todo | `leitura "<quadro>" [--sustenta E,..] [--enfraquece] [--rival H,..] [--questao Q] [--lacuna Q,..] [--motivo]` · `leitura` (mostra a atual) |
 | criar | `novo <tipo> "<título>" --pai ..` (tipos: alvo, frente, questao, hipotese, premissa, fato, entidade, decisao, fio) |
@@ -210,10 +211,10 @@ O mod `.claude/skills/holmes/` é opcional e só poda saídas longas do Bash; el
 
 ## Verificado
 
-- ✅ `holmes/test_holmes.py`: 11 testes. Cobrem árvore e limites, execuções e validade (controle visto,
+- ✅ `holmes/test_holmes.py`: 12 testes. Cobrem árvore e limites, execuções e validade (controle visto,
   script versionado, exploratório), túnel, instrumento versionado, corpus nos quatro modos, citação,
   aliases, dependências transitivas, contradições, ACH, hooks, leitura ligada à base, `--sentido`, legado
-  fora dos alertas, o percurso extração → conexão candidata → aresta → leitura, e o caso sintético.
+  fora dos alertas, o percurso extração → conexão candidata → aresta → leitura, ramos com fork de um passo, trilha, árvore e ficha, e o caso sintético.
 - ✅ `holmes/aval/aval.py recuperacao`: descoberta de relações medida contra gabarito (números e limites em
   `holmes/aval/README.md`).
 - ✅ Hook Stop num transcript de 80 MB: 4,6 s → 0,25 s lendo só a cauda, com diário idêntico.

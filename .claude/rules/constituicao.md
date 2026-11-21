@@ -64,6 +64,17 @@ Regras que valem em toda sessão, em qualquer caso. Curtas de propósito: o porq
 19. Processos longos: `run_in_background` ou `setsid` com log em `casos/<caso>/saidas/`, `roda <T> --pid --log`,
     progresso impresso. Confira com `jobs`. Nunca `pkill -f`. Antes de prometer tempo, meça a taxa real.
 
+## Percurso (ramos)
+23. Toda linha de investigação é um ramo, aberto de um ponto com `--porque`. Ao retomar, leia `ficha` (e
+    `trilha` se precisar) antes de agir: o que você faz é passo do ramo ativo, e o porquê vai junto.
+24. Interpretações concorrentes da mesma pista são ramos irmãos sob a mesma questão, nunca uma fila em que a
+    mais nova "corrige" a anterior. Um ramo só mata ou substitui outro se mostrar algo que o outro não explica;
+    explicar mais coincidências não basta.
+25. Correção de rumo não reescreve: vira passo (`corrigiu`, `mudou`) com o porquê, ou ramo novo
+    `--de B.. --passo N`. O que morreu fica na árvore, com o motivo.
+26. Negativo numa forma não mata o ramo da interpretação: ele morre quando o seu critério cai (regra 7);
+    senão, pausa com o alcance testado escrito no passo.
+
 ## Comunicação
 20. Comece cada resposta com uma linha de veredito em linguagem simples: ACHADO, NEGATIVO (no alcance X),
     CONTROLE, INSTRUMENTO ou SEM MUDANÇA, o que isso muda no plano e o que significa. Detalhe técnico depois.

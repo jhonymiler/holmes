@@ -66,6 +66,30 @@ fora dos alertas do mapa até ser mexido.
 |---|---|
 | sustenta · enfraquece · contradiz · refuta · depende · duplica · substitui · sobre · deriva · responde · rival | matriz fato × hipótese com CC / C / N / I / II |
 
+### Ramos e passos: o percurso do raciocínio
+
+A árvore acima diz **o que** se investiga. O **ramo B** guarda **como se chegou** a cada coisa: uma linha de
+raciocínio que nasce de um ponto (questão, hipótese, alvo ou um passo de outro ramo) com o porquê de existir,
+e acumula **passos** em ordem, como commits. Passo não se edita: correção de rumo é passo novo (`corrigiu`,
+`mudou`) ou ramo novo nascido de um passo anterior (`ramo novo .. --de B.. --passo N`), como um fork.
+
+```mermaid
+flowchart LR
+    Q["Questão Q"] --> B1["Ramo B1<br/>1 abriu · 2 registrou E · 3 testou T"]
+    B1 -- "fork do passo 2" --> B2["Ramo B2 ▶ ativo<br/>1 abriu · 2 pensou · 3 proximo"]
+    Q --> B3["Ramo B3 [morto]<br/>motivo no passo mudou"]
+```
+
+| Peça | O que guarda |
+|---|---|
+| `ramo` (nó B, `pai` = ponto de origem) | pergunta da linha · estado ativo/pausado/morto/fundido/concluido · `de_passo` quando nasce de um passo |
+| `passo` (tabela) | ramo · tipo · texto · **porquê** · nós gerados · quando. Manuais: leu, pensou, testou, achou, corrigiu, decidiu, proximo (exigem `--porque`). Automáticos: abriu, bifurcou, registrou, mudou, testou |
+| ramo ativo (`.holmes/ramo-<caso>`) | todo `novo`, `teste`, `resultado` e `estado` vira passo dele, e o nó criado leva `no.ramo` |
+
+Consultas: `arvore [id]` (tronco + todos os ramos, nunca um galho sem o caminho até ele), `trilha [B..]` (da raiz ao
+ramo, com cada passo e porquê; dos ancestrais, só os passos até o ponto do fork), `ficha` (uma página: imediato,
+últimos passos, próxima experiência, o que já foi percorrido ali, o que está resolvido, outras linhas abertas).
+
 ### Ontologia: cada conceito da investigação e onde ele mora
 
 O modelo conceitual é rico; o armazenamento, econômico. Só **questão** e **conexão candidata** ganharam tipo
@@ -182,6 +206,7 @@ numa transação (um erro desfaz o lote). `--so`/`--rejeita` escolhem itens. Tex
 | leitura | vigente, substituida | — (a nova substitui a anterior e exige `--motivo`) |
 | questão | aberta, respondida, reformulada, estacionada | respondida, reformulada, estacionada |
 | conexão | sugerida, confirmada, rejeitada | confirmada (cria a aresta), rejeitada |
+| ramo | ativo, pausado, morto, fundido, concluido | todas menos ativo (o motivo vira o porquê do passo `mudou`) |
 
 Os três ciclos que mais pesam no raciocínio:
 

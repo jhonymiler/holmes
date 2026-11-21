@@ -155,6 +155,7 @@ Full data model, with diagrams: [MODELO.md](MODELO.md).
 | For | Command |
 |---|---|
 | case | `init <case> "<objective>"` · `usa <case>` (switch) · `casos` (list) |
+| path | `ficha` (one page) · `arvore [id]` · `trilha [B..]` · `ramo novo "<question>" --de <id> [--passo N] --porque ".."` · `ramo usa B..` · `passo <leu\|pensou\|testou\|achou\|corrigiu\|decidiu\|proximo> ".." --porque ".."` |
 | orientation | `mapa [--tudo]` · `proximo` (what next, and why) · `ver <id>` · `cadeia <id>` (what it rests on) · `questoes` · `cronologia` · `busca "<txt>"` · `ja "<txt>"` (already tested?) · `saude` (health) |
 | overall reading | `leitura "<picture>" [--sustenta E,..] [--enfraquece] [--rival H,..] [--questao Q] [--lacuna Q,..] [--motivo]` · `leitura` (show current) |
 | create | `novo <type> "<title>" --pai ..` (types: alvo, frente, questao, hipotese, premissa, fato, entidade, decisao, fio) |
@@ -214,11 +215,11 @@ The mod `.claude/skills/holmes/` is optional and only trims long Bash output; it
 
 ## Verified
 
-- ✅ `holmes/test_holmes.py`: 11 tests. They cover the tree and limits, runs and validity (control seen,
+- ✅ `holmes/test_holmes.py`: 12 tests. They cover the tree and limits, runs and validity (control seen,
   versioned script, exploratory), tunnel, versioned instrument, corpus in all four modes, citation, aliases,
   transitive dependencies, contradictions, ACH (analysis of competing hypotheses), hooks, reading tied to
   its basis, `--sentido`, legacy items kept out of alerts, the path extraction → candidate connection →
-  edge → reading, and the synthetic case.
+  edge → reading, branches forked from a step, path, tree and one-page sheet, and the synthetic case.
 - ✅ `holmes/aval/aval.py recuperacao`: relation discovery measured against an answer key (numbers and
   limits in `holmes/aval/README.md`).
 - ✅ Stop hook on an 80 MB transcript: 4.6 s → 0.25 s by reading only the tail, with an identical journal.
