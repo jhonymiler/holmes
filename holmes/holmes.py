@@ -1283,8 +1283,11 @@ def reorganiza(db, aplica=False):
     """Traz um banco antigo ao modelo: fato é só constatação provada (o resto vira pista, mesmo id e arestas) e
     todo nó citado num passo pertence ao ramo desse passo. Sem `aplica`, só mostra o plano."""
     L = []
-    rs = q(db, "SELECT n.*, f.natureza, f.conferido FROM no n JOIN fato f ON f.no=n.id WHERE n.tipo='fato'")
-    vira = [r for r in rs if r["natureza"] not in NATUREZAS_FATO or not r["conferido"]]
+    rs = q(db, "SELECT n.*, f.natureza, f.conferido, f.citacao, f.fonte FROM no n JOIN fato f ON f.no=n.id "
+               "WHERE n.tipo='fato'")
+    # citação com o texto literal gravado e a fonte ligada carrega a própria prova
+    literal = {r["id"] for r in rs if r["natureza"] == "citacao" and (r["citacao"] or "").strip() and r["fonte"]}
+    vira = [r for r in rs if r["id"] not in literal and (r["natureza"] not in NATUREZAS_FATO or not r["conferido"])]
     por_nat = {}
     for r in vira:
         por_nat[r["natureza"] or "?"] = por_nat.get(r["natureza"] or "?", 0) + 1
@@ -1307,6 +1310,9 @@ def reorganiza(db, aplica=False):
             indexa(db, r["id"])
         db.execute("UPDATE fato SET conferido_por='fonte' WHERE conferido IS NOT NULL AND conferido_por IS NULL AND "
                    "no IN (SELECT id FROM no WHERE tipo='fato')")  # o confere antigo era "conferido na fonte"
+        for i in literal:
+            db.execute("UPDATE fato SET conferido=coalesce(conferido, ?), conferido_por=coalesce(conferido_por, 'fonte') "
+                       "WHERE no=?", (agora(), i))
         for i in sem:
             db.execute("UPDATE no SET ramo=? WHERE id=?", (ref[i], i))
             evento(db, i, "religado", f"ramo B{ref[i]}")
