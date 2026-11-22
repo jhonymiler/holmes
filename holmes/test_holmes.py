@@ -206,6 +206,10 @@ def test_reading_meaning_and_legacy():
     assert "supersedes L5" in run(r, "reading", "New reading: a late forgery.", "--reason", "4 inconclusive forms")
     assert "OVERALL READING" not in run(r, "map")
     assert "criterion was met: modern aniline ink" in run(r, "state", "H3", "refuted", "T4")
+    assert "OVERALL READING requested by event" in run(r, "map")                   # the refutation asks for a review
+    assert "needs the reason" in run(r, "reading", "--keep", "no", ok=False)
+    assert "kept" in run(r, "reading", "--keep", "H3 was already outside the current reading")
+    assert "OVERALL READING" not in run(r, "map")                                  # answered: it stops repeating
     # inherited from another system: the contradiction leaves the alerts until someone touches one side
     run(r, "new", "fact", "Iron-gall ink", "--state", "current", "--by", "source", "--location", "sheet 1")    # E11
     run(r, "new", "fact", "Aniline ink", "--state", "current", "--by", "source", "--location", "sheet 1")      # E12
@@ -216,6 +220,31 @@ def test_reading_meaning_and_legacy():
     assert "open contradiction" not in m and "inherited, outside the alerts: 1 contradictions" in m
     run(r, "edit", "E11", "--summary", "checked again")
     assert "open contradiction: E11 × E12" in run(r, "map")
+
+
+def test_search_literal_dossier_and_legacy_ids():
+    r = case()
+    run(r, "new", "front", "Zeros", "--parent", "O1")                                                 # F2
+    run(r, "new", "hypothesis", "Zeroed cells hide the key", "--parent", "F2", "--refuted-if", "no key")  # H3
+    run(r, "test", "H3", "Zero the prime cells", "--scope", "prime cells #8000", "--why", "p",
+        "--outside", "zero=o mapping")                                                              # T4
+    run(r, "result", "T4", "negative", "0 hits")
+    run(r, "new", "clue", "The author wrote #8000 about the hardest part", "--nature", "quote")      # K5
+    run(r, "link", "K5", "supports", "H3")
+    run(r, "new", "fact", "Unrelated: the paper is from 1897", "--by", "source", "--location", "sheet 1")  # E6
+    out = run(r, "search", "zeros", "--no-corpus")                    # stem: zeros finds zeroed and zero
+    assert "H3" in out and "T4" in out and "of " in out and "case items" in out
+    lit = run(r, "search", "#8000", "--literal", "--no-corpus")
+    assert "K5" in lit and "T4" in lit and "E6" not in lit
+    assert "explicitly left this out" in run(r, "tried", "zero=o")    # the OUTSIDE field answers "never tried?"
+    d = run(r, "dossier", "hardest part")                             # seed K5 → supports H3 → its test T4
+    assert "* " in d and "K5" in d and "H3" in d and "refuted if: no key" in d and "LINKS" in d
+    assert "T4" in run(r, "dossier", "hardest part", "--hops", "2") and "E6" not in d
+    with sqlite3.connect(r / "cases/demo/case.db") as db:
+        db.execute("INSERT INTO legacy(ref, node) VALUES ('v1:A4', 5)")
+    msg = run(r, "show", "A4", ok=False)                              # node 4 is T4; A4 is an old id of K5
+    assert "not an id of this case" in msg and "v1:A4 → K5" in msg
+    assert run(r, "show", "v1:A4").startswith("K5")
 
 
 def test_corpus_modes():

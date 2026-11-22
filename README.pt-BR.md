@@ -182,7 +182,7 @@ Opcionais: `numpy` acelera a busca vetorial; `pdftotext` indexa PDF.
 |---|---|---|
 | Guarda | objetivo, alvos, frentes, questões, hipóteses, premissas, testes, execuções, fatos, pistas, entidades, decisões, fios, fontes, instrumentos, leituras, conexões candidatas, ramos e passos | chats, documentos, livros e páginas em pedaços, com o texto cru |
 | Tamanho | pequeno: título ≤ 160, resumo ≤ 800 | grande; nunca injetado |
-| Consulta | `map`, `show`, `search`, `tried`, `ach`, `health` | `corpus.py search` (bm25, literal, vector, hybrid), `window`, `show` |
+| Consulta | `map`, `show`, `search`, `tried`, `dossier`, `ach`, `health` | `corpus.py search` (bm25, literal, vector, hybrid), `window`, `show` |
 | Ligação | `source` registra o arquivo e o indexa no corpus; `quote <pedaço>` copia o trecho literal para um fato | — |
 
 Modelo de dados completo, com diagramas: [MODEL.md](MODEL.md). Um caso fictício do começo ao fim, com fluxogramas
@@ -197,8 +197,8 @@ e as saídas reais de cada comando: [EXAMPLE.md](EXAMPLE.md).
 |---|---|
 | caso | `init <caso> "<objetivo>"` · `use <caso>` (trocar) · `cases` (listar) |
 | percurso | `sheet` (uma página) · `tree [id]` · `trail [B..]` · `branch new "<pergunta>" --from <id> [--step N] --why ".." [--no-use]` · `branch use B..` · `branch release` · `step <read\|thought\|tested\|found\|corrected\|decided\|next> ".." --why ".."` |
-| orientar-se | `map [--all]` · `next` (o que fazer e por quê) · `show <id>` · `chain <id>` (no que se apoia) · `questions` · `timeline` · `search "<txt>"` · `tried "<txt>"` (já testado?) · `health` |
-| ler o todo | `reading "<quadro>" [--supports E,..] [--weakens ..] [--rival H,..] [--question Q] [--gap Q,..] [--reason ".."]` · `reading` (mostra a atual) |
+| orientar-se | `map [--all]` · `next` (o que fazer e por quê) · `show <id>` · `chain <id>` (no que se apoia) · `questions` · `timeline` · `search "<txt>" [--literal]` · `tried "<txt>" [--literal]` (já testado? também avisa termos listados como OUTSIDE) · `dossier "<termos>" [--hops 2]` (o encadeamento de um tema: itens achados pelo conteúdo, suas ligações e os passos que os citam) · `health` |
+| ler o todo | `reading "<quadro>" [--supports E,..] [--weakens ..] [--rival H,..] [--question Q] [--gap Q,..] [--reason ".."]` · `reading --keep "<por quê>"` (os eventos não mudam a leitura: responde ao pedido) · `reading` (mostra a atual) |
 | criar | `new <tipo> "<título>" --parent ..` (tipos: target, front, question, hypothesis, premise, fact (exige `--by`), clue, entity, decision, thread) |
 | extrair | `extract <contrato.json> [--apply] [--only ..] [--reject ..]` (observação, pista, interpretação, questão, hipótese, conexão; contrato em MODEL.md) |
 | relacionar | `connections <id\|"texto">` (candidatas; consulta) · `connection <de> <para> <relação> "<por quê>" [--rival ..] [--discriminator ..]` · `state C.. confirmed\|rejected "<motivo>"` |

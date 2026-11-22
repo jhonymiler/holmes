@@ -8,9 +8,11 @@ The plan is the `map` query; raw material lives in the corpus (holmes/corpus.py)
 
   case       init <case> "<objective>" · use <case> · cases
   plan       map [--all] · next · show <id> · chain <id> · questions · timeline · health
-             search "<txt>" [--no-corpus] · tried "<txt>"
+             search "<txt>" [--literal] [--no-corpus] · tried "<txt>" [--literal]
+             dossier "<terms>" [--hops 1] [--literal]   (the chain around a theme: seeds by content + links + steps)
   reading    reading "<the picture>" [--supports E,..] [--weakens E,..] [--rival H,..] [--question Q]
                      [--gap Q,..] [--reason "<why it changed>"]          (no text: shows the current one)
+             reading --keep "<why the events do not change it>"          (answers the OVERALL READING request)
   relations  connections <id|"text"> [-n 8]   (candidates by query; nothing is stored)
              connection <from> <to> <relation> "<why>" [--rival] [--discriminator] [--reasons E,..]
              state C.. confirmed|rejected "<reason>"   (confirmed becomes a graph edge)
@@ -41,6 +43,7 @@ HOLMES_READING (default 6: results without an overall reading before the map ask
 """
 import argparse
 import hashlib
+import math
 import os
 import re
 import socket
@@ -228,9 +231,15 @@ def get_node(db, ref, typ=None):
     if not m:
         raise Error(f"invalid id: {ref!r} (use H12, T30…)")
     r = one(db, "SELECT * FROM node WHERE id=?", int(m[2]))
+    wrong = m[1] and r and PREFIX[r["type"]] != m[1] and {m[1], PREFIX[r["type"]]} != {"E", "K"}
+    if m[1] and (not r or wrong):  # an id from another system cited bare ("A958" from v1) is never read as node 958
+        old = q(db, "SELECT l.ref, n.* FROM legacy l JOIN node n ON n.id=l.node WHERE l.ref LIKE ?", f"%:{ref.strip()}")
+        if old:
+            raise Error(f"{ref} is not an id of this case" + (f" (node {r['id']} is {label(r)})" if r else "") + "; legacy id "
+                        + ", ".join(f"{o['ref']} → {label(o)} {o['title'][:60]}" for o in old))
     if not r:
         raise Error(f"{ref} does not exist")
-    if m[1] and PREFIX[r["type"]] != m[1] and {m[1], PREFIX[r["type"]]} != {"E", "K"}:
+    if wrong:
         raise Error(f"{ref}: node {r['id']} is {an(r['type'])} ({label(r)}), not {an(TYPE_OF.get(m[1], m[1]))}")
     if typ and r["type"] not in ({typ} if isinstance(typ, str) else typ):
         raise Error(f"{ref} is {an(r['type'])}, expected {typ if isinstance(typ, str) else ' or '.join(typ)}")
@@ -250,10 +259,8 @@ def branch_file(case):
 
 
 def active_branch(db, case):
-    for f in (branch_file(case), STATE_DIR / f"ramo-{case}"):
-        if f.exists():
-            break
-    else:
+    f = branch_file(case)
+    if not f.exists():
         return None
     try:
         r = one(db, "SELECT * FROM node WHERE id=? AND type='branch'", int(f.read_text().strip()))
@@ -264,7 +271,6 @@ def active_branch(db, case):
 
 def set_branch(case, node):
     STATE_DIR.mkdir(exist_ok=True)
-    (STATE_DIR / f"ramo-{case}").unlink(missing_ok=True)
     if node is None:
         branch_file(case).unlink(missing_ok=True)
     else:
@@ -502,11 +508,19 @@ def reading_basis(db, lt):
     return " · ".join(parts)
 
 
+def reading_mark(db, l):
+    """(event id, time) of the last time the current reading was written or reviewed and kept (`reading --keep`)."""
+    if not l:
+        return 0, ""
+    e = one(db, "SELECT id, at FROM event WHERE node=? AND action IN ('created','kept') ORDER BY id DESC LIMIT 1", l["id"])
+    return (e["id"], e["at"]) if e else (0, l["created"])
+
+
 def results_since_reading(db):
-    """Results recorded after the current overall reading (or all of them, without a reading)."""
-    l = current_reading(db)
+    """Results recorded after the current overall reading was written or kept (or all of them, without a reading)."""
+    _, at = reading_mark(db, current_reading(db))
     return one(db, "SELECT count(*) FROM run WHERE result IS NOT NULL AND result != 'failed' "
-                   "AND replace(substr(finished, 1, 19), 'T', ' ') > ?", l["created"] if l else "")[0]
+                   "AND replace(substr(finished, 1, 19), 'T', ' ') > ?", at)[0]
 
 
 RELEVANT = ((("% positive",), "positive result"), (("%→confirmed",), "connection confirmed"),
@@ -520,8 +534,8 @@ RELEVANT = ((("% positive",), "positive result"), (("%→confirmed",), "connecti
 def relevant_events(db):
     """What happened since the current reading that may change the picture (not just how many tests ran)."""
     l = current_reading(db)
-    # by the creation event's id, not by the clock: events in the same second as the reading are not lost
-    since = one(db, "SELECT max(id) FROM event WHERE node=? AND action='created'", l["id"])[0] if l else 0
+    # by event id, not by the clock: events in the same second as the reading are not lost
+    since = reading_mark(db, l)[0]
     found = []
     for patterns, name in RELEVANT:
         rs = q(db, "SELECT e.node FROM event e JOIN node n ON n.id=e.node WHERE e.id > ? AND ("
@@ -548,14 +562,14 @@ def reading_request(db):
     ev = relevant_events(db)
     if ev:
         return ("OVERALL READING requested by event: " + "; ".join(ev) + ". Does this change what the case seems "
-                "to tell? If it did, `holmes.py reading \"...\" --supports .. --reason ..`; if not, say why.")
+                "to tell? If it did, `holmes.py reading \"...\" --supports .. --reason ..`; if not, `holmes.py reading --keep \"<why>\"`.")
     n = results_since_reading(db)
     if n < READING_EVERY:
         return ""
     l = current_reading(db)
     pend = one(db, "SELECT count(*) FROM run x JOIN node t ON t.id=x.test WHERE x.result IS NOT NULL AND "
                    "x.result != 'failed' AND t.legacy=0 AND (x.meaning IS NULL OR x.meaning LIKE 'revisit:%') AND "
-                   "replace(substr(x.finished, 1, 19), 'T', ' ') > ?", l["created"] if l else "")[0]
+                   "replace(substr(x.finished, 1, 19), 'T', ' ') > ?", reading_mark(db, l)[1])[0]
     return (f"OVERALL READING pending: {n} results since the last one" + (f" ({pend} with meaning pending)" if pend else "")
             + ". Read them together (skill `reading`): taken together, do they change the picture? Update with `holmes.py reading`.")
 
@@ -622,32 +636,144 @@ def expand(db, text):
     return text + " " + " ".join(extra)
 
 
-def search(db, text, n=8, tests_only=False, with_corpus=True):
-    ws = C.terms(expand(db, text))
+def find(db, text, literal=False):
+    """Every case node matching the text, best first. Words match by stem (`zeros` finds zeroed, zerar), and the
+    nodes holding more of the query's words come first, then title hits, then BM25. Literal: the exact text
+    (case-insensitive) anywhere in what is indexed, `#8000` included."""
+    if literal:
+        refs = [h["ref"] for h in q(db, "SELECT ref FROM idx WHERE instr(lower(text), lower(?)) > 0", text.strip())]
+        return [r for r in (node_by_id(db, int(x)) for x in refs) if r]
+    # shortcut: a crude stem (drop the last 2 letters of words of 5+, keep 3); a real stemmer if this proves too loose
+    stems = sorted({w if len(w) < 5 else w[:max(3, len(w) - 2)] for w in C.terms(expand(db, text))})
+    if not stems:
+        return []
+    hits = q(db, "SELECT ref, text FROM idx WHERE idx MATCH ? ORDER BY bm25(idx)", " OR ".join(f'"{w}"*' for w in stems))
+    asked = {w if len(w) < 5 else w[:max(3, len(w) - 2)] for w in C.terms(text)}
+    total = one(db, "SELECT count(*) FROM idx")[0] or 1
+    # a rare word weighs more than a common one: "metades 285" says more than "verificar se difere"
+    weight = {w: math.log(1 + total / (1 + one(db, "SELECT count(*) FROM idx WHERE idx MATCH ?", f'"{w}"*')[0])) for w in asked}
+    covers = lambda t: sum(weight[w] for w in asked if any(x.startswith(w) for x in t))
+    scored = []
+    for rank, h in enumerate(hits):
+        r = node_by_id(db, int(h["ref"]))
+        if r:
+            scored.append((-covers(set(C.terms(h["text"]))), -covers(set(C.terms(r["title"]))), rank, r))
+    return [x[-1] for x in sorted(scored, key=lambda x: x[:3])]
+
+
+def search(db, text, n=8, tests_only=False, with_corpus=True, literal=False):
+    rows = [r for r in find(db, text, literal) if not tests_only or r["type"] == "test"]
+    ws = [text.strip().lower()] if literal else C.terms(text)
     out = []
-    if ws:
-        for h in q(db, "SELECT ref FROM idx WHERE idx MATCH ? ORDER BY bm25(idx) LIMIT ?",
-                   " OR ".join(f'"{w}"' for w in ws), n * 4):
-            r = node_by_id(db, int(h["ref"]))
-            if not r or (tests_only and r["type"] != "test"):
-                continue
-            s = line(db, r)
-            if tests_only:
-                t = one(db, "SELECT * FROM test WHERE node=?", r["id"])
-                x = last_run(db, r["id"])
-                s += f"\n    scope: {t['scope']}" + (f"\n    outside: {t['outside']}" if t["outside"] else "")
-                if x and x["note"]:
-                    s += f"\n    result: {x['note'][:200]}"
-            out.append(s)
-            if len(out) >= n:
-                break
+    for r in rows[:n]:
+        s = line(db, r)
+        if tests_only:
+            t = one(db, "SELECT * FROM test WHERE node=?", r["id"])
+            x = last_run(db, r["id"])
+            s += f"\n    scope: {t['scope']}" + (f"\n    outside: {t['outside']}" if t["outside"] else "")
+            if t["outside"] and any(w in t["outside"].lower() for w in ws):
+                s += f"\n    ⚠ the terms are in OUTSIDE: {label(r)} explicitly left this out"
+            if x and x["note"]:
+                s += f"\n    result: {x['note'][:200]}"
+        out.append(s)
+    if rows:
+        out.append(f"({min(n, len(rows))} of {len(rows)} case items" + ("" if literal else "; any word matches, title hits first")
+                   + (f"; -n {len(rows)} shows all" if len(rows) > n else "") + ")")
     if with_corpus and not tests_only and C.exists():
         try:
             with C.connect() as cdb:
-                out += [f"corpus {C.line(C.chunk(cdb, i), text)}" for i in C.bm25(cdb, text, n=3)]
+                ids = C.literal(cdb, text, n=3) if literal else C.bm25(cdb, text, n=3)
+                out += [f"corpus {C.line(C.chunk(cdb, i), text)}" for i in ids]
         except Exception as e:  # the corpus is auxiliary; searching the case does not depend on it
             out.append(f"(corpus unavailable: {e})")
     return out
+
+
+DOSSIER_EDGES = ("supports", "weakens", "contradicts", "refutes", "depends", "duplicates", "supersedes", "about",
+                 "derives", "answers", "rival")
+
+
+HUB = 25  # a node with more links than this (a dump parent, a catch-all hypothesis) is shown but not expanded
+
+
+def dossier(db, text, hops=1, seeds=25, literal=False, limit=100):
+    """The chain around a theme: seed nodes found by content, expanded `hops` jumps through edges, parent/children
+    and candidate connections, printed by kind, then the links among them and the steps that cite them, in order."""
+    found = find(db, text, literal)[:seeds]
+    if not found:
+        return "nothing recorded with these terms; try synonyms or --literal"
+    seed = {r["id"] for r in found}
+    rank = {r["id"]: i for i, r in enumerate(found)}
+    dist = {i: 0 for i in seed}
+    frontier = set(seed)
+    marks = ",".join("?" * len(DOSSIER_EDGES))
+    for hop in range(1, hops + 1):
+        nxt = set()
+        for i in frontier:
+            degree = one(db, "SELECT (SELECT count(*) FROM edge WHERE src=? OR dst=?) + (SELECT count(*) FROM node WHERE parent=?)",
+                         i, i, i)[0]
+            if degree > HUB:
+                continue
+            nxt |= {x[0] for x in q(db, f"SELECT dst FROM edge WHERE src=? AND type IN ({marks}) UNION "
+                                        f"SELECT src FROM edge WHERE dst=? AND type IN ({marks})",
+                                    i, *DOSSIER_EDGES, i, *DOSSIER_EDGES)}
+            nxt |= {x[0] for x in q(db, "SELECT parent FROM node WHERE id=? AND parent IS NOT NULL UNION "
+                                        "SELECT id FROM node WHERE parent=? AND type != 'branch'", i, i)}
+            nxt |= {x[0] for x in q(db, "SELECT node FROM connection WHERE src=? OR dst=? UNION "
+                                        "SELECT src FROM connection WHERE node=? UNION SELECT dst FROM connection WHERE node=?",
+                                    i, i, i, i)}
+        frontier = nxt - set(dist)
+        dist.update({i: hop for i in frontier})
+    rows = sorted((node_by_id(db, i) for i in dist), key=lambda r: (dist[r["id"]], rank.get(r["id"], 0), r["created"]))
+    cut = len(rows) - limit
+    rows = sorted(rows[:limit], key=lambda r: (r["created"], r["id"]))
+    ids = {r["id"] for r in rows}
+    groups = [("FACTS", lambda r: r["type"] == "fact" and r["state"] not in FALLEN),
+              ("OPEN CLUES", lambda r: r["type"] == "clue" and r["state"] not in FALLEN),
+              ("HYPOTHESES ALIVE", lambda r: r["type"] == "hypothesis" and r["state"] in ("alive", "supported")),
+              ("HYPOTHESES PARKED (not refuted)", lambda r: r["type"] == "hypothesis" and r["state"] == "parked"),
+              ("TESTS", lambda r: r["type"] == "test"),
+              ("OPEN QUESTIONS AND THREADS", lambda r: r["type"] in ("question", "thread") and r["state"] in ("open", "parked")),
+              ("FALLEN (refuted, retracted, dropped...)", lambda r: r["state"] in FALLEN),
+              ("OTHER", lambda r: True)]
+    L, done = [f"DOSSIER {text!r}: {len(seed)} seed(s) by content (*), {len(ids)} item(s) within {hops} jump(s)"
+               + (f"; {cut} more left out (--limit)" if cut > 0 else "")], set()
+    for title, keep in groups:
+        g = [r for r in rows if r["id"] not in done and keep(r)]
+        if not g:
+            continue
+        L.append(f"\n{title} ({len(g)})")
+        for r in g:
+            done.add(r["id"])
+            L.append(f"{'*' if r['id'] in seed else ' '} {r['created'][:10]} {line(db, r)[:170]}")
+            if r["type"] == "hypothesis":
+                h = one(db, "SELECT refuted_if FROM hypothesis WHERE node=?", r["id"])
+                if h and h["refuted_if"]:
+                    L.append(f"      refuted if: {h['refuted_if'][:160]}")
+            if r["type"] == "test":
+                t, x = one(db, "SELECT * FROM test WHERE node=?", r["id"]), last_run(db, r["id"])
+                L.append(f"      scope: {t['scope'][:160]}" + (f"\n      outside: {t['outside'][:160]}" if t["outside"] else ""))
+                if x:
+                    L.append(f"      → {x['result'] or 'running'}: {(x['note'] or '')[:160]}"
+                             + (f" | meaning: {x['meaning'][:100]}" if x["meaning"] else ""))
+                v = validity(db, r["id"])
+                if v:
+                    L.append(f"      ⚠ {v}")
+    m = ",".join("?" * len(ids))
+    links = q(db, f"SELECT * FROM edge WHERE src IN ({m}) AND dst IN ({m}) ORDER BY created", *ids, *ids)
+    if links:
+        L.append(f"\nLINKS ({len(links)})")
+        lab = lambda i: label(node_by_id(db, i))
+        L += [f"  {(e['created'] or '')[:10]} {lab(e['src'])} {e['type']} {lab(e['dst'])}" + (f" — {e['note']}" if e["note"] else "")
+              for e in links[:60]]
+    labels = {label(r) for r in rows}
+    steps = [p for p in q(db, "SELECT * FROM step WHERE nodes IS NOT NULL ORDER BY id")
+             if labels & {x.strip() for x in p["nodes"].split(",")}]
+    if steps:
+        L.append(f"\nSTEPS THAT CITE THEM ({len(steps)}, in order)")
+        L += [f"  {p['at'][:10]} B{p['branch']} {p['type']}: {p['text'][:140]}" + (f"\n      why: {p['why'][:160]}" if p["why"] else "")
+              for p in steps[-40:]]
+    return "\n".join(L)
 
 
 def broken_dependencies(db):
@@ -1549,6 +1675,7 @@ def parser():
     s = sub.add_parser("edit"); s.add_argument("id"); s.add_argument("--title"); s.add_argument("--summary")
     s.add_argument("--refuted-if"); s.add_argument("--script")
     s = sub.add_parser("reading"); s.add_argument("text", nargs="?"); s.add_argument("--title")
+    s.add_argument("--keep", help="the events do not change the current reading: say why (answers the request)")
     for o in ("--supports", "--weakens", "--rival", "--question", "--gap", "--reason"):
         s.add_argument(o)
     s = sub.add_parser("state"); s.add_argument("id"); s.add_argument("state"); s.add_argument("reason", nargs="?", default="")
@@ -1576,6 +1703,10 @@ def parser():
     for name in ("search", "tried"):
         s = sub.add_parser(name); s.add_argument("text"); s.add_argument("-n", type=int, default=8)
         s.add_argument("--no-corpus", action="store_true")
+        s.add_argument("--literal", action="store_true", help="the exact text instead of any word")
+    s = sub.add_parser("dossier"); s.add_argument("text"); s.add_argument("--hops", type=int, default=1)
+    s.add_argument("--seeds", type=int, default=25); s.add_argument("--limit", type=int, default=100)
+    s.add_argument("--literal", action="store_true")
     s = sub.add_parser("show"); s.add_argument("id")
     s = sub.add_parser("source"); s.add_argument("path"); s.add_argument("--title")
     s.add_argument("--provenance", choices=PROVENANCES, default="primary")
@@ -1677,6 +1808,13 @@ def main(argv=None):
             print(f"{label(r)} edited")
         elif a.cmd == "reading":
             cur = current_reading(db)
+            if a.keep is not None:
+                if not cur or a.text:
+                    raise Error("--keep reviews the current reading without changing it: `reading --keep \"<why it holds>\"`")
+                if len(a.keep.strip()) < 10:
+                    raise Error("--keep needs the reason the events do not change the picture")
+                event(db, cur["id"], "kept", a.keep.strip())
+                return print(f"L{cur['id']} kept: the requests so far are answered")
             if not a.text:
                 if not cur:
                     return print("no overall reading yet: `holmes.py reading \"<what the case seems to tell>\"`")
@@ -1865,9 +2003,11 @@ def main(argv=None):
             if req:
                 print("⚠ " + req)
         elif a.cmd in ("search", "tried"):
-            r = search(db, a.text, a.n, tests_only=a.cmd == "tried", with_corpus=not a.no_corpus)
+            r = search(db, a.text, a.n, tests_only=a.cmd == "tried", with_corpus=not a.no_corpus, literal=a.literal)
             print("\n".join(r) if r else "nothing recorded with these terms. Try synonyms and `corpus.py search --mode "
                                          "literal` before concluding it is new: absence in a search does not prove absence.")
+        elif a.cmd == "dossier":
+            print(dossier(db, a.text, a.hops, a.seeds, a.literal, a.limit))
         elif a.cmd == "show":
             r = get_node(db, a.id)
             print(show(db, r) + ("\n" + trail(db, r, short=True) if r["type"] == "branch" else ""))

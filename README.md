@@ -183,7 +183,7 @@ Optional: `numpy` speeds up vector search; `pdftotext` indexes PDFs.
 |---|---|---|
 | Holds | objective, targets, fronts, questions, hypotheses, premises, tests, runs, facts, clues, entities, decisions, threads, sources, instruments, readings, candidate connections, branches and steps | chats, documents, books and pages in chunks, with the raw text |
 | Size | small: title ≤ 160, summary ≤ 800 | large; never injected |
-| Query | `map`, `show`, `search`, `tried`, `ach`, `health` | `corpus.py search` (bm25, literal, vector, hybrid), `window`, `show` |
+| Query | `map`, `show`, `search`, `tried`, `dossier`, `ach`, `health` | `corpus.py search` (bm25, literal, vector, hybrid), `window`, `show` |
 | Link | `source` registers the file and indexes it; `quote <chunk>` copies the literal passage into a fact | — |
 
 Full data model, with diagrams: [MODEL.md](MODEL.md). A fictional case from start to finish, with flowcharts and
@@ -198,8 +198,8 @@ the real output of each command: [EXAMPLE.md](EXAMPLE.md).
 |---|---|
 | case | `init <case> "<objective>"` · `use <case>` (switch) · `cases` (list) |
 | path | `sheet` (one page) · `tree [id]` · `trail [B..]` · `branch new "<question>" --from <id> [--step N] --why ".." [--no-use]` · `branch use B..` · `branch release` · `step <read\|thought\|tested\|found\|corrected\|decided\|next> ".." --why ".."` |
-| orientation | `map [--all]` · `next` (what next, and why) · `show <id>` · `chain <id>` (what it rests on) · `questions` · `timeline` · `search "<txt>"` · `tried "<txt>"` (already tested?) · `health` |
-| overall reading | `reading "<picture>" [--supports E,..] [--weakens ..] [--rival H,..] [--question Q] [--gap Q,..] [--reason ".."]` · `reading` (show current) |
+| orientation | `map [--all]` · `next` (what next, and why) · `show <id>` · `chain <id>` (what it rests on) · `questions` · `timeline` · `search "<txt>" [--literal]` · `tried "<txt>" [--literal]` (already tested? also flags terms listed as OUTSIDE) · `dossier "<terms>" [--hops 2]` (the chain around a theme: items found by content, their links, the steps that cite them) · `health` |
+| overall reading | `reading "<picture>" [--supports E,..] [--weakens ..] [--rival H,..] [--question Q] [--gap Q,..] [--reason ".."]` · `reading --keep "<why>"` (the events do not change it: answers the request) · `reading` (show current) |
 | create | `new <type> "<title>" --parent ..` (types: target, front, question, hypothesis, premise, fact (needs `--by`), clue, entity, decision, thread) |
 | extract | `extract <contract.json> [--apply] [--only ..] [--reject ..]` (observation, clue, interpretation, question, hypothesis, connection; contract in MODEL.md) |
 | relate | `connections <id\|"text">` (candidates; query) · `connection <from> <to> <relation> "<why>" [--rival ..] [--discriminator ..]` · `state C.. confirmed\|rejected "<reason>"` |

@@ -32,7 +32,7 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
    with `--reason`; a count of results is only a reminder. When something is solved, write why the match worked.
 
 ## Before claiming or testing
-9. Run `tried "<terms>"` (or `search`) before proposing a test or saying something is new. "Never tested", "does not
+9. Run `tried "<terms>"` (or `search`, `dossier`) before proposing a test or saying something is new. "Never tested", "does not
    exist" and "not in the database" only with the search cited and synonyms tried.
 10. Absence by grep requires a control showing the search would find the term if it existed. A word search is
     not reading: a source given by the user is read for its meaning. Absence only weighs against a hypothesis

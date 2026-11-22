@@ -12,7 +12,7 @@ states are the CLI's own tokens.
 
 Before any other action, and again at every decision: `python3 -I holmes/holmes.py map`.
 The map is the overall plan. If an action does not serve one of its targets or fronts, do not do it.
-Before testing or claiming something new: `tried "<term>"`. A previous finding: `show <id>`, and read all of it.
+Before testing or claiming something new: `tried "<term>"`; before summarizing a theme: `dossier "<terms>"`. A previous finding: `show <id>`, and read all of it.
 The map's `CURRENT READING` is the story the case seems to tell: every test must make sense within it.
 When resuming: `sheet` (where we are and why) and, if needed, `trail` (the whole path to the active branch).
 Every action is a step of a branch; with no active branch, pick one (`tree`, `branch use B..`) or open one.

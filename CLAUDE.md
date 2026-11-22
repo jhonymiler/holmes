@@ -16,8 +16,8 @@
    the ACTIVE BRANCH (the line of reasoning in progress): `sheet` says on one page where we are and why; `trail`
    rebuilds the path from the root to there; `tree` shows every line and where each one was born.
 2. Switch case: `holmes.py use <case>`. New case: `holmes.py init <case> "<objective>"`.
-3. Before testing: `holmes.py tried "<terms>"`. Detail: `show <id>`; what it rests on: `chain <id>`; what to do
-   and why: `next`.
+3. Before testing: `holmes.py tried "<terms>"` (`--literal` for an exact text such as `#8000`). Where a theme stands:
+   `dossier "<terms>"`. Detail: `show <id>`; what it rests on: `chain <id>`; what to do and why: `next`.
 4. What you do is a step of the active branch (`new`, `test`, `result`, `state` record themselves; reasoning
    without a test is `step thought "..." --why "..."`). A new direction is a new branch, born from a point:
    `branch new "<question>" --from <id> [--step N] --why "..."`. A course correction becomes a step or a fork,
