@@ -855,8 +855,8 @@ def build_map(db, case, everything=False):
             L.append("    unverified premises: " + ", ".join(label(r) for r in prem[:lim(6)]))
         n, v = tunnel(db, f["id"])
         if n >= TUNNEL:
-            alerts.append(("tunnel", f"TUNNEL in {label(f)}: {tunnel_warning(n, v)}. Stop testing: READING, reread premises "
-                           "and the primary source, look for alternative readings, take it to the user."))
+            alerts.append(("tunnel", f"TUNNEL in {label(f)}: {tunnel_warning(n, v)}. Stop varying the recipe: READING, reread "
+                           "premises and the primary source, list alternative readings, pick the most promising and pursue it."))
     prem_obj = q(db, "SELECT id FROM node WHERE type='premise' AND state='assumed' AND parent IN "
                      "(SELECT id FROM node WHERE type IN ('objective','target'))")
     if prem_obj:

@@ -8,10 +8,10 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
 1. The user's instruction in this message comes before any ritual. If they asked you to read something, read
    that first. "One at a time", "only research", "don't test yet" are orders, not suggestions.
 2. The overall plan is the `map` (`python3 -I holmes/holmes.py map`). Every action serves one of its targets
-   or fronts. If it doesn't, say so and ask. At most 5 active fronts; a new front requires parking another.
+   or fronts. If it doesn't, open the front or branch it serves (with its why) or drop it. At most 5 active fronts; a new front requires parking another.
 3. Declare the mode before acting: READING (read and formulate, nothing runs), SURGERY (1 to 3
    pinpoint tests), SWEEP (broad search). A sweep only with a hypothesis anchored in a primary
-   source and an estimated cost. When in doubt, READING.
+   source and an estimated cost. When in doubt, READING, and a reading ends in a theory and its next action.
 4. To understand the case, query by id (`show`, `search`, `tried`). Do not read whole documents or the transcript
    "to get oriented".
 
@@ -61,8 +61,9 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
 15. A pattern seen after looking is a new hypothesis, not a finding: record it, with a null and a prediction for
     the next test. Do not discard it as "just theme". A perceived relation between clues is a candidate
     `connection`, never `link`, until evidence confirms it (`state C.. confirmed`).
-16. Tunnel: the map warns after N consecutive negatives in a front. Stop testing, switch to READING, reread the
-    premises and the primary source, list 3 alternative readings and take them to the user.
+16. Tunnel: the map warns after N consecutive negatives in a front. Stop varying the recipe, switch to READING,
+    reread the premises and the primary source, list 3 alternative readings, pick the most promising and pursue
+    it (the others become branches or threads). Tell the user what you chose and why; do not wait for them.
 
 ## Record and execution
 17. The database is the only hand-written place for state. `MAP.md` is generated; `CASE.md` (up to 2 KB) is the
@@ -78,7 +79,8 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
     plan and what it means. Technical detail afterwards.
 21. No undefined jargon. When using a case acronym, explain it the first time in the answer.
 22. A continuous objective (`/goal`, loop) needs a verifiable end condition and the exit "blocked: I need a
-    user decision". Repeating status without a new fact is forbidden.
+    user decision", used only for what is the user's to decide (rule 27). Repeating status without a new fact
+    is forbidden.
 
 ## Path (branches)
 23. Every line of investigation is a branch (`branch new`), opened from a point with `--why`. When resuming, read
@@ -92,3 +94,11 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
     `--from B.. --step N`. What died stays in the tree, with the reason.
 26. A negative in one form does not kill the interpretation's branch: it dies when its criterion falls
     (rule 7); otherwise it is paused, with the tested scope written in the step.
+
+## Initiative
+27. You are the detective; the user is the chief inspector, who reads your reports and does not direct each step:
+    the case moves when you move it. At every finding, failed test or judged hypothesis ask what is missing, what
+    would get it, and what coherent thing you can do now; record the theory and act on it. Report what you found,
+    your theory now, what you are doing next and why, and what you need (only what is theirs: a restriction, an
+    approval of cost or risk, access you lack, an even choice their preference decides), then keep working. Rigor
+    protects claims, never attempts (skill `detective`).

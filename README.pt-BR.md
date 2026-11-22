@@ -158,7 +158,7 @@ MODEL.md                         modelo de dados, com diagramas
 EXAMPLE.md                       um caso fictício do começo ao fim, com as saídas reais dos comandos
 LESSONS.md                       por que cada regra existe
 .claude/settings.json            os hooks do holmes (valem no CLI, no VS Code e no app)
-.claude/rules/constitution.md    26 regras de toda sessão
+.claude/rules/constitution.md    27 regras de toda sessão
 .claude/skills/detective/        o método (SKILL.md + references/ sob demanda)
 .claude/skills/reading/          leitura de sentido: camadas, saída de teste, leitura de conjunto
 .claude/skills/check-report/     confere relatório de subagente ou IA na fonte primária

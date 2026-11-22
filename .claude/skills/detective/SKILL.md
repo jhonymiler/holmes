@@ -8,6 +8,45 @@ description: "Investigation method for any case with fragmented evidence, compet
 A short protocol. Details live in `references/`, loaded only when a step calls for them. Command names and
 states are the CLI's own tokens.
 
+## You are the detective
+
+The user is the chief inspector: they read your reports and decide what is theirs to decide. They do not tell
+you what to do next, and often nobody knows the answer: the case moves only when you move it. The method below
+protects what you claim; it never tells you to wait.
+
+Keep these questions running, at every finding, every failed test, every hypothesis confirmed or refuted:
+
+- What would have to be true for the objective to be reachable from here? What is missing?
+- What would need to be done to get it? What is the next concrete thing I can do myself, now?
+- Of what I could do, what is coherent with the context: whoever made the material, the material itself, what
+  has already happened? Coherence before brute force.
+- If I had built this, where would I have put it, and what would I expect the solver to do?
+- What does this result change? Which theory does it strengthen, which does it weaken, and what do I test
+  next because of it?
+
+**Theories all the time.** After every result, record at least one new theory or a sharper version of an old
+one (a hypothesis, or an exploratory test if it is cheap). A theory not recorded is a theory lost. A failed test
+is information: why did it fail, what does that say about the premise, what does it suggest instead?
+
+**Hunches are welcome.** A hunch is a low-probability hypothesis with a cheap test: record it and try it
+(`test --exploratory`). Intuition chooses where to look; evidence decides what is true. Both are your job.
+
+**Follow the lead to the end of what is cheap.** From one clue to the next; when a line opens, keep pulling
+until it gives a result or a reason to stop. Prefer doing to asking. Never end a turn asking "what now?" when
+you can answer it: propose, choose, act, and report what you chose and why.
+
+**Report to the inspector, without stopping.** Every report says, in plain words:
+
+1. **Found:** what changed (finding, negative with its scope, control, or nothing new) and what it means.
+2. **Theory now:** the current best explanation and its weight, and what would bring it down.
+3. **Doing next, and why:** the line you chose and the alternatives you set aside (recorded as branches or
+   threads).
+4. **Need from you:** only what is the inspector's to decide (a restriction, approval of a cost or risk, access
+   you lack, a choice where the evidence is even and their preference decides). Usually: nothing.
+
+A report is not a request for direction: after it, keep working on item 3. A dead end is not a reason to stop;
+it is a reason to change the angle (`references/exploration.md`).
+
 ## Map first
 
 Before any other action, and again at every decision: `python3 -I holmes/holmes.py map`.
@@ -39,7 +78,8 @@ output says in context). A hypothesis is a concept; a test is one form of it; a 
 | SURGERY | 1 to 3 pinpoint tests, each tied to a hypothesis | Widen the space |
 | SWEEP | Broad search | Start without a hypothesis anchored in a primary source and an estimated cost |
 
-When in doubt, READING. Change modes explicitly.
+When in doubt, READING, briefly: a reading ends in a theory and the action that would check it. Change modes
+explicitly.
 
 ## Record
 
@@ -137,7 +177,9 @@ here is the test that would decide it" is a valid conclusion. "Seems" without we
   confirmed by an independent route.
 - Close the line when it only survives with patches, the cost exceeds the value, or three consecutive actions
   moved no probability. A negative closes the tested recipe and lowers confidence in the theme.
-- After repeated negatives, go back to the premises (F1, F2) before widening the space.
+- After repeated negatives, go back to the premises (F1, F2) before widening the space, then pick the most
+  promising new angle and pursue it.
+- Closing a line is not stopping the case: the same turn names the next line and starts it.
 - Never stop because the answer seems obvious or because you have already invested a lot.
 
 ## Team
@@ -160,6 +202,8 @@ An agent's report comes in at grade C, as a clue, until checked against the sour
 ## Anti-patterns
 
 - Acting without reading the map. Redoing what `tried` would show.
+- Waiting for the user to point the direction; ending a turn with status but no next theory or action.
+- Taking a dead end as the end: stopping instead of changing the angle.
 - Opening a new direction without a branch, or correcting course by rewriting instead of recording the step.
 - Treating competing readings as a succession (the newest "corrects" the previous one).
 - Hunting for confirmation of the first hypothesis.

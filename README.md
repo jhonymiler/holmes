@@ -159,7 +159,7 @@ MODEL.md                         data model, with diagrams
 EXAMPLE.md                       a fictional case from start to finish, with real command output
 LESSONS.md                       why each rule exists
 .claude/settings.json            holmes hooks (work in the CLI, VS Code and the app)
-.claude/rules/constitution.md    26 rules for every session
+.claude/rules/constitution.md    27 rules for every session
 .claude/skills/detective/        the method (SKILL.md + references/ on demand)
 .claude/skills/reading/          reading for meaning: layers, test output, overall reading
 .claude/skills/check-report/     check a subagent/AI report against the primary source
