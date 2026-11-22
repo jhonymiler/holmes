@@ -7,6 +7,8 @@
   `sources/` (originals, read-only), `scripts/`, `outputs/` (logs), `notes/` (free prose, outside the index).
 - `holmes/corpus.py` — the material (chats, documents, books) in `corpus/corpus.db`. Search it (`search`,
   `window`) instead of opening large files; quote excerpts with `holmes.py quote <chunk> "<claim>"`.
+- `holmes/ledger.py` — which exact candidates each sweep tried (Bloom filter + distinct count) in
+  `cases/<case>/ledger/`. A sweep script feeds it (`Ledger("T12", seed=..)`); `tried "<candidate>" --candidate` asks it.
 - `.claude/rules/constitution.md` — rules for every session. `.claude/skills/detective/` — the method.
   `.claude/skills/reading/` — reading for meaning. Hooks: `.claude/settings.json`. Data model: `MODEL.md`.
 - `.holmes/` — local state: active case, active branch and the per-session reasoning journal (written by hooks).

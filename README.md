@@ -168,6 +168,7 @@ LESSONS.md                       why each rule exists
 holmes/holmes.py                 reasoning database (case.db) and CLI
 holmes/corpus.py                 material database (corpus.db): chats, documents, books; BM25, literal, vector
 holmes/hooks.py                  what the hooks run
+holmes/ledger.py                 candidate ledger: which exact candidates a sweep tried (Bloom filter + HyperLogLog)
 holmes/test_holmes.py            hermetic tests
 holmes/eval/                     synthetic case with answer key (watchmaker.json) and evaluator (evaluate.py)
 cases/<case>/                    case.db · CASE.md (≤ 2 KB, by hand) · MAP.md (generated) · sources/ outputs/ notes/ scripts/
@@ -198,7 +199,7 @@ the real output of each command: [EXAMPLE.md](EXAMPLE.md).
 |---|---|
 | case | `init <case> "<objective>"` · `use <case>` (switch) · `cases` (list) |
 | path | `sheet` (one page) · `tree [id]` · `trail [B..]` · `branch new "<question>" --from <id> [--step N] --why ".." [--no-use]` · `branch use B..` · `branch release` · `step <read\|thought\|tested\|found\|corrected\|decided\|next> ".." --why ".."` |
-| orientation | `map [--all]` · `next` (what next, and why) · `show <id>` · `chain <id>` (what it rests on) · `questions` · `timeline` · `search "<txt>" [--literal]` · `tried "<txt>" [--literal]` (already tested? also flags terms listed as OUTSIDE) · `dossier "<terms>" [--hops 2]` (the chain around a theme: items found by content, their links, the steps that cite them) · `health` |
+| orientation | `map [--all]` · `next` (what next, and why) · `show <id>` · `chain <id>` (what it rests on) · `questions` · `timeline` · `search "<txt>" [--literal]` · `tried "<txt>" [--literal]` (already tested? also flags terms listed as OUTSIDE) · `tried "<candidate>" --candidate` (the ledger) · `dossier "<terms>" [--hops 2]` (the chain around a theme: items found by content, their links, the steps that cite them) · `health` |
 | overall reading | `reading "<picture>" [--supports E,..] [--weakens ..] [--rival H,..] [--question Q] [--gap Q,..] [--reason ".."]` · `reading --keep "<why>"` (the events do not change it: answers the request) · `reading` (show current) |
 | create | `new <type> "<title>" --parent ..` (types: target, front, question, hypothesis, premise, fact (needs `--by`), clue, entity, decision, thread) |
 | extract | `extract <contract.json> [--apply] [--only ..] [--reject ..]` (observation, clue, interpretation, question, hypothesis, connection; contract in MODEL.md) |
@@ -265,7 +266,7 @@ The mod `.claude/skills/holmes/` is optional and only trims long Bash output; it
 
 ## Verified
 
-- ✅ `holmes/test_holmes.py`: 12 hermetic tests, covering:
+- ✅ `holmes/test_holmes.py`: 14 hermetic tests, covering:
   - the tree and its limits, and targets;
   - runs and validity (control seen, versioned script, exploratory mode) and the tunnel alert;
   - facts, sources, citation, entities and aliases;
@@ -277,6 +278,9 @@ The mod `.claude/skills/holmes/` is optional and only trims long Bash output; it
   - branches forked from a step, steps, `trail`, `tree` and `sheet`;
   - rereading on a contradiction or a central hypothesis, instrument revalidation, and resume after
     compaction;
+  - search by stem and literal text, `dossier`, legacy ids pointing to the mapped node, `reading --keep`;
+  - the candidate ledger (exact candidates, distinct count, seeded sample), source custody in `health`,
+    reopening only with a reason, near duplicates at creation, the Stop hook against asking leave;
   - the synthetic case with a known answer.
 - ✅ `holmes/eval/evaluate.py recall`: relation discovery measured against an answer key (numbers and limits in
   `holmes/eval/README.md`).

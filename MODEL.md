@@ -390,6 +390,24 @@ With none of that: READING of the primary source or of the last result.
 - **Inherited:** contradictions, dependencies and negatives of items with `legacy = 1` become one count line
   (detail in `health`).
 
+## The candidate ledger
+
+A test records a concept; a sweep tries concrete candidates. `holmes/ledger.py` keeps, per test, in
+`cases/<case>/ledger/`: a Bloom filter in segments of 10 million candidates (~18 MB each, 0.1% false "tried", a
+"not tried" is certain), a HyperLogLog of 16 KB (distinct candidates within ~1%) and the seed of the test's
+sample. Writers merge on save under a lock (bits OR, registers max), so parallel sweeps of one test lose nothing.
+`L.pick(c, fraction)` samples by a hash of (seed, candidate): the same seed picks the same candidates in any order.
+`result` fills `n` from the distinct count when `--n` is absent; `show T..` prints it; `tried "<c>" --candidate`
+lists the tests that probably tried `c`. What was never fed to a ledger is outside its answer.
+
+## Custody and reopening
+
+`health` rehashes every registered local source and lists the ones changed or missing since registration;
+sources registered under a folder that does not exist on this machine are only counted. A
+fallen item (refuted, retracted, dropped, discarded...) only comes back with a reason: the new information or
+form that makes it worth testing again. `new` points out live items of the same kind whose 3-word sequences
+mostly repeat the new one (Jaccard ≥ 0.5), suggesting `link .. duplicates ..`.
+
 ## corpus.db: the material
 
 ```mermaid
@@ -400,6 +418,9 @@ flowchart LR
     CH --> LIT["literal search<br/>substring in the raw text (mode literal)"]
     CH --> VEC["vector (optional, embed)<br/>modes vector and hybrid (rank fusion)"]
 ```
+
+`add` skips a file whose size and modification time match what it stored, without reading it; otherwise it
+rehashes in 1 MB blocks and reindexes only if the content changed.
 
 Commands (`python3 -I holmes/corpus.py ..`): `add <collection> <file|folder> [--type auto|text|chat|pdf]`,
 `search "<text>" [-c collection] [--author X] [-n 8] [--mode bm25|literal|vector|hybrid] [--where key=value]`,

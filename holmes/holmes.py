@@ -8,7 +8,7 @@ The plan is the `map` query; raw material lives in the corpus (holmes/corpus.py)
 
   case       init <case> "<objective>" · use <case> · cases
   plan       map [--all] · next · show <id> · chain <id> · questions · timeline · health
-             search "<txt>" [--literal] [--no-corpus] · tried "<txt>" [--literal]
+             search "<txt>" [--literal] [--no-corpus] · tried "<txt>" [--literal] · tried "<candidate>" --candidate
              dossier "<terms>" [--hops 1] [--literal]   (the chain around a theme: seeds by content + links + steps)
   reading    reading "<the picture>" [--supports E,..] [--weakens E,..] [--rival H,..] [--question Q]
                      [--gap Q,..] [--reason "<why it changed>"]          (no text: shows the current one)
@@ -55,6 +55,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import corpus as C  # noqa: E402
+import ledger as L_  # noqa: E402
 
 
 ROOT = Path(os.environ.get("HOLMES_ROOT") or Path(__file__).resolve().parents[1])
@@ -277,7 +278,8 @@ def set_branch(case, node):
         branch_file(case).write_text(str(node))
 
 
-CURRENT = {"branch": None}  # active branch of this invocation: create(), state and result record steps in it
+CURRENT = {"branch": None}
+CASE = {"name": None}  # case of this invocation (the ledger lives in its folder)  # active branch of this invocation: create(), state and result record steps in it
 
 
 def add_step(db, branch, typ, text, why=None, nodes=()):
@@ -412,9 +414,7 @@ def create(db, typ, title, parent=None, summary=None, origin=None, grade=None, s
 
 # ---------- tests and runs ----------
 
-def file_sha(c):
-    p = Path(c)
-    return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None
+file_sha = C.file_sha
 
 
 def current_version(db, inst):
@@ -687,6 +687,31 @@ def search(db, text, n=8, tests_only=False, with_corpus=True, literal=False):
         except Exception as e:  # the corpus is auxiliary; searching the case does not depend on it
             out.append(f"(corpus unavailable: {e})")
     return out
+
+
+def shingles(text, k=3):
+    ws = C.terms(text)
+    return {" ".join(ws[i:i + k]) for i in range(len(ws) - k + 1)} or set(ws)
+
+
+def near_duplicates(db, node, threshold=0.5):
+    """Live items of the same kind whose word sequences mostly repeat this one's (Jaccard over 3-word shingles)."""
+    r = node_by_id(db, node)
+    kinds = ("fact", "clue") if r["type"] in ("fact", "clue") else (r["type"],)
+    mine = shingles(f"{r['title']} {r['summary'] or ''}")
+    ws = list(dict.fromkeys(C.terms(r["title"])))[:16]
+    if not mine or not ws:
+        return []
+    out = []
+    for h in q(db, "SELECT ref FROM idx WHERE idx MATCH ? ORDER BY bm25(idx) LIMIT 40", " OR ".join(f'"{w}"' for w in ws)):
+        o = node_by_id(db, int(h["ref"]))
+        if not o or o["id"] == node or o["type"] not in kinds or o["state"] in FALLEN:
+            continue
+        theirs = shingles(f"{o['title']} {o['summary'] or ''}")
+        sim = len(mine & theirs) / len(mine | theirs) if theirs else 0
+        if sim >= threshold:
+            out.append((o, sim))
+    return sorted(out, key=lambda x: -x[1])[:3]
 
 
 DOSSIER_EDGES = ("supports", "weakens", "contradicts", "refutes", "depends", "duplicates", "supersedes", "about",
@@ -993,6 +1018,9 @@ def show(db, r):
         v = validity(db, r["id"])
         if v:
             L.append(f"  ⚠ {v}")
+        led = L_.info(label(r), case_dir(CASE["name"])).get(label(r)) if CASE["name"] else None
+        if led:
+            L.append(f"  ledger: ~{led['distinct']} distinct candidates, {led['segments']} Bloom segment(s), seed {led['seed']}")
     if r["type"] == "instrument":
         L += [f"  version {v['id']} {v['sha'][:12]} {v['at'][:16]} verified={v['verified']} {v['note'] or ''}"
               for v in q(db, "SELECT * FROM version WHERE instrument=? ORDER BY id", r["id"])]
@@ -1065,6 +1093,22 @@ def health(db):
     hs = q(db, "SELECT n.* FROM node n JOIN hypothesis h ON h.node=n.id WHERE n.state='alive' AND h.refuted_if IS NULL")
     if hs:
         L.append(f"{len(hs)} live hypothesis(es) without a refutation criterion (--refuted-if): " + ", ".join(label(r) for r in hs[:15]))
+    changed, missing, elsewhere = [], [], 0
+    for s in q(db, "SELECT n.id, s.ref, s.sha FROM source s JOIN node n ON n.id=s.node WHERE s.sha IS NOT NULL"):
+        p = Path(s["ref"])
+        if not p.exists():  # moved, deleted, or a path from another machine: the hash cannot be checked here
+            (missing if p.parent.exists() else [None]).append(f"S{s['id']}")
+            elsewhere += not p.parent.exists()
+        elif file_sha(p) != s["sha"]:
+            changed.append(f"S{s['id']}")
+    if changed:
+        L.append(f"{len(changed)} source(s) changed on disk since they were registered (custody: re-register with "
+                 "`source <path>` and reread what rests on them): " + ", ".join(changed[:15]))
+    if missing:
+        L.append(f"{len(missing)} source(s) missing from disk: " + ", ".join(missing[:15]))
+    if elsewhere:
+        L.append(f"{elsewhere} source(s) registered under a folder that does not exist here (another machine?): "
+                 "their custody cannot be checked from this one")
     hk = STATE_DIR / "hooks.json"  # written by the hooks themselves when they run: execution seen, not configuration
     try:
         import json
@@ -1704,6 +1748,8 @@ def parser():
         s = sub.add_parser(name); s.add_argument("text"); s.add_argument("-n", type=int, default=8)
         s.add_argument("--no-corpus", action="store_true")
         s.add_argument("--literal", action="store_true", help="the exact text instead of any word")
+        if name == "tried":
+            s.add_argument("--candidate", action="store_true", help="the text is one exact candidate: ask the ledger")
     s = sub.add_parser("dossier"); s.add_argument("text"); s.add_argument("--hops", type=int, default=1)
     s.add_argument("--seeds", type=int, default=25); s.add_argument("--limit", type=int, default=100)
     s.add_argument("--literal", action="store_true")
@@ -1763,6 +1809,7 @@ def main(argv=None):
         return print("\n".join(f"{'*' if c == cur else ' '} {c}" for c in cases()) or "no case")
 
     case = active_case()
+    CASE["name"] = case
     with connect(case) as db:
         ra = active_branch(db, case)
         CURRENT["branch"] = ra["id"] if ra else None
@@ -1784,6 +1831,9 @@ def main(argv=None):
                           refuted_if=a.refuted_if, cls=a.cls, alias=a.alias, forbids=a.forbids, allows=a.allows,
                           why=a.why, by=a.by)
             print(f"{PREFIX[typ]}{node}")
+            for other, sim in near_duplicates(db, node):
+                print(f"looks like {label(other)} ({sim:.0%} of the same word sequences): {other['title'][:90]}; "
+                      f"if it is the same, `link {PREFIX[typ]}{node} duplicates {label(other)}`")
             if typ == "hypothesis" and not a.refuted_if:
                 print("tip: --refuted-if \"<what would bring it down>\" makes the hypothesis testable")
         elif a.cmd == "edit":
@@ -1848,6 +1898,9 @@ def main(argv=None):
                 raise Error(f"invalid state for {r['type']}; use: {', '.join(STATES[r['type']])}")
             if new in NEEDS_REASON and not a.reason.strip():
                 raise Error(f"'{new}' requires a reason (the id of the test, fact or decision that showed it)")
+            if r["state"] in FALLEN and new not in FALLEN and not a.reason.strip():
+                raise Error(f"reopening {label(r)} ({r['state']}) requires a reason: the new information or form that "
+                            "makes it worth testing again")
             if r["type"] == "front" and new == "active" and r["state"] != "active":
                 if one(db, "SELECT count(*) FROM node WHERE type='front' AND state='active'")[0] >= MAX_FRONTS:
                     raise Error(f"there are already {MAX_FRONTS} active fronts")
@@ -1978,6 +2031,9 @@ def main(argv=None):
                     raise Error("--meaning too short to say anything. Write what the output says in context, or "
                                 "\"none: <why>\", or \"revisit: <what>\", or leave it out (it stays pending for the overall reading)")
             ok = {"yes": 1, "no": 0}.get(a.control_ok)
+            led = L_.info(label(t), case_dir(case)).get(label(t))
+            if led and not a.n:  # the ledger counted the distinct candidates: that is the real n
+                a.n = f"~{led['distinct']} distinct (ledger)"
             db.execute("UPDATE run SET result=?, note=?, n=?, control_ok=?, finished=?, meaning=? WHERE id=?",
                        (a.result, a.note, a.n, ok, now(), meaning, x["id"]))
             still_open = one(db, "SELECT 1 FROM run WHERE test=? AND result IS NULL", t["id"])
@@ -2002,6 +2058,12 @@ def main(argv=None):
             req = reading_request(db)
             if req:
                 print("⚠ " + req)
+        elif a.cmd == "tried" and a.candidate:
+            hits = L_.tests_with(a.text, case_dir(case))
+            print(f"{a.text!r}: probably tried in " + ", ".join(line(db, get_node(db, t))[:120] for t in hits)
+                  + f" (ledger Bloom filter: up to {L_.ERROR:.1%} false 'tried')" if hits else
+                  f"{a.text!r}: in no ledger. Certain for sweeps that recorded a ledger; tests without one are not covered "
+                  "by this answer: `tried \"<terms>\"` for those.")
         elif a.cmd in ("search", "tried"):
             r = search(db, a.text, a.n, tests_only=a.cmd == "tried", with_corpus=not a.no_corpus, literal=a.literal)
             print("\n".join(r) if r else "nothing recorded with these terms. Try synonyms and `corpus.py search --mode "

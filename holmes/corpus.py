@@ -56,6 +56,18 @@ class Error(Exception):
     pass
 
 
+def file_sha(p):
+    """sha256 of a file read in 1 MB blocks (a big source never sits whole in memory); None if it is not a file."""
+    p = Path(p)
+    if not p.is_file():
+        return None
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
 def connect():
     DB.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB, timeout=30)
@@ -155,9 +167,15 @@ def add(db, collection, path, typ="auto"):
     db.execute("INSERT OR IGNORE INTO collection(name) VALUES (?)", (collection,))
     out = []
     for a in files:
-        sha = hashlib.sha256(a.read_bytes()).hexdigest()
+        st = a.stat()
+        stamp = json.dumps({"size": st.st_size, "mtime_ns": st.st_mtime_ns})
         old = db.execute("SELECT * FROM document WHERE collection=? AND ref=?", (collection, str(a))).fetchone()
+        if old and old["meta"] == stamp:  # same size and modification time: not even read
+            out.append((old["id"], "unchanged", a))
+            continue
+        sha = file_sha(a)
         if old and old["sha"] == sha:
+            db.execute("UPDATE document SET meta=? WHERE id=?", (stamp, old["id"]))
             out.append((old["id"], "unchanged", a))
             continue
         if old:
@@ -165,8 +183,8 @@ def add(db, collection, path, typ="auto"):
             db.execute("DELETE FROM chunk WHERE document=?", (old["id"],))
             db.execute("DELETE FROM document WHERE id=?", (old["id"],))
         t = detect(a) if typ == "auto" else typ
-        did = db.execute("INSERT INTO document(collection, ref, title, sha, type) VALUES (?,?,?,?,?)",
-                         (collection, str(a), a.name, sha, t)).lastrowid
+        did = db.execute("INSERT INTO document(collection, ref, title, sha, type, meta) VALUES (?,?,?,?,?,?)",
+                         (collection, str(a), a.name, sha, t, stamp)).lastrowid
         n = 0
         if t == "chat":
             msgs = list(read_chat(a))
