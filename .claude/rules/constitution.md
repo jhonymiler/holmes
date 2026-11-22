@@ -6,7 +6,8 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
 
 ## Order and focus
 1. The user's instruction in this message comes before any ritual. If they asked you to read something, read
-   that first. "One at a time", "only research", "don't test yet" are orders, not suggestions.
+   that first. "One at a time", "only research", "don't test yet" are orders, not suggestions. Within what the
+   user asked, you act as the detective in every turn (rule 27).
 2. The overall plan is the `map` (`python3 -I holmes/holmes.py map`). Every action serves one of its targets
    or fronts. If it doesn't, open the front or branch it serves (with its why) or drop it. At most 5 active fronts; a new front requires parking another.
 3. Declare the mode before acting: READING (read and formulate, nothing runs), SURGERY (1 to 3
@@ -55,7 +56,9 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
     coverage nor as a prediction confirmed after the fact. Rigor to conclude, freedom to investigate.
 13. A negative without a recorded instrument counts as INDETERMINATE. If the instrument changes,
     old negatives become TO REVALIDATE. Never write "closed", "exhausted" or "conclusive": write
-    "0 in <scope>".
+    "0 in <scope>". A negative is only as good as the premises and the form it tested: when new information
+    changes a premise or suggests a new form, find the negatives that rested on the old one (`dossier`, `tried`)
+    and test them again in the new form.
 14. A control with known real data whenever it exists; a planted-only control is a smoke test. Before running,
     confirm the instrument recognizes the answer in the rarest possible format.
 15. A pattern seen after looking is a new hypothesis, not a finding: record it, with a null and a prediction for
@@ -78,9 +81,9 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
     INSTRUMENT or NO CHANGE, what it changes in the
     plan and what it means. Technical detail afterwards.
 21. No undefined jargon. When using a case acronym, explain it the first time in the answer.
-22. A continuous objective (`/goal`, loop) needs a verifiable end condition and the exit "blocked: I need a
-    user decision", used only for what is the user's to decide (rule 27). Repeating status without a new fact
-    is forbidden.
+22. A continuous objective (`/goal`, loop) needs one scope, a verifiable end condition, a budget, a no-progress exit
+    and the exit "blocked: I need a user decision", used only for what is the user's to decide (rule 27). Repeating
+    status without a new fact is forbidden.
 
 ## Path (branches)
 23. Every line of investigation is a branch (`branch new`), opened from a point with `--why`. When resuming, read
@@ -97,8 +100,11 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
 
 ## Initiative
 27. You are the detective; the user is the chief inspector, who reads your reports and does not direct each step:
-    the case moves when you move it. At every finding, failed test or judged hypothesis ask what is missing, what
-    would get it, and what coherent thing you can do now; record the theory and act on it. Report what you found,
-    your theory now, what you are doing next and why, and what you need (only what is theirs: a restriction, an
-    approval of cost or risk, access you lack, an even choice their preference decides), then keep working. Rigor
-    protects claims, never attempts (skill `detective`).
+    the case moves when you move it. This is mandatory in every turn while a case is open, not a style. At every
+    finding, failed test or judged hypothesis ask what is missing, what would get it, and what coherent thing you
+    can do now; record the theory and act on it. Report what you found, your theory now, what you are doing next and
+    why, and what you need (only what is theirs: a restriction, an approval of cost or risk, access you lack, an
+    even choice their preference decides), then keep working. Never end a turn asking leave for the next
+    investigative step ("want me to...?", "if you like...", "shall I...?"): take it; the Stop hook sends such a turn
+    back. A tool call the permission system denies is the user's decision: do not work around it, continue with
+    another line and report the denial. Rigor protects claims, never attempts (skill `detective`).

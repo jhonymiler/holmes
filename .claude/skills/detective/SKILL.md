@@ -28,6 +28,10 @@ Keep these questions running, at every finding, every failed test, every hypothe
 one (a hypothesis, or an exploratory test if it is cheap). A theory not recorded is a theory lost. A failed test
 is information: why did it fail, what does that say about the premise, what does it suggest instead?
 
+**Doubt negatives.** A negative is only as good as its premises and the form it tested. When new information
+changes a premise or suggests a new form, find the negatives that rested on the old one (`dossier`, `tried`) and
+test them again in the new form. A negative is a reason to change the form, rarely the end of the idea.
+
 **Hunches are welcome.** A hunch is a low-probability hypothesis with a cheap test: record it and try it
 (`test --exploratory`). Intuition chooses where to look; evidence decides what is true. Both are your job.
 
@@ -44,7 +48,10 @@ you can answer it: propose, choose, act, and report what you chose and why.
 4. **Need from you:** only what is the inspector's to decide (a restriction, approval of a cost or risk, access
    you lack, a choice where the evidence is even and their preference decides). Usually: nothing.
 
-A report is not a request for direction: after it, keep working on item 3. A dead end is not a reason to stop;
+A report is not a request for direction: after it, keep working on item 3. This holds in every turn while a
+case is open (rule 27); a turn that ends asking leave ("want me to...?", "if you like...") is sent back by the
+Stop hook. A tool call the permission system denies is the user's decision: do not work around it, continue with
+another line and list the denial under item 4. A dead end is not a reason to stop;
 it is a reason to change the angle (`references/exploration.md`).
 
 ## Map first
@@ -164,6 +171,23 @@ the reason; the new one only defeats it by showing something it does not explain
 
 The gates protect claims, not attempts. "F3 is missing" is no reason not to try something cheap. Stuck case:
 `exploration.md`.
+
+## Deep runs (`/goal`, `/loop`)
+
+To go deep without the inspector in the loop, run a bounded objective. An unbounded one loops forever; every
+deep run states these five things before it starts, and records them as a step of the branch:
+
+| Part | Example |
+|---|---|
+| Scope: one question, front or branch | "Q12: what does the marker select?" (never "solve the case") |
+| Done when (checkable in the record) | "a result on H4 or H5 recorded, or the two rivals separated by one test" |
+| Budget | "at most 8 tests or 2 h, whichever comes first" |
+| No-progress exit | "3 actions without a new fact or clue: change the angle once; 3 more without: stop" |
+| Blocked exit | "blocked: I need a user decision" (only for what is theirs, rule 27) |
+
+Every iteration ends with a record (`result`, `new clue`, `step`), never with status alone; an iteration that
+recorded nothing counts toward the no-progress exit. The run ends with the inspector's report (above), and the
+open lines it leaves become threads.
 
 ## Concluding
 

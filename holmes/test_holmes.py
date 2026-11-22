@@ -286,6 +286,14 @@ def test_hooks():
         {"type": "assistant", "message": {"content": [{"type": "text", "text": "ok end"}]}}]))
     run(r, "stop", script="hooks.py", stdin=json.dumps({"session_id": "s2", "transcript_path": str(tr)}))
     assert "same message" in (r / ".holmes/journal/s2.md").read_text()
+    def ends(text, **extra):                                                  # rule 27: no asking leave
+        tr.write_text("\n".join(json.dumps(x) for x in [
+            {"type": "user", "message": {"content": "go on"}, "timestamp": "2026-01-01T00:00"},
+            {"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}]))
+        return run(r, "stop", script="hooks.py", stdin=json.dumps({"session_id": "s3", "transcript_path": str(tr), **extra}))
+    assert "Rule 27" in json.loads(ends("H3 survived. Quer que eu ataque a lacuna?"))["reason"]
+    assert ends("H3 survived; next I run T5 because it separates H3 from H4.").strip() == ""
+    assert ends("Want me to run it?", stop_hook_active=True).strip() == ""   # never sends the same turn back twice
     seen = run(r, "health").split("hooks seen running:")[1]                  # execution seen, not configuration
     assert "start" in seen and "stop" in seen and "never seen" not in seen
 

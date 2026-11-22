@@ -103,7 +103,9 @@ def start(ev):
     except H.Error as e:
         return output("SessionStart", f"[holmes] {e}. Existing cases: {', '.join(H.cases()) or 'none'}.")
     parts = [f"[holmes] Active case: {case}. Follow first what the user asks in this message; the map is "
-             "orientation, not a task.", holmes("map")]
+             "orientation, not a task. You are the detective, the user is the chief inspector (rule 27): keep asking "
+             "what is missing and what you can do now, record a theory after every result, act on it, and report "
+             "without asking permission for the next step.", holmes("map")]
     d = journal_of(ev)
     if ev.get("source") in ("compact", "resume") and d.exists():
         parts.append(f"[holmes] End of this session's journal (in full at {d.relative_to(H.ROOT)}):\n"
@@ -187,6 +189,25 @@ def last_turn(transcript):
             if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Bash"]
 
 
+# the turn ends asking leave for the next step instead of taking it (Portuguese and English phrasings)
+ASKS_LEAVE = re.compile(
+    r"\b(quer que eu|deseja que eu|gostaria que eu|prefere que eu|se (voc[eê] )?quiser|se preferir|ou prefere|"
+    r"posso (seguir|continuar|prosseguir|come[cç]ar|fazer|rodar|testar|atacar|tentar|abrir|ir)\b[^.?!]*\?|"
+    r"devo (seguir|continuar|prosseguir|testar)\b[^.?!]*\?|do you want me to|want me to|shall i\b|should i\b[^.?!]*\?|"
+    r"if you(\'d| would)? like|would you like me to|let me know if you want)", re.I)
+
+
+def last_text(transcript):
+    """Text of the agent's last message in the transcript (its tail is enough)."""
+    for e in reversed(tail(transcript, 1 << 20)[0]):
+        if e.get("type") == "assistant":
+            txt = " ".join(b.get("text", "") for b in (e.get("message") or {}).get("content") or []
+                           if isinstance(b, dict) and b.get("type") == "text")
+            if txt.strip():
+                return txt
+    return ""
+
+
 def stop(ev):
     try:
         update_journal(ev)
@@ -201,6 +222,16 @@ def stop(ev):
                 f"[holmes] {Path(ran).name} ran in this turn and nothing was recorded. Record what it showed "
                 "(`holmes.py result T.. ` or `new fact`/`new clue`/`new thread`), or say in one line why there is nothing "
                 "to record. If it is still running, record the PID and the log in the test."}
+    try:
+        H.active_case()
+    except H.Error:
+        return None  # the detective stance is enforced only while a case is open
+    if ASKS_LEAVE.search(last_text(ev["transcript_path"])[-600:]):
+        return {"decision": "block", "reason":
+                "[holmes] Rule 27: your turn ends asking leave for the next investigative step. You are the detective: "
+                "take the step you were offering (the most promising one), record it and report. Only what is the "
+                "inspector's to decide (a restriction, approval of a cost or risk, access you lack, an even choice their "
+                "preference decides) is asked, written as \"Need from you: ...\" - then you may stop."}
     return None
 
 
