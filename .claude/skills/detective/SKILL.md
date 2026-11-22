@@ -39,14 +39,22 @@ test them again in the new form. A negative is a reason to change the form, rare
 until it gives a result or a reason to stop. Prefer doing to asking. Never end a turn asking "what now?" when
 you can answer it: propose, choose, act, and report what you chose and why.
 
-**Report to the inspector, without stopping.** Every report says, in plain words:
+**Report to the inspector, without stopping.** Short, fixed shape, read at a glance. Written in the
+inspector's language, labels included (in Portuguese: ACHADO/NEGATIVO/CONTROLE/INSTRUMENTO/SEM MUDANÇA, Achei,
+Teoria agora, Sigo com, Preciso de você):
 
-1. **Found:** what changed (finding, negative with its scope, control, or nothing new) and what it means.
-2. **Theory now:** the current best explanation and its weight, and what would bring it down.
-3. **Doing next, and why:** the line you chose and the alternatives you set aside (recorded as branches or
-   threads).
-4. **Need from you:** only what is the inspector's to decide (a restriction, approval of a cost or risk, access
-   you lack, a choice where the evidence is even and their preference decides). Usually: nothing.
+```
+**FINDING** · <one line: what changed and what it means>
+
+**Found:** <1 to 3 lines: the evidence, citing ids>
+**Theory now:** <the best explanation, its weight, and what would bring it down>
+**Doing next:** <the line you chose and why; the ones set aside, with their ids>
+**Need from you:** nothing | <only the inspector's decision: a restriction, approval of a cost or risk,
+access you lack, a choice where the evidence is even and their preference decides>
+```
+
+Bold only on the labels, never inside sentences. Ids and names as plain text (K1071, dbbi); code formatting
+only for commands. At most three lines per item: the detail is in the record, and the report points to it by id.
 
 A report is not a request for direction: after it, keep working on item 3. This holds in every turn while a
 case is open (rule 27); a turn that ends asking leave ("want me to...?", "if you like...") is sent back by the
@@ -105,6 +113,7 @@ Every fact, hypothesis and decision goes to the record, not the conversation.
 | Weight of evidence | `ach <E> <H> CC\|C\|N\|I\|II`; `ach <F>` shows the matrix and what is diagnostic |
 | Test | `test <hyp> "<t>" --scope .. --why "if + opens X; if − closes Y" --prediction .. --control .. --control-type real --instrument I.. [--script <path>]`; attach the script later with `edit <T> --script <path>` |
 | Run | `run <T> --pid <pid> --log <file>` (long) or straight `result` (quick) |
+| Sweep over candidates | the script feeds the ledger (`from ledger import Ledger`; `L.seen(c)` skips what any test tried, `L.pick(c, 0.01)` is a reproducible sample, `L.add(c)`); `tried "<c>" --candidate`; `show T..` gives the distinct count |
 | Cheap hunch | `test <hyp> "<t>" --scope .. --why .. --exploratory` (counts as a lead; needs no `--refuted-if`) |
 | Result | `result <T> positive\|negative\|inconclusive\|failed "<note>" [--meaning "<what it says>"\|"none: <why>"\|"revisit: <what>"] --n <size> --control-ok yes\|no` |
 | Question | `new question "<question>" --parent <front\|target\|O\|Q>`; a hypothesis that answers it: `link <H> answers <Q>`; `questions` |

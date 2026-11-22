@@ -77,9 +77,10 @@ labels in capitals (READING, FINDING...) are the CLI's own tokens.
     printed progress. Check with `jobs`. Never `pkill -f`. Before promising a time, measure the real rate.
 
 ## Communication
-20. Start every answer with one plain-language verdict line: FINDING, NEGATIVE (within scope X), CONTROL,
-    INSTRUMENT or NO CHANGE, what it changes in the
-    plan and what it means. Technical detail afterwards.
+20. Start every answer with one plain-language verdict line: FINDING, NEGATIVE (within scope X), CONTROL, INSTRUMENT
+    or NO CHANGE, what it changes in the plan and what it means; then the short report of the `detective` skill.
+    Write in the user's language, labels included; bold only on labels; ids as plain text; detail stays in the
+    record.
 21. No undefined jargon. When using a case acronym, explain it the first time in the answer.
 22. A continuous objective (`/goal`, loop) needs one scope, a verifiable end condition, a budget, a no-progress exit
     and the exit "blocked: I need a user decision", used only for what is the user's to decide (rule 27). Repeating

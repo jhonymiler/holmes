@@ -167,6 +167,7 @@ LESSONS.md                       por que cada regra existe
 holmes/holmes.py                 banco do raciocínio (case.db) e CLI
 holmes/corpus.py                 banco do material (corpus.db): chat, documentos, livros; BM25, literal, vetorial
 holmes/hooks.py                  o que os hooks executam
+holmes/ledger.py                 registro de candidatos: quais candidatos exatos uma varredura testou (Bloom + HyperLogLog)
 holmes/test_holmes.py            testes herméticos
 holmes/eval/                     caso sintético com gabarito (watchmaker.json) e avaliador (evaluate.py)
 cases/<caso>/                    case.db · CASE.md (≤ 2 KB, à mão) · MAP.md (gerado) · sources/ outputs/ notes/ scripts/
@@ -197,7 +198,7 @@ e as saídas reais de cada comando: [EXAMPLE.md](EXAMPLE.md).
 |---|---|
 | caso | `init <caso> "<objetivo>"` · `use <caso>` (trocar) · `cases` (listar) |
 | percurso | `sheet` (uma página) · `tree [id]` · `trail [B..]` · `branch new "<pergunta>" --from <id> [--step N] --why ".." [--no-use]` · `branch use B..` · `branch release` · `step <read\|thought\|tested\|found\|corrected\|decided\|next> ".." --why ".."` |
-| orientar-se | `map [--all]` · `next` (o que fazer e por quê) · `show <id>` · `chain <id>` (no que se apoia) · `questions` · `timeline` · `search "<txt>" [--literal]` · `tried "<txt>" [--literal]` (já testado? também avisa termos listados como OUTSIDE) · `dossier "<termos>" [--hops 2]` (o encadeamento de um tema: itens achados pelo conteúdo, suas ligações e os passos que os citam) · `health` |
+| orientar-se | `map [--all]` · `next` (o que fazer e por quê) · `show <id>` · `chain <id>` (no que se apoia) · `questions` · `timeline` · `search "<txt>" [--literal]` · `tried "<txt>" [--literal]` (já testado? também avisa termos listados como OUTSIDE) · `tried "<candidato>" --candidate` (o registro) · `dossier "<termos>" [--hops 2]` (o encadeamento de um tema: itens achados pelo conteúdo, suas ligações e os passos que os citam) · `health` |
 | ler o todo | `reading "<quadro>" [--supports E,..] [--weakens ..] [--rival H,..] [--question Q] [--gap Q,..] [--reason ".."]` · `reading --keep "<por quê>"` (os eventos não mudam a leitura: responde ao pedido) · `reading` (mostra a atual) |
 | criar | `new <tipo> "<título>" --parent ..` (tipos: target, front, question, hypothesis, premise, fact (exige `--by`), clue, entity, decision, thread) |
 | extrair | `extract <contrato.json> [--apply] [--only ..] [--reject ..]` (observação, pista, interpretação, questão, hipótese, conexão; contrato em MODEL.md) |
@@ -264,7 +265,7 @@ O mod `.claude/skills/holmes/` é opcional e só poda saídas longas do Bash; el
 
 ## Verificado
 
-- ✅ `holmes/test_holmes.py`: 12 testes herméticos, que cobrem:
+- ✅ `holmes/test_holmes.py`: 14 testes herméticos, que cobrem:
   - a árvore e seus limites, e os alvos;
   - execuções e validade (controle visto, script versionado, modo exploratório) e o alerta de túnel;
   - fatos, fontes, citação, entidades e apelidos;
@@ -276,6 +277,9 @@ O mod `.claude/skills/holmes/` é opcional e só poda saídas longas do Bash; el
   - ramos com fork de um passo, passos, `trail`, `tree` e `sheet`;
   - releitura diante de contradição ou de hipótese central, revalidação de instrumento e retomada após
     compactar;
+  - busca por radical e por texto literal, `dossier`, ids do legado apontando o nó mapeado, `reading --keep`;
+  - o registro de candidatos (candidato exato, contagem de distintos, amostra com semente), custódia das fontes no
+    `health`, reabertura só com motivo, quase-duplicatas na criação, o hook Stop contra pedir licença;
   - o caso sintético com resposta conhecida.
 - ✅ `holmes/eval/evaluate.py recall`: descoberta de relações medida contra gabarito (números e limites em
   `holmes/eval/README.md`).

@@ -16,11 +16,11 @@ traps (the same word without a relation) and 13 distractors. The solution is kno
 answer key's keys: `case`, `objective`, `solution`, `solution_words`, `clues`, `links`, `traps`,
 `interpreter_concepts`.
 
-Measured on 2026-11-20 (top 5):
+Measured on 2026-11-22 (top 5; `search` matches word stems since then):
 
 | Mode | Links | Non-literal | Traps in the list |
 |---|---|---|---|
-| `search` (what existed) | 3/9 | 1/7 | 3/4 |
+| `search` (what existed) | 4/9 | 2/7 | 4/4 |
 | `connections` | 3/9 | 1/7 | 2/4 |
 | `connections` + the interpreter's concepts | 9/9 | 7/7 | 2/4 |
 

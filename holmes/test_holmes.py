@@ -247,6 +247,40 @@ def test_search_literal_dossier_and_legacy_ids():
     assert run(r, "show", "v1:A4").startswith("K5")
 
 
+def test_ledger_custody_reopen_and_duplicates():
+    r = case()
+    run(r, "new", "front", "Passwords", "--parent", "O1")                                            # F2
+    run(r, "new", "hypothesis", "The password is a date", "--parent", "F2", "--refuted-if", "no date opens it")  # H3
+    run(r, "test", "H3", "Dates 1890-1899", "--scope", "3650 dates", "--why", "p")                  # T4
+    out = run(r, "add", "T4", "--seed", "5", script="ledger.py", stdin="\n".join(f"189{i % 10}-{i}" for i in range(3650)))
+    assert "3650 candidate(s) added" in out
+    assert "probably tried in T4" in run(r, "tried", "1893-3", "--candidate")
+    assert "in no ledger" in run(r, "tried", "1999-1", "--candidate")
+    assert "ledger: ~" in run(r, "show", "T4") and "seed 5" in run(r, "show", "T4")
+    run(r, "result", "T4", "negative", "no date opened it")
+    assert re.search(r"n=~3[56]\d\d distinct", run(r, "show", "T4"))                # the ledger filled n
+    assert "seed" in run(r, "add", "T4", "--seed", "6", script="ledger.py", stdin="x", ok=False)   # same test, same seed
+    # reopening a fallen item needs the new information
+    run(r, "state", "H3", "refuted", "T4")
+    assert "requires a reason" in run(r, "state", "H3", "alive", ok=False)
+    run(r, "state", "H3", "alive", "new form: dates written as day-month")
+    # near duplicates are pointed out at creation
+    run(r, "new", "clue", "The letter was written with iron gall ink in the winter of 1897", "--nature", "observation")
+    dup = run(r, "new", "clue", "The letter was written with iron gall ink in the winter of 1897, says the lab", "--nature", "report")
+    assert "looks like K" in dup and "duplicates" in dup
+    assert "looks like" not in run(r, "new", "clue", "A watermark shows a Dutch mill", "--nature", "observation")
+    # custody: a registered source that changes on disk is flagged; the corpus skips files it already has
+    src = r / "cases/demo/sources/letter.txt"
+    src.write_text("Dear sir, the ink darkens.")
+    run(r, "source", str(src))
+    assert "changed on disk" not in run(r, "health")
+    assert "unchanged" in run(r, "add", "demo", str(src), script="corpus.py")
+    src.write_text("Dear sir, the ink darkens. P.S. burn this.")
+    assert "1 source(s) changed on disk" in run(r, "health")
+    src.unlink()
+    assert "1 source(s) missing from disk" in run(r, "health")
+
+
 def test_corpus_modes():
     r = Path(tempfile.mkdtemp())
     (r / "a.md").write_text("Line one\nD\nO\nO\nR\n\nThe key opens the cellar door.")
