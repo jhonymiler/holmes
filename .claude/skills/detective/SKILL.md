@@ -6,7 +6,7 @@ description: "Investigation method for any case with fragmented evidence, compet
 # Detective
 
 A short protocol. Details live in `references/`, loaded only when a step calls for them. Command names and
-states are the CLI's own tokens (the old Portuguese ones still work as aliases: `MIGRATION.md`).
+states are the CLI's own tokens.
 
 ## Map first
 

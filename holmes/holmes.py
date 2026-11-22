@@ -35,14 +35,9 @@ The plan is the `map` query; raw material lives in the corpus (holmes/corpus.py)
              step <type> "<text>" --why ".." [--nodes ..] · tree [id] · trail [B..] · sheet
   proofs     instrument <path> "<name>" [--verifier "cmd"] · proof [--execute] [--legacy]
              (without --execute it only lists: they are shell commands stored in the database)
-  upkeep     reorganize [--apply]
-
-Old Portuguese commands, options and values are still accepted (MIGRATION.md); an old case database is
-migrated in place the first time it is opened.
 
 Environment: HOLMES_ROOT, HOLMES_CASES, HOLMES_CASE (forces the case), HOLMES_TUNNEL (default 5), HOLMES_CORPUS,
-HOLMES_READING (default 6: results without an overall reading before the map asks for one). The old names
-(HOLMES_RAIZ, HOLMES_CASOS, HOLMES_CASO, HOLMES_TUNEL, HOLMES_LEITURA) are read when the new ones are absent.
+HOLMES_READING (default 6: results without an overall reading before the map asks for one).
 """
 import argparse
 import hashlib
@@ -59,20 +54,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import corpus as C  # noqa: E402
 
 
-def env(new, old, default=None):
-    """New environment variable first, the old Portuguese one as fallback."""
-    return os.environ.get(new) or os.environ.get(old) or default
-
-
-ROOT = Path(env("HOLMES_ROOT", "HOLMES_RAIZ") or Path(__file__).resolve().parents[1])
-_cases_env = env("HOLMES_CASES", "HOLMES_CASOS")
-# an existing `casos/` root is still used while `cases/` holds no case database
-CASES = Path(_cases_env) if _cases_env else (ROOT / "casos" if (ROOT / "casos").is_dir()
-                                             and not any((ROOT / "cases").glob("*/*.db")) else ROOT / "cases")
+ROOT = Path(os.environ.get("HOLMES_ROOT") or Path(__file__).resolve().parents[1])
+CASES = Path(os.environ.get("HOLMES_CASES") or ROOT / "cases")
 STATE_DIR = ROOT / ".holmes"
-ACTIVE, OLD_ACTIVE = STATE_DIR / "active", STATE_DIR / "ativo"
-TUNNEL = int(env("HOLMES_TUNNEL", "HOLMES_TUNEL") or 5)
-READING_EVERY = int(env("HOLMES_READING", "HOLMES_LEITURA") or 6)
+ACTIVE = STATE_DIR / "active"
+TUNNEL = int(os.environ.get("HOLMES_TUNNEL") or 5)
+READING_EVERY = int(os.environ.get("HOLMES_READING") or 6)
 MAX_FRONTS, MAX_HYP, MAX_MAP = 5, 7, 3500
 
 PREFIX = {"objective": "O", "target": "A", "front": "F", "hypothesis": "H", "premise": "R", "test": "T",
@@ -121,83 +108,6 @@ PROVENANCES = ["primary", "derived", "third-party", "ours"]
 CONTROL_TYPES = ["real", "planted", "sabotage", "none"]
 ACH = {"CC": 2, "C": 1, "N": 0, "I": -1, "II": -2}
 
-# ---------- the old Portuguese vocabulary (MIGRATION.md): accepted on input, translated in old databases ----------
-
-OLD_COMMANDS = {"usa": "use", "casos": "cases", "saude": "health", "questoes": "questions", "proximo": "next",
-                "cronologia": "timeline", "prova": "proof", "cadeia": "chain", "conexoes": "connections",
-                "conexao": "connection", "extrai": "extract", "mapa": "map", "novo": "new", "edita": "edit",
-                "leitura": "reading", "estado": "state", "liga": "link", "desliga": "unlink", "teste": "test",
-                "roda": "run", "resultado": "result", "busca": "search", "ja": "tried", "ver": "show",
-                "fonte": "source", "cita": "quote", "confere": "prove", "atributo": "attribute", "ramo": "branch",
-                "passo": "step", "arvore": "tree", "trilha": "trail", "ficha": "sheet", "reorganiza": "reorganize",
-                "instrumento": "instrument"}
-OLD_TYPES = {"objetivo": "objective", "alvo": "target", "frente": "front", "hipotese": "hypothesis",
-             "premissa": "premise", "teste": "test", "fato": "fact", "pista": "clue", "entidade": "entity",
-             "decisao": "decision", "fio": "thread", "fonte": "source", "instrumento": "instrument",
-             "leitura": "reading", "questao": "question", "conexao": "connection", "ramo": "branch"}
-_OLD_STATE_LISTS = {
-    "objective": ["aberto", "atingido", "abandonado"], "target": ["aberto", "resolvido", "bloqueado"],
-    "front": ["ativa", "estacionada", "fechada", "descartada"], "hypothesis": ["viva", "apoiada", "refutada", "estacionada"],
-    "premise": ["assumida", "verificada", "refutada"], "test": ["planejado", "rodando", "feito", "cancelado"],
-    "fact": ["vigente", "contestado", "retratado"], "clue": ["aberta", "descartada"], "entity": ["ativa", "fundida"],
-    "decision": ["vigente", "revogada"], "thread": ["aberto", "fechado", "estacionado"],
-    "source": ["catalogada", "indexada"], "instrument": ["vigente", "obsoleto"], "reading": ["vigente", "substituida"],
-    "question": ["aberta", "respondida", "reformulada", "estacionada"],
-    "connection": ["sugerida", "confirmada", "rejeitada"],
-    "branch": ["ativo", "pausado", "morto", "fundido", "concluido"]}
-OLD_STATES = {t: dict(zip(old, STATES[t])) for t, old in _OLD_STATE_LISTS.items()}
-OLD_STATES["fact"]["rascunho"] = "draft"  # legacy-only fact state: `reorganize` turns the item into a clue
-ANY_OLD_STATE = {}
-for _m in OLD_STATES.values():
-    for _k, _v in _m.items():
-        ANY_OLD_STATE.setdefault(_k, _v)
-OLD_VALUES = {
-    "type": OLD_TYPES,
-    "nature": {"observacao": "observation", "medicao": "measurement", "citacao": "quote", "inferencia": "inference",
-               "interpretacao": "interpretation", "relato": "report"},
-    "origin": {"autor": "author", "fonte": "source", "medido": "measured", "usuario": "user", "agente": "agent",
-               "externo": "external"},
-    "edge": {"sustenta": "supports", "enfraquece": "weakens", "contradiz": "contradicts", "refuta": "refutes",
-             "depende": "depends", "duplica": "duplicates", "substitui": "supersedes", "sobre": "about",
-             "deriva": "derives", "responde": "answers"},
-    "step": {"abriu": "opened", "bifurcou": "forked", "registrou": "recorded", "mudou": "changed", "testou": "tested",
-             "leu": "read", "pensou": "thought", "achou": "found", "corrigiu": "corrected", "decidiu": "decided",
-             "proximo": "next"},
-    "proof": {"fonte": "source", "medicao": "measurement", "teste": "test", "reproducao": "reproduction"},
-    "result": {"positivo": "positive", "negativo": "negative", "inconclusivo": "inconclusive", "falhou": "failed"},
-    "provenance": {"primaria": "primary", "derivada": "derived", "terceiros": "third-party", "nossa": "ours"},
-    "control_type": {"plantado": "planted", "sabotagem": "sabotage", "nenhum": "none"},
-    "mode": {"exploratorio": "exploratory"},
-    "yesno": {"sim": "yes", "nao": "no"},
-    "branch_action": {"novo": "new", "usa": "use", "solta": "release"},
-    "class": {"evento": "event", "conceito": "concept"},  # the code looks for class 'event' (`timeline`)
-    "key": {"quando": "when"},  # the code looks for attribute 'when' (`timeline`)
-    "edge_note": {"decisiva": "decisive", "lacuna": "gap"},  # notes the code matches on reading edges
-    "version_note": {"detectada ao rodar": "detected when running"},
-}
-
-
-def translate(kind, v):
-    """Old Portuguese value → new English value (unknown values pass through unchanged)."""
-    if v is None:
-        return None
-    if kind == "meaning":  # "nenhum: <why>" / "revisar: <what>" → "none: .." / "revisit: .."
-        pref, sep, rest = v.partition(":")
-        new = {"nenhum": "none", "revisar": "revisit"}.get(pref.strip().lower())
-        return f"{new}:{rest}" if sep and new else v
-    return OLD_VALUES[kind].get(v, v)
-
-
-def state_of(typ, v):
-    """A state given on the command line or stored the old way, translated for the node's type."""
-    return OLD_STATES.get(typ, {}).get(v) or ANY_OLD_STATE.get(v, v) if v not in STATES.get(typ, ()) else v
-
-
-def accepts(kind):
-    """argparse `type=`: translates an old value before `choices` checks it."""
-    return lambda v: translate(kind, v)
-
-
 class Error(Exception):
     pass
 
@@ -211,24 +121,20 @@ def case_dir(case):
 
 
 def cases():
-    return sorted({p.parent.name for pat in ("*/case.db", "*/caso.db") for p in CASES.glob(pat)})
+    return sorted({p.parent.name for p in CASES.glob("*/case.db")})
 
 
 def read_active():
-    for f in (ACTIVE, OLD_ACTIVE):
-        if f.exists():
-            return f.read_text().strip()
-    return ""
+    return ACTIVE.read_text().strip() if ACTIVE.exists() else ""
 
 
 def write_active(case):
     STATE_DIR.mkdir(exist_ok=True)
     ACTIVE.write_text(case)
-    OLD_ACTIVE.unlink(missing_ok=True)  # one source of truth after the first write
 
 
 def active_case():
-    c = env("HOLMES_CASE", "HOLMES_CASO") or read_active()
+    c = os.environ.get("HOLMES_CASE") or read_active()
     if not c:
         raise Error("no active case: `holmes.py use <case>` (or `init`)")
     if c not in cases():
@@ -237,25 +143,7 @@ def active_case():
 
 
 def case_db(case):
-    """case.db of a case; an old caso.db (with CASO.md and MAPA.md) is renamed once, before it is migrated."""
-    d = case_dir(case)
-    new, old = d / "case.db", d / "caso.db"
-    if not new.exists() and old.exists():
-        try:
-            con = sqlite3.connect(old.as_uri() + "?mode=rw", uri=True)  # never creates an empty caso.db
-            con.execute("PRAGMA wal_checkpoint(TRUNCATE)")  # fold the WAL into the main file before renaming
-            con.close()
-            os.link(old, new)  # atomic: fails if another process already moved it
-        except (sqlite3.OperationalError, FileExistsError, FileNotFoundError):
-            return new
-        old.unlink()
-        for suffix in ("-wal", "-shm"):  # emptied by the checkpoint
-            if (d / f"caso.db{suffix}").exists() and not (d / f"case.db{suffix}").exists():
-                (d / f"caso.db{suffix}").rename(d / f"case.db{suffix}")
-        for a, b in (("CASO.md", "CASE.md"), ("MAPA.md", "MAP.md")):
-            if (d / a).exists() and not (d / b).exists():
-                (d / a).rename(d / b)
-    return new
+    return case_dir(case) / "case.db"
 
 
 SCHEMA = """
@@ -307,148 +195,9 @@ CREATE TABLE IF NOT EXISTS step(id INTEGER PRIMARY KEY, branch INTEGER NOT NULL 
 CREATE INDEX IF NOT EXISTS step_branch ON step(branch, id);
 """
 
-# old table → (new table, [(old column, new column, how its value is translated)])
-OLD_SCHEMA = [
-    ("no", "node", [("id", "id", None), ("tipo", "type", "type"), ("pai", "parent", None), ("titulo", "title", None),
-                    ("resumo", "summary", None), ("estado", "state", "state"), ("origem", "origin", "origin"),
-                    ("grau", "grade", None), ("criado", "created", None), ("atualizado", "updated", None),
-                    ("legado", "legacy", None), ("ramo", "branch", None)]),
-    ("alvo", "target", [("no", "node", None), ("solucao", "solution", None), ("prova", "proof", None)]),
-    ("hipotese", "hypothesis", [("no", "node", None), ("prob", "prob", None), ("refuta_se", "refuted_if", None)]),
-    ("teste", "test", [("no", "node", None), ("alcance", "scope", None), ("fora", "outside", None), ("porque", "why", None),
-                       ("previsao", "prediction", None), ("previsao_em", "predicted_at", None),
-                       ("controle", "control", None), ("controle_tipo", "control_type", "control_type"),
-                       ("instrumento", "instrument", None), ("script", "script", None), ("receita", "recipe", None),
-                       ("modo", "mode", "mode")]),
-    ("execucao", "run", [("id", "id", None), ("teste", "test", None), ("versao", "version", None),
-                         ("script_sha", "script_sha", None), ("host", "host", None), ("pid", "pid", None),
-                         ("log", "log", None), ("inicio", "started", None), ("fim", "finished", None), ("n", "n", None),
-                         ("controle_ok", "control_ok", None), ("resultado", "result", "result"), ("nota", "note", None),
-                         ("sentido", "meaning", "meaning")]),
-    ("instrumento", "instrument", [("no", "node", None), ("caminho", "path", None), ("verificador", "verifier", None)]),
-    ("versao", "version", [("id", "id", None), ("instrumento", "instrument", None), ("sha", "sha", None),
-                           ("quando", "at", None), ("verificado", "verified", None), ("nota", "note", "version_note")]),
-    ("fato", "fact", [("no", "node", None), ("natureza", "nature", "nature"), ("fonte", "source", None),
-                      ("local", "location", None), ("citacao", "quote", None), ("conferido", "proven_at", None),
-                      ("prova", "proof", None), ("conferido_por", "proven_by", "proof")]),
-    ("fonte", "source", [("no", "node", None), ("ref", "ref", None), ("sha", "sha", None),
-                         ("procedencia", "provenance", "provenance"), ("confiabilidade", "reliability", None),
-                         ("documento", "document", None)]),
-    ("entidade", "entity", [("no", "node", None), ("classe", "class", "class"), ("aliases", "aliases", None)]),
-    ("atributo", "attribute", [("entidade", "entity", None), ("chave", "key", "key"), ("valor", "value", None),
-                               ("fato", "fact", None), ("quando", "at", None)]),
-    ("decisao", "decision", [("no", "node", None), ("proibe", "forbids", None), ("permite", "allows", None)]),
-    ("aresta", "edge", [("de", "src", None), ("tipo", "type", "edge"), ("para", "dst", None),
-                        ("nota", "note", "edge_note"), ("criado", "created", None)]),
-    ("_ach_pt", "ach", [("fato", "fact", None), ("hipotese", "hypothesis", None), ("valor", "value", None),
-                        ("nota", "note", None)]),
-    ("legado", "legacy", [("ref", "ref", None), ("no", "node", None)]),
-    ("conexao", "connection", [("no", "node", None), ("de", "src", None), ("para", "dst", None),
-                               ("relacao", "relation", "edge"), ("rival", "rival", None),
-                               ("discriminador", "discriminator", None), ("canal", "channel", None)]),
-    ("evento", "event", [("id", "id", None), ("no", "node", None), ("acao", "action", "action"),
-                         ("texto", "text", "event_text"), ("quando", "at", None)]),
-    ("ramo", "branch", [("no", "node", None), ("de_passo", "from_step", None)]),
-    ("passo", "step", [("id", "id", None), ("ramo", "branch", None), ("tipo", "type", "step"), ("texto", "text", None),
-                       ("porque", "why", None), ("nos", "nodes", None), ("quando", "at", None)]),
-]
-
-
-def translate_action(action, old_type):
-    """An old event action, translated where the code later matches it (state changes, results, links, proofs)."""
-    typ = OLD_TYPES.get(old_type, old_type)
-    fixed = {"criou": "created", "editou": "edited", "rodando": "running", "nova versão": "new version",
-             "substituida": "superseded", "reclassificado": "reclassified", "religado": "relinked",
-             "prova ok": "proof ok", "prova FALHOU": "proof FAILED", "conferido": "checked"}
-    if action in fixed:
-        return fixed[action]
-    if action.startswith(("prob ", "ach ")):
-        return action
-    m = re.fullmatch(r"(\S+)→(\S+)", action)
-    if m:
-        return f"{state_of(typ, m[1])}→{state_of(typ, m[2])}"
-    m = re.fullmatch(r"(X\d+) (\w+)", action)
-    if m:
-        return f"{m[1]} {translate('result', m[2])}"
-    m = re.fullmatch(r"(liga|desliga) (\w+)", action)
-    if m:
-        return f"{'link' if m[1] == 'liga' else 'unlink'} {translate('edge', m[2])}"
-    m = re.fullmatch(r"provado por (\w+)", action)
-    if m:
-        return f"proven by {translate('proof', m[1])}"
-    m = re.fullmatch(r"atributo (.+)", action)
-    if m:
-        return f"attribute {translate('key', m[1])}"
-    return action
-
-
-def translate_event_text(action, text):
-    """'criou' events start with the node type ('fato: <title>'): translate that prefix."""
-    if action == "criou" and text:
-        t, sep, rest = text.partition(":")
-        if sep and t in OLD_TYPES:
-            return f"{OLD_TYPES[t]}:{rest}"
-    return text
-
-
-def migrate(db):
-    """Migrates a database from the Portuguese schema (table `no`) in place, once, in one transaction:
-    every table is rebuilt under its English name with its stored values translated, and the search index is
-    rebuilt. A database that has no `no` table is already migrated (or new) and is left alone."""
-    tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    if "no" not in tables:
-        return False
-    db.create_function("holmes_tr", 2, translate)
-    db.create_function("holmes_state", 2, lambda t, s: state_of(OLD_TYPES.get(t, t), s))
-    db.create_function("holmes_action", 2, translate_action)
-    db.create_function("holmes_event_text", 2, translate_event_text)
-    level = db.isolation_level
-    db.isolation_level = None  # explicit BEGIN/COMMIT: the whole migration is one transaction
-    db.execute("PRAGMA foreign_keys=OFF")  # old tables point at `no`, which is dropped
-    try:
-        db.execute("BEGIN IMMEDIATE")
-        if "no" not in {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}:
-            db.execute("ROLLBACK")  # another process migrated it while we waited for the lock
-            return False
-        if "ach" in tables:
-            db.execute("ALTER TABLE ach RENAME TO _ach_pt")
-            tables.add("_ach_pt")
-        db.execute("DROP TABLE IF EXISTS idx")  # rebuilt below from the migrated nodes
-        db.execute("DROP INDEX IF EXISTS no_pai")
-        db.execute("DROP INDEX IF EXISTS passo_ramo")
-        for stmt in SCHEMA.split(";\n"):
-            if stmt.strip() and not stmt.strip().startswith("PRAGMA"):
-                db.execute(stmt)
-        for old, new, cols in OLD_SCHEMA:
-            if old not in tables:
-                continue  # table created by a later version: nothing to copy
-            have = {r[1] for r in db.execute(f"PRAGMA table_info({old})")}
-            pairs = [(o, n, k) for o, n, k in cols if o in have]
-            expr = {None: "{o}", "state": "holmes_state(tipo, {o})", "action": "holmes_action({o}, "
-                    "(SELECT tipo FROM no WHERE no.id={old}.no))", "event_text": "holmes_event_text(acao, {o})"}
-            sel = ", ".join(expr.get(k, f"holmes_tr('{k}', {{o}})").format(o=o, old=old) for o, n, k in pairs)
-            db.execute(f"INSERT INTO {new}({', '.join(n for _, n, _ in pairs)}) SELECT {sel} FROM {old}")
-        db.execute("UPDATE sqlite_sequence SET seq=(SELECT seq FROM sqlite_sequence WHERE name='no') WHERE name='node' "
-                   "AND EXISTS (SELECT 1 FROM sqlite_sequence WHERE name='no')")
-        for old, _, _ in OLD_SCHEMA:
-            db.execute(f"DROP TABLE IF EXISTS {old}")
-        for (i,) in db.execute("SELECT id FROM node").fetchall():
-            index_node(db, i)
-        event(db, None, "migrated", "Portuguese schema → English schema (MIGRATION.md)")
-        db.execute("COMMIT")
-    except BaseException:
-        if db.in_transaction:
-            db.execute("ROLLBACK")
-        raise
-    finally:
-        db.isolation_level = level
-    return True
-
-
 def connect(case=None):
     db = sqlite3.connect(case_db(case or active_case()), timeout=30)
     db.row_factory = sqlite3.Row
-    migrate(db)
     db.executescript(SCHEMA)
     return db
 
@@ -563,7 +312,6 @@ def touch(db, node, action, text=""):
 def proof_of(db, by, proof, where=None):
     """A fact is a proven finding: says how (source, measurement, test, reproduction) and with what.
     `where`: for --by source, the source, quote or locator the proof points to."""
-    by = translate("proof", by)
     if by not in PROOFS:
         raise Error("a fact requires --by source|measurement|test|reproduction: how it is proven. "
                     "Without a proof yet, it is a clue (`new clue`)")
@@ -586,14 +334,12 @@ def proof_of(db, by, proof, where=None):
 
 
 def create(db, typ, title, parent=None, summary=None, origin=None, grade=None, state=None, force=False, **x):
-    typ = translate("type", typ)
     if typ not in STATES:
         raise Error(f"invalid type {typ!r}; use: {', '.join(STATES)}")
     if len(title) > 160:
         raise Error(f"title with {len(title)} characters (max. 160): the detail goes in --summary")
     if summary and len(summary) > 800:
         raise Error(f"summary with {len(summary)} characters (max. 800): one conclusion per item; material goes to the corpus")
-    origin = translate("origin", origin)
     if origin and origin not in ORIGINS:
         raise Error(f"invalid origin; use: {', '.join(ORIGINS)}")
     p = get_node(db, parent) if parent else None
@@ -603,7 +349,7 @@ def create(db, typ, title, parent=None, summary=None, origin=None, grade=None, s
         raise Error("a branch needs --from: the point (question, hypothesis, target, branch…) it grows from")
     if typ == "objective" and one(db, "SELECT 1 FROM node WHERE type='objective'"):
         raise Error("the case already has an objective (only one); sub-problems are targets")
-    state = state_of(typ, state) if state else None
+    state = state or None
     if typ == "front" and (state or "active") == "active" and not force:
         n = one(db, "SELECT count(*) FROM node WHERE type='front' AND state='active'")[0]
         if n >= MAX_FRONTS:
@@ -624,7 +370,7 @@ def create(db, typ, title, parent=None, summary=None, origin=None, grade=None, s
                       "VALUES (?,?,?,?,?,?,?,?,?)", (typ, p["id"] if p else None, title, summary, state,
                                                      origin or "agent", grade, t, t)).lastrowid
     if typ in ("fact", "clue"):
-        nat = translate("nature", x.get("nature")) or "observation"
+        nat = x.get("nature") or "observation"
         if nat not in NATURES:
             raise Error(f"invalid nature; use: {', '.join(NATURES)}")
         by, proof = None, x.get("proof")
@@ -642,7 +388,7 @@ def create(db, typ, title, parent=None, summary=None, origin=None, grade=None, s
     elif typ == "hypothesis":
         db.execute("INSERT INTO hypothesis VALUES (?,?,?)", (node, x.get("prob"), x.get("refuted_if")))
     elif typ == "entity":
-        db.execute("INSERT INTO entity VALUES (?,?,?)", (node, translate("class", x.get("cls")), x.get("alias")))
+        db.execute("INSERT INTO entity VALUES (?,?,?)", (node, x.get("cls"), x.get("alias")))
     elif typ == "decision":
         db.execute("INSERT INTO decision VALUES (?,?,?)", (node, x.get("forbids"), x.get("allows")))
     elif typ == "target":
@@ -1031,10 +777,6 @@ def build_map(db, case, everything=False):
         if nl:
             inherited[{"INDETERMINATE": "indeterminate negatives", "TO REVALIDATE": "negatives to revalidate",
                        "INVALID": "invalid results"}[key]] = nl
-    old_facts = one(db, "SELECT count(*) FROM node n JOIN fact f ON f.node=n.id WHERE n.type='fact' AND f.proven_at IS NULL")[0]
-    if old_facts:
-        alerts.append(("old", f"{old_facts} fact(s) without a recorded proof (database older than the fact/clue model): run "
-                              "`reorganize` (plan) and `reorganize --apply` (what is not proven becomes a clue)."))
     clues = one(db, "SELECT count(*) FROM node WHERE type='clue' AND state='open' AND legacy=0")[0]
     if clues:
         alerts.append(("clue", f"{clues} open clue(s): prove them (`prove K.. --by ..`, becomes a fact) or drop them "
@@ -1174,9 +916,6 @@ def ach_matrix(db, f):
     return "\n".join(L)
 
 
-HOOK_NAMES = {"abertura": "start", "pistas": "prompt", "guarda": "guard", "pos": "post", "fim": "stop"}
-
-
 def health(db):
     L = []
     loose = q(db, "SELECT * FROM node WHERE type IN ('fact','clue') AND id NOT IN (SELECT src FROM edge UNION SELECT dst FROM edge "
@@ -1208,7 +947,7 @@ def health(db):
         seen = {}
     if not isinstance(seen, dict):
         seen = {}
-    seen = {HOOK_NAMES.get(k, k): re.sub(r" FALHOU$", " FAILED", str(v)) for k, v in sorted(seen.items(), key=lambda kv: kv[0] in HOOK_NAMES, reverse=True)}
+    seen = {k: str(v) for k, v in seen.items()}
     missing = [h for h in ("start", "prompt", "guard", "stop") if h not in seen]
     L.append("hooks seen running: " + (", ".join(f"{k} {v}" for k, v in sorted(seen.items())) or "none")
              + (f" · never seen: {', '.join(missing)} (check .claude/settings.json and that the folder is trusted)" if missing else ""))
@@ -1586,55 +1325,7 @@ def sheet(db, case):
     return "\n".join(L)
 
 
-def reorganize(db, apply=False):
-    """Brings an old database to the model: a fact is only a proven finding (the rest becomes a clue, same id and
-    edges) and every node cited in a step belongs to that step's branch. Without `apply`, only shows the plan."""
-    L = []
-    rs = q(db, "SELECT n.*, f.nature, f.proven_at, f.quote, f.source FROM node n JOIN fact f ON f.node=n.id "
-               "WHERE n.type='fact'")
-    # a quote with its literal text stored and its source linked carries its own proof
-    literal = {r["id"] for r in rs if r["nature"] == "quote" and (r["quote"] or "").strip() and r["source"]
-               and (r["proven_at"] or (r["origin"] != "external" and r["state"] != "draft"))}
-    become = [r for r in rs if r["id"] not in literal and (r["nature"] not in FACT_NATURES or not r["proven_at"])]
-    by_nature = {}
-    for r in become:
-        by_nature[r["nature"] or "?"] = by_nature.get(r["nature"] or "?", 0) + 1
-    L.append(f"facts: {len(rs)}; become clues {len(become)} (" + ", ".join(f"{k} {v}" for k, v in sorted(by_nature.items()))
-             + f"); stay facts {len(rs) - len(become)} (proven)")
-    ref = {}  # cited node → first branch that cites it
-    for p in q(db, "SELECT branch, nodes FROM step WHERE nodes IS NOT NULL ORDER BY id"):
-        for x in p["nodes"].split(","):
-            m = re.fullmatch(r"[A-Z](\d+)", x.strip())
-            if m:
-                ref.setdefault(int(m[1]), p["branch"])
-    orphans = [i for i in ref if (one(db, "SELECT branch FROM node WHERE id=? AND type != 'branch'", i) or {"branch": 1})["branch"] is None]
-    L.append(f"nodes cited in steps: {len(ref)}; get a branch {len(orphans)}")
-    if apply:
-        for r in become:
-            st = "dropped" if r["state"] in ("retracted", "contested") else "open"
-            db.execute("UPDATE node SET type='clue', state=? WHERE id=?", (st, r["id"]))
-            why = ("not a finding" if r["nature"] not in FACT_NATURES else "no recorded proof")
-            event(db, r["id"], "reclassified", f"fact→clue ({st}): {r['nature']}, {why}")
-            index_node(db, r["id"])
-        # the old `prove` meant "checked against the source"; a stored proof was a shell command (re-proved by running it)
-        db.execute("UPDATE fact SET proven_by=CASE WHEN trim(coalesce(proof, '')) != '' THEN 'measurement' ELSE 'source' END "
-                   "WHERE proven_at IS NOT NULL AND proven_by IS NULL AND node IN (SELECT id FROM node WHERE type='fact')")
-        db.execute("UPDATE node SET state='current' WHERE type='fact' AND state NOT IN ('current', 'contested', 'retracted')")
-        for i in literal:
-            db.execute("UPDATE fact SET proven_at=coalesce(proven_at, ?), proven_by=coalesce(proven_by, 'source') "
-                       "WHERE node=?", (now(), i))
-        for i in orphans:
-            db.execute("UPDATE node SET branch=? WHERE id=?", (ref[i], i))
-            event(db, i, "relinked", f"branch B{ref[i]}")
-    loose = one(db, "SELECT count(*) FROM node n WHERE n.type IN ('fact','clue','hypothesis','test','question') AND "
-                    "n.parent IS NULL AND n.branch IS NULL AND n.id NOT IN (SELECT src FROM edge UNION SELECT dst FROM edge)")[0]
-    L.append(f"loose (no parent, no branch, no edge): {loose}")
-    L.append("applied" if apply else "plan only: `reorganize --apply` writes it (back up case.db first)")
-    return "\n".join(L)
-
-
 def new_connection(db, src, dst, relation, why, rival=None, discriminator=None, origin="agent", reasons=(), channel=None):
-    relation = translate("edge", relation)
     if relation not in EDGES:
         raise Error(f"invalid relation; use: {', '.join(EDGES)}")
     if src["id"] == dst["id"]:
@@ -1657,41 +1348,11 @@ def new_connection(db, src, dst, relation, why, rival=None, discriminator=None, 
 
 EXTRACTION_KEYS = {"source", "observations", "clues", "interpretations", "questions", "hypotheses", "connections",
                    "discriminators", "impact"}
-# the old Portuguese contract keeps working: its keys and values are translated on input
-OLD_CONTRACT_KEYS = {
-    "fonte": "source", "observacoes": "observations", "pistas": "clues", "interpretacoes": "interpretations",
-    "questoes": "questions", "hipoteses": "hypotheses", "conexoes": "connections", "discriminadores": "discriminators",
-    "impacto": "impact", "texto": "text", "natureza": "nature", "origem": "origin", "grau": "grade", "local": "location",
-    "citacao": "quote", "pedaco": "chunk", "metodo": "method", "limites": "limits", "por": "by", "prova": "proof",
-    "existente": "existing", "pai": "parent", "resumo": "summary", "motivada_por": "motivated_by", "sobre": "about",
-    "porque": "why", "alternativas": "alternatives", "confianca": "confidence", "refuta_se": "refuted_if",
-    "responde": "answers", "premissas": "premises", "rivais": "rivals", "de": "from", "para": "to",
-    "relacao": "relation", "discriminador": "discriminator", "motivos": "reasons", "canal": "channel",
-    "estado": "state", "entre": "between", "observacao": "observation", "plano": "plan", "leitura": "reading"}
-CONTRACT_VALUES = {"nature": "nature", "origin": "origin", "by": "proof", "relation": "edge"}
-
-
-def contract_in(data, top=True):
-    """Renames old contract keys (and translates their enum values) recursively; English keys pass through."""
-    if isinstance(data, list):
-        return [contract_in(x, False) for x in data]
-    if not isinstance(data, dict):
-        return data
-    out = {}
-    for k, v in data.items():
-        k = OLD_CONTRACT_KEYS.get(k, k) if isinstance(k, str) and not (top and k in EXTRACTION_KEYS) else k
-        if k in CONTRACT_VALUES and isinstance(v, str):
-            v = translate(CONTRACT_VALUES[k], v)
-        elif k == "state" and isinstance(v, str):
-            v = state_of("connection", v)
-        out[k] = contract_in(v, False) if isinstance(v, (dict, list)) else v
-    return out
 
 
 def extract(db, data, apply=False, only=None, reject=()):
     """Validates the contract, shows the plan and, with apply, writes everything in one transaction (an error in
     any item undoes the whole batch). Local ids (o1, q1…) become case ids; case ids (E42, ext:42) are reused."""
-    data = contract_in(data)
     extra = set(data) - EXTRACTION_KEYS
     if extra:
         raise Error(f"unknown key in the contract: {', '.join(sorted(extra))} (valid: {', '.join(sorted(EXTRACTION_KEYS))})")
@@ -1863,11 +1524,6 @@ def run_proof(cmd):
 
 # ---------- CLI ----------
 
-def opt(s, new, old=None, **kw):
-    """An option under its English name, with the old Portuguese spelling as an alias."""
-    s.add_argument(*([new] + ([old] if old else [])), **kw)
-
-
 def parser():
     ap = argparse.ArgumentParser(prog="holmes.py", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1875,88 +1531,80 @@ def parser():
     s = sub.add_parser("use"); s.add_argument("case")
     for name in ("cases", "health", "jobs", "questions", "next", "timeline", "sheet"):
         sub.add_parser(name)
-    s = sub.add_parser("proof"); opt(s, "--execute", "--executa", action="store_true"); opt(s, "--legacy", "--legado", action="store_true")
+    s = sub.add_parser("proof"); s.add_argument("--execute", action="store_true"); s.add_argument("--legacy", action="store_true")
     s = sub.add_parser("chain"); s.add_argument("id")
     s = sub.add_parser("connections"); s.add_argument("target", nargs="?"); s.add_argument("-n", type=int, default=8)
     s = sub.add_parser("connection"); s.add_argument("src", metavar="from"); s.add_argument("dst", metavar="to")
-    s.add_argument("relation", type=accepts("edge"), choices=EDGES); s.add_argument("why"); opt(s, "--rival")
-    opt(s, "--discriminator", "--discriminador"); opt(s, "--reasons", "--motivos")
-    opt(s, "--origin", "--origem", default="agent", type=accepts("origin"), choices=ORIGINS); opt(s, "--channel", "--canal")
-    s = sub.add_parser("extract"); s.add_argument("file"); opt(s, "--apply", "--aplica", action="store_true")
-    opt(s, "--only", "--so"); opt(s, "--reject", "--rejeita")
-    s = sub.add_parser("map"); opt(s, "--all", "--tudo", action="store_true")
+    s.add_argument("relation", choices=EDGES); s.add_argument("why"); s.add_argument("--rival")
+    s.add_argument("--discriminator"); s.add_argument("--reasons")
+    s.add_argument("--origin", default="agent", choices=ORIGINS); s.add_argument("--channel")
+    s = sub.add_parser("extract"); s.add_argument("file"); s.add_argument("--apply", action="store_true")
+    s.add_argument("--only"); s.add_argument("--reject")
+    s = sub.add_parser("map"); s.add_argument("--all", action="store_true")
     s = sub.add_parser("new"); s.add_argument("type"); s.add_argument("title")
-    for new, old in (("--parent", "--pai"), ("--summary", "--resumo"), ("--origin", "--origem"), ("--grade", "--grau"),
-                     ("--state", "--estado"), ("--nature", "--natureza"), ("--source", "--fonte"),
-                     ("--location", "--local"), ("--quote", "--citacao"), ("--proof", "--prova"),
-                     ("--refuted-if", "--refuta-se"), ("--alias", None), ("--forbids", "--proibe"),
-                     ("--allows", "--permite"), ("--why", "--porque"), ("--by", "--por")):
-        opt(s, new, old)
-    opt(s, "--class", "--classe", dest="cls"); s.add_argument("--prob", type=float)
-    s = sub.add_parser("edit"); s.add_argument("id"); opt(s, "--title", "--titulo"); opt(s, "--summary", "--resumo")
-    opt(s, "--refuted-if", "--refuta-se"); s.add_argument("--script")
-    s = sub.add_parser("reading"); s.add_argument("text", nargs="?"); opt(s, "--title", "--titulo")
-    for new, old in (("--supports", "--sustenta"), ("--weakens", "--enfraquece"), ("--rival", None),
-                     ("--question", "--questao"), ("--gap", "--lacuna"), ("--reason", "--motivo")):
-        opt(s, new, old)
+    for o in ("--parent", "--summary", "--origin", "--grade", "--state", "--nature", "--source", "--location",
+              "--quote", "--proof", "--refuted-if", "--alias", "--forbids", "--allows", "--why", "--by"):
+        s.add_argument(o)
+    s.add_argument("--class", dest="cls"); s.add_argument("--prob", type=float)
+    s = sub.add_parser("edit"); s.add_argument("id"); s.add_argument("--title"); s.add_argument("--summary")
+    s.add_argument("--refuted-if"); s.add_argument("--script")
+    s = sub.add_parser("reading"); s.add_argument("text", nargs="?"); s.add_argument("--title")
+    for o in ("--supports", "--weakens", "--rival", "--question", "--gap", "--reason"):
+        s.add_argument(o)
     s = sub.add_parser("state"); s.add_argument("id"); s.add_argument("state"); s.add_argument("reason", nargs="?", default="")
-    opt(s, "--solution", "--solucao"); opt(s, "--proof", "--prova")
+    s.add_argument("--solution"); s.add_argument("--proof")
     for name in ("link", "unlink"):
-        s = sub.add_parser(name); s.add_argument("src", metavar="from"); s.add_argument("type", type=accepts("edge"), choices=EDGES)
+        s = sub.add_parser(name); s.add_argument("src", metavar="from"); s.add_argument("type", choices=EDGES)
         s.add_argument("dst", metavar="to")
         if name == "link":
             s.add_argument("note", nargs="?")
     s = sub.add_parser("prob"); s.add_argument("hypothesis"); s.add_argument("p", type=float); s.add_argument("reason")
     s = sub.add_parser("ach"); s.add_argument("target"); s.add_argument("hypothesis", nargs="?")
-    s.add_argument("value", nargs="?", choices=list(ACH)); opt(s, "--note", "--nota")
+    s.add_argument("value", nargs="?", choices=list(ACH)); s.add_argument("--note")
     s = sub.add_parser("test"); s.add_argument("hypothesis"); s.add_argument("title")
-    opt(s, "--scope", "--alcance", required=True); opt(s, "--why", "--porque", required=True)
-    for new, old in (("--outside", "--fora"), ("--prediction", "--previsao"), ("--control", "--controle"),
-                     ("--instrument", "--instrumento"), ("--script", None), ("--summary", "--resumo")):
-        opt(s, new, old)
-    opt(s, "--control-type", "--controle-tipo", type=accepts("control_type"), choices=CONTROL_TYPES)
-    opt(s, "--force", "--forca", action="store_true"); opt(s, "--exploratory", "--exploratorio", action="store_true")
+    s.add_argument("--scope", required=True); s.add_argument("--why", required=True)
+    for o in ("--outside", "--prediction", "--control", "--instrument", "--script", "--summary"):
+        s.add_argument(o)
+    s.add_argument("--control-type", choices=CONTROL_TYPES)
+    s.add_argument("--force", action="store_true"); s.add_argument("--exploratory", action="store_true")
     s = sub.add_parser("run"); s.add_argument("test"); s.add_argument("--pid", type=int); s.add_argument("--log")
     s.add_argument("--host")
     s = sub.add_parser("result"); s.add_argument("target")
-    s.add_argument("result", type=accepts("result"), choices=RESULTS); s.add_argument("note")
-    s.add_argument("--n"); opt(s, "--control-ok", "--controle-ok", type=accepts("yesno"), choices=["yes", "no"])
-    opt(s, "--meaning", "--sentido")
+    s.add_argument("result", choices=RESULTS); s.add_argument("note")
+    s.add_argument("--n"); s.add_argument("--control-ok", choices=["yes", "no"])
+    s.add_argument("--meaning")
     for name in ("search", "tried"):
         s = sub.add_parser(name); s.add_argument("text"); s.add_argument("-n", type=int, default=8)
-        opt(s, "--no-corpus", "--sem-corpus", action="store_true")
+        s.add_argument("--no-corpus", action="store_true")
     s = sub.add_parser("show"); s.add_argument("id")
-    s = sub.add_parser("source"); s.add_argument("path"); opt(s, "--title", "--titulo")
-    opt(s, "--provenance", "--procedencia", type=accepts("provenance"), choices=PROVENANCES, default="primary")
-    opt(s, "--reliability", "--confiabilidade", choices=list("ABCDEF")); opt(s, "--no-corpus", "--sem-corpus", action="store_true")
+    s = sub.add_parser("source"); s.add_argument("path"); s.add_argument("--title")
+    s.add_argument("--provenance", choices=PROVENANCES, default="primary")
+    s.add_argument("--reliability", choices=list("ABCDEF")); s.add_argument("--no-corpus", action="store_true")
     s = sub.add_parser("quote"); s.add_argument("chunk", type=int); s.add_argument("claim")
-    opt(s, "--nature", "--natureza", default="quote", type=accepts("nature"), choices=NATURES); opt(s, "--grade", "--grau", default="B")
+    s.add_argument("--nature", default="quote", choices=NATURES); s.add_argument("--grade", default="B")
     s = sub.add_parser("prove"); s.add_argument("fact", help="clue K.. (becomes a fact) or fact E.. (renews the proof)"); s.add_argument("note")
-    opt(s, "--by", "--por", required=True, type=accepts("proof"), choices=PROOFS); opt(s, "--proof", "--prova")
-    opt(s, "--source", "--fonte"); opt(s, "--location", "--local")
-    s = sub.add_parser("attribute"); s.add_argument("entity"); s.add_argument("key", type=accepts("key")); s.add_argument("value")
-    opt(s, "--fact", "--fato")
-    s = sub.add_parser("branch"); s.add_argument("action", nargs="?", type=accepts("branch_action"), choices=["new", "use", "release"])
+    s.add_argument("--by", required=True, choices=PROOFS); s.add_argument("--proof")
+    s.add_argument("--source"); s.add_argument("--location")
+    s = sub.add_parser("attribute"); s.add_argument("entity"); s.add_argument("key"); s.add_argument("value")
+    s.add_argument("--fact")
+    s = sub.add_parser("branch"); s.add_argument("action", nargs="?", choices=["new", "use", "release"])
     s.add_argument("text", nargs="?", help="new: the line's question · use: the branch id (B..)")
-    opt(s, "--from", "--de", dest="src", help="new (required): the node or branch it grows from")
-    opt(s, "--step", "--passo", type=int, help="new: fork from this step of the --from branch")
-    opt(s, "--why", "--porque", help="new (required): why this line exists")
-    opt(s, "--summary", "--resumo", help="new: longer description")
-    opt(s, "--no-use", "--nao-usa", action="store_true", help="new: open it without making it active")
-    s = sub.add_parser("step"); s.add_argument("type", type=accepts("step"), choices=MANUAL_STEPS); s.add_argument("text")
-    opt(s, "--why", "--porque"); opt(s, "--nodes", "--nos"); opt(s, "--branch", "--ramo")
+    s.add_argument("--from", dest="src", help="new (required): the node or branch it grows from")
+    s.add_argument("--step", type=int, help="new: fork from this step of the --from branch")
+    s.add_argument("--why", help="new (required): why this line exists")
+    s.add_argument("--summary", help="new: longer description")
+    s.add_argument("--no-use", action="store_true", help="new: open it without making it active")
+    s = sub.add_parser("step"); s.add_argument("type", choices=MANUAL_STEPS); s.add_argument("text")
+    s.add_argument("--why"); s.add_argument("--nodes"); s.add_argument("--branch")
     s = sub.add_parser("tree"); s.add_argument("id", nargs="?")
     s = sub.add_parser("trail"); s.add_argument("id", nargs="?")
-    s = sub.add_parser("reorganize"); opt(s, "--apply", "--aplica", action="store_true")
     s = sub.add_parser("instrument"); s.add_argument("path"); s.add_argument("name", nargs="?")
-    opt(s, "--verifier", "--verificador")
+    s.add_argument("--verifier")
     return ap
 
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv and argv[0] in OLD_COMMANDS:  # old Portuguese command name
-        argv[0] = OLD_COMMANDS[argv[0]]
     a = parser().parse_args(argv)
 
     if a.cmd == "init":
@@ -1978,8 +1626,6 @@ def main(argv=None):
         if a.case not in cases():
             raise Error(f"{a.case} does not exist; cases: {', '.join(cases()) or 'none'}")
         write_active(a.case)
-        with connect(a.case):  # migrates an old database now, not in the middle of the next command
-            pass
         return print(f"active case: {a.case}")
     if a.cmd == "cases":
         cur = read_active()
@@ -1994,7 +1640,7 @@ def main(argv=None):
             (case_dir(case) / "MAP.md").write_text(txt + "\n", encoding="utf-8")  # generated view; never edit
             print(txt)
         elif a.cmd == "new":
-            typ = translate("type", a.type)
+            typ = a.type
             if typ == "branch":
                 raise Error("a branch is opened with `branch new \"<question>\" --from <id> --why \"<why this line>\"`")
             own = {"source": "source <path>", "instrument": "instrument <path> \"<name>\"",
@@ -2059,7 +1705,7 @@ def main(argv=None):
                 print("warning: reading without --supports: if one of its pieces of evidence falls, no one will warn you")
         elif a.cmd == "state":
             r = get_node(db, a.id)
-            new = state_of(r["type"], a.state)
+            new = a.state
             if new not in STATES[r["type"]]:
                 raise Error(f"invalid state for {r['type']}; use: {', '.join(STATES[r['type']])}")
             if new in NEEDS_REASON and not a.reason.strip():
@@ -2182,7 +1828,7 @@ def main(argv=None):
                 x = one(db, "SELECT * FROM run WHERE test=? AND result IS NULL ORDER BY id DESC", t["id"])
                 if not x:  # quick attempt: opens and closes the run at once
                     x = one(db, "SELECT * FROM run WHERE id=?", open_run(db, t))
-            meaning = translate("meaning", " ".join((a.meaning or "").split())) or None
+            meaning = " ".join((a.meaning or "").split()) or None
             if meaning:  # four states: substantive · "none: <why>" · "revisit: <what>" · absent = pending
                 pref, _, rest = meaning.partition(":")
                 pref = pref.strip().lower()
@@ -2274,8 +1920,6 @@ def main(argv=None):
             print(trail(db, r) if r else "no active branch: `trail B..`")
         elif a.cmd == "sheet":
             print(sheet(db, case))
-        elif a.cmd == "reorganize":
-            print(reorganize(db, a.apply))
         elif a.cmd == "health":
             print(health(db))
         elif a.cmd == "chain":

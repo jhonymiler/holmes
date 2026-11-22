@@ -2,8 +2,8 @@ import type { Register } from 'claude-code'
 
 // holmes module: trimming only. The holmes hooks (start, prompt, guard, post, stop, pre-compact) live in
 // .claude/settings.json, which loads the same in the CLI, in VS Code and in the app; the mod is optional and does
-// not repeat them. Trimming: Bash output above HOLMES_OUTPUT_LIMIT (the old HOLMES_LIMITE_SAIDA is read when it
-// is unset or empty; 4000 when the value is not a nonzero number) goes in full to /tmp/holmes-outputs/<session>/ and only head + tail + the path
+// not repeat them. Trimming: Bash output above HOLMES_OUTPUT_LIMIT (4000 when unset,
+// empty or not a number; 0 turns it off) goes in full to /tmp/holmes-outputs/<session>/ and only head + tail + the path
 // enter the context. In v1, tool results were ~75% of the window and the reasoning ~7%.
 
 export const register: Register = on => {
@@ -19,7 +19,7 @@ export const register: Register = on => {
 }
 
 async function trim($: any, r: any) {
-  const raw = String((await $.env.get('HOLMES_OUTPUT_LIMIT')) || (await $.env.get('HOLMES_LIMITE_SAIDA')) || '')
+  const raw = String((await $.env.get('HOLMES_OUTPUT_LIMIT')) || '')
   const limit = raw === '' || isNaN(Number(raw)) ? 4000 : Number(raw) // an explicit 0 turns trimming off
   if (!limit) return r
   const cut = async (txt: string, name: string) => {

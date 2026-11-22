@@ -8,7 +8,6 @@
     stop        Stop              rewrites the journal; asks for a record if a case script ran without calling holmes.py
     pre-compact PreCompact        rewrites the journal before the cut
 
-The old Portuguese arguments (abertura, pistas, guarda, pos, fim) are still accepted.
 Everything a hook injects stays under 10,000 characters: above that Claude Code swaps the text for a 2 KB
 preview. A hook never breaks the session: any error becomes silence + a line on stderr.
 """
@@ -24,7 +23,7 @@ sys.path.insert(0, str(HERE))
 import holmes as H  # noqa: E402
 
 STATE = H.STATE_DIR
-MAX_JOURNAL = int(H.env("HOLMES_MAX_JOURNAL", "HOLMES_MAX_DIARIO") or 120_000)
+MAX_JOURNAL = int(os.environ.get("HOLMES_MAX_JOURNAL") or 120_000)
 SCRIPT = re.compile(r"\b(?:python3?|\S*/bin/python)\b(?:\s+-\S+)*\s+([\w./-]+\.py)\b")
 
 
@@ -34,7 +33,7 @@ def output(event, text):
 
 def holmes(*args):
     r = subprocess.run([sys.executable, "-I", str(HERE / "holmes.py"), *args], capture_output=True, text=True,
-                       timeout=20, cwd=H.ROOT, env={**os.environ, "HOLMES_HOOK": "1"})
+                       timeout=20, cwd=H.ROOT)
     return (r.stdout or r.stderr).strip()
 
 
@@ -106,8 +105,6 @@ def start(ev):
     parts = [f"[holmes] Active case: {case}. Follow first what the user asks in this message; the map is "
              "orientation, not a task.", holmes("map")]
     d = journal_of(ev)
-    if not d.exists():  # a journal written before the rename
-        d = STATE / "diario" / d.name
     if ev.get("source") in ("compact", "resume") and d.exists():
         parts.append(f"[holmes] End of this session's journal (in full at {d.relative_to(H.ROOT)}):\n"
                      + d.read_text(encoding="utf-8")[-2500:])
@@ -123,9 +120,7 @@ def prompt(ev):
     except H.Error:
         return None
     seen_f = STATE / "sessions" / f"{ev.get('session_id', 'x')}.seen"
-    old_f = STATE / "sessoes" / f"{ev.get('session_id', 'x')}.vistos"  # written before the rename
-    src = seen_f if seen_f.exists() else old_f
-    seen = set(src.read_text().split("\n")) if src.exists() else set()
+    seen = set(seen_f.read_text().split("\n")) if seen_f.exists() else set()
     key = lambda l: " ".join(l.split(" ", 2)[:2]) if l.startswith("corpus") else l.split(" ", 1)[0]  # "H12" or "corpus #37"
     lines = [l for l in holmes("search", text, "-n", "6").splitlines()
              if l and not l.startswith((" ", "(")) and key(l) not in seen][:6]
@@ -160,7 +155,7 @@ def runs_case_script(cmd):
         return None, None
     m = SCRIPT.search(cmd)
     if m and not m[1].endswith(("holmes.py", "hooks.py")) and (
-            any(f"{root}/{case}/" in cmd for root in ("cases", "casos", H.CASES.name)) or "/scripts/" in m[1]):
+            any(f"{root}/{case}/" in cmd for root in ("cases", H.CASES.name)) or "/scripts/" in m[1]):
         return case, m[1]
     return None, None
 
@@ -215,7 +210,6 @@ def pre_compact(ev):
 
 
 ACTIONS = {"start": start, "prompt": prompt, "guard": guard, "post": post, "stop": stop, "pre-compact": pre_compact}
-OLD_ACTIONS = {"abertura": "start", "pistas": "prompt", "guarda": "guard", "pos": "post", "fim": "stop"}
 
 
 def mark(action, ok):
@@ -232,7 +226,7 @@ def mark(action, ok):
 
 
 if __name__ == "__main__":
-    name = OLD_ACTIONS.get(sys.argv[1], sys.argv[1]) if len(sys.argv) > 1 else ""
+    name = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
         r = ACTIONS[name](json.load(sys.stdin))
         mark(name, True)

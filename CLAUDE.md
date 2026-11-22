@@ -10,7 +10,6 @@
 - `.claude/rules/constitution.md` — rules for every session. `.claude/skills/detective/` — the method.
   `.claude/skills/reading/` — reading for meaning. Hooks: `.claude/settings.json`. Data model: `MODEL.md`.
 - `.holmes/` — local state: active case, active branch and the per-session reasoning journal (written by hooks).
-- Old Portuguese commands and options still work as aliases; the mapping is in `MIGRATION.md`.
 
 ## Getting started
 1. Session start already injects the active case's `map`. Read it; do not read whole documents. The map shows
@@ -29,7 +28,7 @@
    `--source`/`--location` or `--proof`). What is not yet proven is a clue:
    `new clue "<t>" --nature observation|measurement|quote|report|inference|interpretation`; a clue of
    observation, measurement, quote or report becomes a fact (never an inference or interpretation) with
-   `prove K.. "<note>" --by ..`. An inference is never a fact: it stays a clue, or becomes a hypothesis. Old databases: `reorganize` (plan), then `reorganize --apply`.
+   `prove K.. "<note>" --by ..`. An inference is never a fact: it stays a clue, or becomes a hypothesis.
 
 ## This machine's environment
 <!-- Measured facts about the machine (CPU/thread limits, GPU, venv paths, unreliable tools) go here, and only here. -->

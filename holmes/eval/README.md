@@ -7,8 +7,7 @@ Two levels, which are not to be confused:
 | Mechanism | whether relation discovery puts the right pair among the top 5 candidates | yes | `python3 -I holmes/eval/evaluate.py recall [answer key]` |
 | Investigation | whether an agent, using holmes, reaches the solution without fabricating relations | no: needs a real session | protocol below + `evaluate.py score <case.db> [answer key]` |
 
-The answer key defaults to `holmes/eval/watchmaker.json`. The old subcommand names (`recuperacao`, `pontua`) are
-still accepted.
+The answer key defaults to `holmes/eval/watchmaker.json`.
 
 ## Synthetic case `watchmaker.json`
 

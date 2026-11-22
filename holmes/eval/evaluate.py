@@ -12,7 +12,6 @@ agent's: the concepts come from the answer key. Deciding whether a candidate is 
 `score` does not need the answer key in the case: it matches each clue with the fact of most similar text and counts
 confirmed links (true and false), rejected traps, questions, reading revisions and tests spent.
 The protocol of a real round with a model is in eval/README.md; it does not run here.
-The old command names (recuperacao, pontua) are still accepted.
 """
 import json
 import os
@@ -26,21 +25,8 @@ HERE = Path(__file__).resolve().parent
 TOP = 5
 
 
-OLD_KEYS = {"caso": "case", "objetivo": "objective", "pistas": "clues", "texto": "text", "onda": "wave",
-            "ligacoes": "links", "de": "from", "para": "to", "conceito": "concept", "armadilhas": "traps",
-            "porque": "why", "conceitos_do_interprete": "interpreter_concepts", "nome": "name",
-            "palavras_da_solucao": "solution_words", "solucao": "solution"}
-
-
-def renamed(x):
-    """An answer key written with the old Portuguese keys, with the keys renamed (values untouched)."""
-    if isinstance(x, dict):
-        return {OLD_KEYS.get(k, k): renamed(v) for k, v in x.items()}
-    return [renamed(v) for v in x] if isinstance(x, list) else x
-
-
 def load(g):
-    return renamed(json.loads(Path(g or HERE / "watchmaker.json").read_text(encoding="utf-8")))
+    return json.loads(Path(g or HERE / "watchmaker.json").read_text(encoding="utf-8"))
 
 
 def ids_of(lines):
@@ -50,7 +36,7 @@ def ids_of(lines):
 def recall(g):
     root = tempfile.mkdtemp()  # disposable case; holmes reads the environment on import
     os.environ.update(HOLMES_ROOT=root, HOLMES_CASES=f"{root}/cases", HOLMES_CORPUS=f"{root}/corpus/corpus.db")
-    for k in ("HOLMES_CASE", "HOLMES_CASO", "HOLMES_RAIZ", "HOLMES_CASOS"):
+    for k in ("HOLMES_CASE",):
         os.environ.pop(k, None)
     sys.path.insert(0, str(HERE.parent))
     import holmes as H
@@ -87,9 +73,6 @@ def words(t):
 def score(path, g):
     db = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     db.row_factory = sqlite3.Row
-    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='no'").fetchone():
-        sys.exit(f"{path} is a case database in the old (Portuguese) schema: open the case once with "
-                 "`python3 -I holmes/holmes.py use <case>` to migrate it, then score again")
     facts = db.execute("SELECT n.id, n.title || ' ' || coalesce(f.quote,'') t FROM node n JOIN fact f ON f.node=n.id "
                        "WHERE f.nature IN ('observation','measurement','quote')").fetchall()
     match = {}
@@ -127,8 +110,6 @@ def score(path, g):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    if a:
-        a[0] = {"recuperacao": "recall", "pontua": "score"}.get(a[0], a[0])
     if not a or a[0] not in ("recall", "score"):
         sys.exit(__doc__)
     if a[0] == "recall":

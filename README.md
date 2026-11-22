@@ -24,9 +24,7 @@ a conclusion is costly:
 
 > [!NOTE]
 > Everything is in English: documentation, rules, skills, agents, the CLI, its states and its output labels.
-> Earlier versions spoke Portuguese; the old commands, options and values still work as aliases, and an old
-> case database is migrated in place the first time it is opened. The full old → new mapping is in
-> [MIGRATION.md](MIGRATION.md). A Portuguese README is in [README.pt-BR.md](README.pt-BR.md).
+> A Portuguese README is in [README.pt-BR.md](README.pt-BR.md).
 
 ## The problem it solves
 
@@ -153,17 +151,6 @@ H sheet                                                           # one page: wh
 > `cases/` and `corpus/`, which don't exist here, so updates never touch your investigation. Make framework
 > changes in separate commits from case changes, so they can be sent back upstream.
 
-<details>
-<summary><b>Coming from the Portuguese CLI?</b></summary>
-
-Nothing to do by hand. The old commands, options and values are accepted as aliases. An old
-`casos/<case>/caso.db` is migrated in place the first time it is opened (back it up first: the migration is
-one-way), `CASO.md` and `MAPA.md` are renamed, and the old environment variables, folders and hook arguments are
-read when the new ones are absent. If an old database still holds unproven facts, run `reorganize` (plan only),
-then `reorganize --apply`. Complete mapping: [MIGRATION.md](MIGRATION.md).
-
-</details>
-
 ## Parts
 
 ```
@@ -171,7 +158,6 @@ CLAUDE.md                        project instructions template (machine facts go
 MODEL.md                         data model, with diagrams
 EXAMPLE.md                       a fictional case from start to finish, with real command output
 LESSONS.md                       why each rule exists
-MIGRATION.md                     old Portuguese names → new English names
 .claude/settings.json            holmes hooks (work in the CLI, VS Code and the app)
 .claude/rules/constitution.md    26 rules for every session
 .claude/skills/detective/        the method (SKILL.md + references/ on demand)
@@ -219,14 +205,17 @@ the real output of each command: [EXAMPLE.md](EXAMPLE.md).
 | relate | `connections <id\|"text">` (candidates; query) · `connection <from> <to> <relation> "<why>" [--rival ..] [--discriminator ..]` · `state C.. confirmed\|rejected "<reason>"` |
 | hypotheses | `prob <H> 0.4 "<reason>"` · `ach <E> <H> CC\|C\|N\|I\|II` · `ach <F>` (matrix) |
 | test | `test <H> "<t>" --scope .. --why .. [--outside ..] [--control ..] [--control-type real\|planted\|sabotage\|none] [--exploratory]` · `run <T> --pid --log` · `result <T> positive\|negative\|inconclusive\|failed "<note>" [--control-ok yes\|no] [--meaning ".."]` · `jobs` |
-| sources | `source <file\|folder\|url>` · `quote <chunk> "<claim>"` · `prove K.. "<note>" --by source\|measurement\|test\|reproduction [--proof ..] [--source S..] [--location ..]` (turns a clue into a fact; the proof need not be a source) · `reorganize [--apply]` (old database → only proven facts, clues, steps relinked) |
+| sources | `source <file\|folder\|url>` · `quote <chunk> "<claim>"` · `prove K.. "<note>" --by source\|measurement\|test\|reproduction [--proof ..] [--source S..] [--location ..]` (turns a clue into a fact; the proof need not be a source) |
 | change | `state <id> <state> "<reason>"` · `edit <id> [--title ..] [--summary ..] [--refuted-if ..]` · `link`/`unlink <from> <type> <to>` · `attribute <N> <key> <value>` |
 | instruments | `instrument <path> "<name>" --verifier "<cmd>"` · `proof` (list) · `proof --execute [--legacy]` |
 
 States for `state`, by type: hypothesis `alive · supported · refuted · parked`; test `planned · running · done ·
 cancelled`; fact `current · contested · retracted`; clue `open · dropped`; connection `suggested · confirmed ·
-rejected`; branch `active · paused · dead · merged · concluded`. The rest are in
-[MIGRATION.md](MIGRATION.md#types-and-states-stored-values).
+rejected`; branch `active · paused · dead · merged · concluded`; objective `open · achieved · abandoned`; target
+`open · solved · blocked`; front `active · parked · closed · discarded`; premise `assumed · verified · refuted`;
+question `open · answered · reformulated · parked`; thread `open · closed · parked`; decision `current · revoked`;
+entity `active · merged`; source `catalogued · indexed`; instrument `current · obsolete`; reading
+`current · superseded`.
 
 </details>
 
@@ -272,13 +261,11 @@ The mod `.claude/skills/holmes/` is optional and only trims long Bash output; it
 | `HOLMES_OUTPUT_LIMIT` | 4000 | Bash output trimming (0 disables) |
 | `HOLMES_EMBED_URL` · `HOLMES_EMBED_MODEL` | — | embedding server for vector search |
 
-The old Portuguese names are read when the new ones are absent ([MIGRATION.md](MIGRATION.md)).
-
 </details>
 
 ## Verified
 
-- ✅ `holmes/test_holmes.py`: 14 hermetic tests, covering:
+- ✅ `holmes/test_holmes.py`: 12 hermetic tests, covering:
   - the tree and its limits, and targets;
   - runs and validity (control seen, versioned script, exploratory mode) and the tunnel alert;
   - facts, sources, citation, entities and aliases;
@@ -288,11 +275,8 @@ The old Portuguese names are read when the new ones are absent ([MIGRATION.md](M
   - the hooks;
   - the path extraction → clue → candidate connection → question → hypothesis → plan;
   - branches forked from a step, steps, `trail`, `tree` and `sheet`;
-  - reorganizing an old database (unproven facts become clues, steps relinked);
   - rereading on a contradiction or a central hypothesis, instrument revalidation, and resume after
     compaction;
-  - **an old Portuguese database** (tables, columns, values, files, variables) migrated once on open, with the
-    old commands, options and values still working on it;
   - the synthetic case with a known answer.
 - ✅ `holmes/eval/evaluate.py recall`: relation discovery measured against an answer key (numbers and limits in
   `holmes/eval/README.md`).

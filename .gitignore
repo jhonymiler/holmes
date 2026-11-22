@@ -1,8 +1,6 @@
 .holmes/
 __pycache__/
-casos/*/saidas/
 *.db-wal
 *.db-shm
 corpus/*.db
 cases/*/outputs/
-casos/*/outputs/

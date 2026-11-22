@@ -2,8 +2,7 @@
 
 Rules that hold in every session, in any case. Short on purpose: the why of each one is in `LESSONS.md`.
 User decisions recorded in the case (`D..` in the map) override these rules. Command names, states and
-labels in capitals (READING, FINDING...) are the CLI's own tokens. The old Portuguese commands and options still
-work as aliases (see `MIGRATION.md`).
+labels in capitals (READING, FINDING...) are the CLI's own tokens.
 
 ## Order and focus
 1. The user's instruction in this message comes before any ritual. If they asked you to read something, read

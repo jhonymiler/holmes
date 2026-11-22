@@ -12,8 +12,6 @@ One database per project (`corpus/corpus.db`), several collections. Never inject
 
 Vectors: HOLMES_EMBED_URL (Ollama-compatible server, POST /api/embed) and HOLMES_EMBED_MODEL.
 HOLMES_EMBED_URL=fake makes deterministic hash vectors (tests only).
-Old Portuguese commands, options and values (busca, --modo hibrido, ...) are still accepted, and an old
-corpus.db is migrated in place the first time it is opened.
 """
 import argparse
 import array
@@ -31,7 +29,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(os.environ.get("HOLMES_ROOT") or os.environ.get("HOLMES_RAIZ") or Path(__file__).resolve().parents[1])
+ROOT = Path(os.environ.get("HOLMES_ROOT") or Path(__file__).resolve().parents[1])
 DB = Path(os.environ.get("HOLMES_CORPUS") or ROOT / "corpus" / "corpus.db")
 WINDOW = 8  # messages per context window
 
@@ -54,82 +52,20 @@ CREATE TABLE IF NOT EXISTS vector(chunk INTEGER PRIMARY KEY REFERENCES chunk(id)
   fmt TEXT DEFAULT 'f4');  -- f4 = float32, f2 = float16 (half the disk); always normalized
 """
 
-OLD_COMMANDS = {"busca": "search", "ver": "show", "janela": "window", "colecoes": "collections"}
-OLD_MODES = {"vetor": "vector", "hibrido": "hybrid"}
-OLD_DOC_TYPES = {"texto": "text"}
-OLD_KINDS = {"janela": "window", "secao": "section", "pagina": "page"}  # the kinds the code itself writes and reads
-
-
 class Error(Exception):
     pass
-
-
-def migrate(db):
-    """Renames the Portuguese tables and columns (table `pedaco`) in place, once, in one transaction, translates
-    the kinds and document types the code uses, and rebuilds the full-text index (its definition names the table)."""
-    if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pedaco'").fetchone():
-        return False
-    level = db.isolation_level
-    db.isolation_level = None
-    try:
-        db.execute("BEGIN IMMEDIATE")
-        if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pedaco'").fetchone():
-            db.execute("ROLLBACK")  # migrated by another process while we waited for the lock
-            return False
-        for stmt in ("DROP TRIGGER IF EXISTS pedaco_ai", "DROP TRIGGER IF EXISTS pedaco_ad", "DROP TABLE IF EXISTS pedaco_fts",
-                     "DROP INDEX IF EXISTS pedaco_doc", "DROP INDEX IF EXISTS pedaco_msg"):
-            db.execute(stmt)
-        renames = [("colecao", "collection", [("nome", "name"), ("criado", "created")]),
-                   ("documento", "document", [("colecao", "collection"), ("titulo", "title"), ("tipo", "type")]),
-                   ("pedaco", "chunk", [("documento", "document"), ("ordem", "position"), ("autor", "author"),
-                                        ("texto", "text")]),
-                   ("vetor", "vector", [("pedaco", "chunk"), ("modelo", "model")])]
-        for old, new, cols in renames:
-            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (old,)).fetchone():
-                continue
-            db.execute(f"ALTER TABLE {old} RENAME TO {new}")
-            have = {r[1] for r in db.execute(f"PRAGMA table_info({new})")}
-            for o, n in cols:
-                if o in have:
-                    db.execute(f"ALTER TABLE {new} RENAME COLUMN {o} TO {n}")
-        for o, n in OLD_KINDS.items():
-            db.execute("UPDATE chunk SET kind=? WHERE kind=?", (n, o))
-        for o, n in OLD_DOC_TYPES.items():
-            db.execute("UPDATE document SET type=? WHERE type=?", (n, o))
-        for stmt in SCHEMA.split(";\n"):
-            if stmt.strip() and not stmt.strip().startswith("PRAGMA"):
-                db.execute(stmt)
-        db.execute("INSERT INTO chunk_fts(chunk_fts) VALUES ('rebuild')")
-        db.execute("COMMIT")
-    except BaseException:
-        if db.in_transaction:
-            db.execute("ROLLBACK")
-        raise
-    finally:
-        db.isolation_level = level
-    return True
 
 
 def connect():
     DB.parent.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(DB, timeout=30)
     db.row_factory = sqlite3.Row
-    migrate(db)
     db.executescript(SCHEMA)
     return db
 
 
 def exists():
-    """Inside a hook an old, unmigrated corpus is skipped: its one-time migration can outlast the hook timeout."""
-    if not DB.exists():
-        return False
-    if not os.environ.get("HOLMES_HOOK"):
-        return True
-    db = sqlite3.connect(DB.as_uri() + "?mode=ro", uri=True)
-    try:
-        return not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pedaco'").fetchone()
-    finally:
-        db.close()
+    return DB.exists()
 
 
 # ---------- ingestion ----------
@@ -156,13 +92,12 @@ def msg_text(t):
 
 
 def read_chat(p):
-    """Messages from a Telegram Desktop export (result.json) or from a JSONL {id, ts, author, text}
-    (the old keys `autor` and `texto` are still read)."""
+    """Messages from a Telegram Desktop export (result.json) or from a JSONL {id, ts, author, text}."""
     if p.suffix == ".jsonl":
         for l in p.read_text(encoding="utf-8").splitlines():
             if l.strip():
                 m = json.loads(l)
-                yield str(m.get("id")), m.get("ts"), m.get("author", m.get("autor")), m.get("text") or m.get("texto") or ""
+                yield str(m.get("id")), m.get("ts"), m.get("author"), m.get("text") or ""
         return
     for m in json.loads(p.read_text(encoding="utf-8")).get("messages", []):
         if m.get("type", "message") == "message":
@@ -174,7 +109,7 @@ def detect(p):
         return "pdf"
     if p.suffix == ".jsonl":
         head = p.read_text(encoding="utf-8", errors="replace")[:2000]
-        return "chat" if '"text"' in head or '"texto"' in head else "text"
+        return "chat" if '"text"' in head else "text"
     if p.suffix == ".json":
         head = p.read_text(encoding="utf-8", errors="replace")[:4000]
         return "chat" if '"messages"' in head else "text"
@@ -192,7 +127,7 @@ def pdf_pages(a):
 
 
 def add_text(db, collection, ref, title, text, typ="text", kind="section"):
-    """Ingests a text that is not in a file (e.g. a migration). Replaces the document if the content changed."""
+    """Ingests a text that is not in a file (e.g. generated text). Replaces the document if the content changed."""
     db.execute("INSERT OR IGNORE INTO collection(name) VALUES (?)", (collection,))
     sha = hashlib.sha256(text.encode()).hexdigest()
     old = db.execute("SELECT * FROM document WHERE collection=? AND ref=?", (collection, ref)).fetchone()
@@ -303,7 +238,7 @@ def literal(db, q, collection=None, author=None, n=8, where=None):
 
 
 def embed_model():
-    return os.environ.get("HOLMES_EMBED_MODEL") or os.environ.get("HOLMES_EMBED_MODELO") or ""
+    return os.environ.get("HOLMES_EMBED_MODEL") or ""
 
 
 def embed_texts(texts):
@@ -364,7 +299,6 @@ def vector_search(db, q, collection=None, author=None, n=8, where=None):
 
 
 def search(db, q, collection=None, author=None, n=8, mode="bm25", where=None):
-    mode = OLD_MODES.get(mode, mode)
     if mode == "literal":
         return literal(db, q, collection, author, n, where)
     if mode == "vector":
@@ -409,22 +343,18 @@ def window(db, collection, msg_id, k=5):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv and argv[0] in OLD_COMMANDS:  # old Portuguese command name
-        argv[0] = OLD_COMMANDS[argv[0]]
     ap = argparse.ArgumentParser(prog="corpus.py", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("add"); s.add_argument("collection"); s.add_argument("path")
-    s.add_argument("--type", "--tipo", default="auto", type=lambda v: OLD_DOC_TYPES.get(v, v),
-                   choices=["auto", "text", "chat", "pdf"])
-    s = sub.add_parser("search"); s.add_argument("text"); s.add_argument("-c", "--collection", "--colecao")
-    s.add_argument("--author", "--autor"); s.add_argument("-n", type=int, default=8)
-    s.add_argument("--mode", "--modo", default="bm25", type=lambda v: OLD_MODES.get(v, v),
-                   choices=["bm25", "literal", "vector", "hybrid"])
-    s.add_argument("--where", "--onde", action="append", help="filter over meta, key=value (repeat for AND)")
+    s.add_argument("--type", default="auto", choices=["auto", "text", "chat", "pdf"])
+    s = sub.add_parser("search"); s.add_argument("text"); s.add_argument("-c", "--collection")
+    s.add_argument("--author"); s.add_argument("-n", type=int, default=8)
+    s.add_argument("--mode", default="bm25", choices=["bm25", "literal", "vector", "hybrid"])
+    s.add_argument("--where", action="append", help="filter over meta, key=value (repeat for AND)")
     s = sub.add_parser("show"); s.add_argument("chunk", type=int)
     s = sub.add_parser("window"); s.add_argument("collection"); s.add_argument("msg_id"); s.add_argument("-k", type=int, default=5)
     sub.add_parser("collections")
-    s = sub.add_parser("embed"); s.add_argument("-c", "--collection", "--colecao"); s.add_argument("--batch", "--lote", type=int, default=32)
+    s = sub.add_parser("embed"); s.add_argument("-c", "--collection"); s.add_argument("--batch", type=int, default=32)
     a = ap.parse_args(argv)
     with connect() as db:
         if a.cmd == "add":

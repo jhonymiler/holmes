@@ -14,12 +14,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 
 
-def run(root, *args, ok=True, script="holmes.py", stdin=None, old_env=False):
+def run(root, *args, ok=True, script="holmes.py", stdin=None):
     env = {k: v for k, v in os.environ.items() if not k.startswith("HOLMES_")}
-    if old_env:  # the old Portuguese variable names still work
-        env.update(HOLMES_RAIZ=str(root), HOLMES_TUNEL="3", HOLMES_LEITURA="4", HOLMES_EMBED_URL="fake")
-    else:
-        env.update(HOLMES_ROOT=str(root), HOLMES_TUNNEL="3", HOLMES_READING="4", HOLMES_EMBED_URL="fake")
+    env.update(HOLMES_ROOT=str(root), HOLMES_TUNNEL="3", HOLMES_READING="4", HOLMES_EMBED_URL="fake")
     r = subprocess.run([sys.executable, "-I", str(HERE / script), *args], capture_output=True, text=True,
                        env=env, input=stdin)
     assert (r.returncode == 0) == ok, (args, r.stdout, r.stderr)
@@ -240,9 +237,6 @@ def test_hooks():
     ev = {"session_id": "s1", "prompt": "and the iron-gall ink, have we seen this before?"}
     assert "H3" in run(r, "prompt", script="hooks.py", stdin=json.dumps(ev))
     assert run(r, "prompt", script="hooks.py", stdin=json.dumps(ev)).strip() == ""   # not repeated in the session
-    (r / ".holmes/sessoes").mkdir()                                           # seen-list written before the rename
-    (r / ".holmes/sessions/s1.seen").rename(r / ".holmes/sessoes/s0.vistos")
-    assert run(r, "prompt", script="hooks.py", stdin=json.dumps({**ev, "session_id": "s0"})).strip() == ""
     run(r, "bogus", script="hooks.py", stdin="{}")                            # unknown/empty action: no entry
     run(r, script="hooks.py", stdin="{}")
     assert set(json.loads((r / ".holmes/hooks.json").read_text())) <= {"start", "prompt"}
@@ -437,7 +431,7 @@ def test_branches_steps_trail_sheet():
     h = run(r, "new", "hypothesis", "Jane wrote it", "--parent", f"F{front}", "--refuted-if", "different handwriting").strip()
     t = run(r, "test", h, "Same handwriting?", "--scope", "3 letters", "--why", "x" * 550).split()[0]
     assert t.startswith("T")
-    run(r, "result", t, "negative", "no match", "--meaning", "nenhum: only a handful of letters seen")
+    run(r, "result", t, "negative", "no match", "--meaning", "none: only a handful of letters seen")
     k = run(r, "new", "clue", "The ink is brown", "--nature", "observation").strip()
     run(r, "prove", k, "redone", "--by", "measurement", "--proof", "true")
     e = "E" + k[1:]
@@ -445,33 +439,14 @@ def test_branches_steps_trail_sheet():
     f = run(r, "new", "fact", "Paper is laid", "--by", "source", "--location", "sheet 1").strip()
     g = run(r, "new", "fact", "Paper is thin", "--by", "source", "--location", "sheet 1", "--grade", "B").strip()
     tr = run(r, "trail", "B7")
-    assert "why: none: only a handful" in tr                                       # the translated meaning
+    assert "why: none: only a handful" in tr
     assert f"changed: {k} proven by measurement: clue → fact" in tr and f"changed: {e} re-proven by source" in tr
     assert "/agent/A proven" in run(r, "show", e) and "/agent/A proven" in run(r, "show", f)  # proven → grade A
     assert "/agent/B proven" in run(r, "show", g)                                 # an explicit --grade is kept
 
 
-def test_reorganize_old_database():
-    r = case()
-    run(r, "new", "fact", "1897 paper", "--by", "source", "--location", "sheet 1")              # E2, outside a branch
-    run(r, "branch", "new", "Paper line", "--from", "O1", "--why", "start")                      # B3
-    run(r, "step", "thought", "The paper dates the letter", "--why", "watermark", "--nodes", "E2")
-    db = sqlite3.connect(r / "cases" / "demo" / "case.db")                                       # database from before the model
-    i = db.execute("INSERT INTO node(type, title, state, origin, created, updated) VALUES "
-                   "('fact', 'Maybe the letter is by a left-hander', 'current', 'agent', 'x', 'x')").lastrowid
-    db.execute("INSERT INTO fact(node, nature) VALUES (?, 'inference')", (i,)); db.commit(); db.close()
-    assert "without a recorded proof" in run(r, "map", "--all")                                  # old database: warns
-    plan = run(r, "reorganize")
-    assert "become clues 1 (inference 1)" in plan and "get a branch 1" in plan and "plan only" in plan
-    assert run(r, "show", f"E{i}").startswith(f"E{i} [fact:current")                            # nothing stored without --apply
-    run(r, "reorganize", "--apply")
-    assert f"K{i} [clue:open inference" in run(r, "search", "left-hander", "--no-corpus")
-    assert "in branch: B3" in run(r, "show", "E2")
-    assert "become clues 0" in run(r, "reorganize")                                              # idempotent
-
-
 def test_rereading_revalidation_and_resume():
-    """plan.md §7 (rereading on contradiction and on a central hypothesis), §16 (instrument) and §14 (compaction)."""
+    """Rereading on a contradiction and on a central hypothesis, instrument revalidation, resume after compaction."""
     r = case()
     run(r, "new", "front", "F", "--parent", "O1")
     run(r, "new", "fact", "A", "--by", "source", "--location", "sheet 1"); run(r, "new", "fact", "B", "--by", "source", "--location", "sheet 1")   # E3 E4
@@ -498,160 +473,6 @@ def test_rereading_revalidation_and_resume():
     st = json.loads(run(r, "start", script="hooks.py", stdin=json.dumps({"session_id": "s", "source": "compact"})))
     ctx = st["hookSpecificOutput"]["additionalContext"]
     assert "park front F" in ctx and "MAP" in ctx and "CURRENT READING" in ctx    # plan + theory + journal
-
-
-OLD_SCHEMA = """CREATE TABLE IF NOT EXISTS no(id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL,
-  pai INTEGER REFERENCES no(id), titulo TEXT NOT NULL CHECK(length(titulo) <= 160),
-  resumo TEXT CHECK(length(resumo) <= 800), estado TEXT NOT NULL, origem TEXT, grau TEXT CHECK(grau IN ('A','B','C')),
-  criado TEXT NOT NULL, atualizado TEXT NOT NULL, legado INTEGER NOT NULL DEFAULT 0);
-CREATE INDEX IF NOT EXISTS no_pai ON no(pai, tipo, estado);
-CREATE TABLE IF NOT EXISTS alvo(no INTEGER PRIMARY KEY REFERENCES no(id), solucao TEXT, prova TEXT);
-CREATE TABLE IF NOT EXISTS hipotese(no INTEGER PRIMARY KEY REFERENCES no(id), prob REAL CHECK(prob BETWEEN 0 AND 1),
-  refuta_se TEXT);
-CREATE TABLE IF NOT EXISTS teste(no INTEGER PRIMARY KEY REFERENCES no(id),
-  alcance TEXT NOT NULL CHECK(length(alcance) <= 600), fora TEXT CHECK(length(fora) <= 600),
-  porque TEXT NOT NULL CHECK(length(porque) <= 600), previsao TEXT, previsao_em TEXT, controle TEXT,
-  controle_tipo TEXT CHECK(controle_tipo IN ('real','plantado','sabotagem','nenhum')),
-  instrumento INTEGER REFERENCES no(id), script TEXT, receita TEXT);
-CREATE TABLE IF NOT EXISTS execucao(id INTEGER PRIMARY KEY, teste INTEGER NOT NULL REFERENCES no(id),
-  versao INTEGER REFERENCES versao(id), script_sha TEXT, host TEXT, pid INTEGER, log TEXT, inicio TEXT, fim TEXT,
-  n TEXT, controle_ok INTEGER, resultado TEXT CHECK(resultado IN ('positivo','negativo','inconclusivo','falhou')),
-  nota TEXT, sentido TEXT);
-CREATE TABLE IF NOT EXISTS instrumento(no INTEGER PRIMARY KEY REFERENCES no(id), caminho TEXT UNIQUE, verificador TEXT);
-CREATE TABLE IF NOT EXISTS versao(id INTEGER PRIMARY KEY, instrumento INTEGER NOT NULL REFERENCES no(id),
-  sha TEXT NOT NULL, quando TEXT NOT NULL, verificado INTEGER, nota TEXT);
-CREATE TABLE IF NOT EXISTS fato(no INTEGER PRIMARY KEY REFERENCES no(id), natureza TEXT, fonte INTEGER REFERENCES no(id),
-  local TEXT, citacao TEXT CHECK(length(citacao) <= 1000), conferido TEXT, prova TEXT);
-CREATE TABLE IF NOT EXISTS fonte(no INTEGER PRIMARY KEY REFERENCES no(id), ref TEXT UNIQUE, sha TEXT,
-  procedencia TEXT CHECK(procedencia IN ('primaria','derivada','terceiros','nossa')),
-  confiabilidade TEXT CHECK(confiabilidade IN ('A','B','C','D','E','F')), documento INTEGER);
-CREATE TABLE IF NOT EXISTS entidade(no INTEGER PRIMARY KEY REFERENCES no(id), classe TEXT, aliases TEXT);
-CREATE TABLE IF NOT EXISTS atributo(entidade INTEGER REFERENCES no(id), chave TEXT, valor TEXT,
-  fato INTEGER REFERENCES no(id), quando TEXT, PRIMARY KEY(entidade, chave));
-CREATE TABLE IF NOT EXISTS decisao(no INTEGER PRIMARY KEY REFERENCES no(id), proibe TEXT, permite TEXT);
-CREATE TABLE IF NOT EXISTS aresta(de INTEGER NOT NULL REFERENCES no(id), tipo TEXT NOT NULL,
-  para INTEGER NOT NULL REFERENCES no(id), nota TEXT CHECK(length(nota) <= 200), criado TEXT, PRIMARY KEY(de, tipo, para));
-CREATE TABLE IF NOT EXISTS ach(fato INTEGER REFERENCES no(id), hipotese INTEGER REFERENCES no(id), valor TEXT NOT NULL,
-  nota TEXT, PRIMARY KEY(fato, hipotese));
-CREATE TABLE IF NOT EXISTS legado(ref TEXT PRIMARY KEY, no INTEGER NOT NULL REFERENCES no(id));
-CREATE TABLE IF NOT EXISTS conexao(no INTEGER PRIMARY KEY REFERENCES no(id), de INTEGER NOT NULL REFERENCES no(id),
-  para INTEGER NOT NULL REFERENCES no(id), relacao TEXT NOT NULL, rival TEXT CHECK(length(rival) <= 400),
-  discriminador TEXT CHECK(length(discriminador) <= 400), canal TEXT);
-CREATE TABLE IF NOT EXISTS evento(id INTEGER PRIMARY KEY, no INTEGER, acao TEXT NOT NULL, texto TEXT, quando TEXT NOT NULL);
-CREATE VIRTUAL TABLE IF NOT EXISTS idx USING fts5(ref UNINDEXED, texto, tokenize='unicode61 remove_diacritics 2');
-CREATE TABLE IF NOT EXISTS ramo(no INTEGER PRIMARY KEY REFERENCES no(id), de_passo INTEGER REFERENCES passo(id));
-CREATE TABLE IF NOT EXISTS passo(id INTEGER PRIMARY KEY, ramo INTEGER NOT NULL REFERENCES no(id), tipo TEXT NOT NULL,
-  texto TEXT NOT NULL CHECK(length(texto) <= 400), porque TEXT CHECK(length(porque) <= 400), nos TEXT,
-  quando TEXT NOT NULL);
-CREATE INDEX IF NOT EXISTS passo_ramo ON passo(ramo, id);"""
-OLD_CORPUS = """CREATE TABLE IF NOT EXISTS colecao(nome TEXT PRIMARY KEY, criado TEXT DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS documento(id INTEGER PRIMARY KEY, colecao TEXT NOT NULL REFERENCES colecao(nome),
-  ref TEXT NOT NULL, titulo TEXT, sha TEXT, tipo TEXT, meta TEXT, UNIQUE(colecao, ref));
-CREATE TABLE IF NOT EXISTS pedaco(id INTEGER PRIMARY KEY, documento INTEGER NOT NULL REFERENCES documento(id),
-  kind TEXT NOT NULL, ordem INTEGER, ts TEXT, autor TEXT, msg_id TEXT, texto TEXT NOT NULL, meta TEXT);
-CREATE INDEX IF NOT EXISTS pedaco_doc ON pedaco(documento, kind, ordem);
-CREATE INDEX IF NOT EXISTS pedaco_msg ON pedaco(msg_id);
-CREATE VIRTUAL TABLE IF NOT EXISTS pedaco_fts USING fts5(texto, content='pedaco', content_rowid='id',
-  tokenize='unicode61 remove_diacritics 2');
-CREATE TRIGGER IF NOT EXISTS pedaco_ai AFTER INSERT ON pedaco BEGIN
-  INSERT INTO pedaco_fts(rowid, texto) VALUES (new.id, new.texto); END;
-CREATE TRIGGER IF NOT EXISTS pedaco_ad AFTER DELETE ON pedaco BEGIN
-  INSERT INTO pedaco_fts(pedaco_fts, rowid, texto) VALUES ('delete', old.id, old.texto); END;
-CREATE TABLE IF NOT EXISTS vetor(pedaco INTEGER PRIMARY KEY REFERENCES pedaco(id), modelo TEXT, emb BLOB,
-  fmt TEXT DEFAULT 'f4');  -- f4 = float32, f2 = float16 (metade do disco); sempre normalizado"""
-
-
-def test_old_portuguese_database_and_commands():
-    """A case and a corpus created the old way (Portuguese tables, columns, values, files and variables) are
-    migrated once on open, and the old commands, options and values keep working on them."""
-    r = Path(tempfile.mkdtemp())
-    d = r / "casos" / "demo"
-    d.mkdir(parents=True)
-    (d / "CASO.md").write_text("# demo\n")
-    (d / "MAPA.md").write_text("old map\n")
-    (r / ".holmes").mkdir()
-    (r / ".holmes" / "ativo").write_text("demo")
-    (r / ".holmes" / "ramo-demo").write_text("9")
-    t = "2026-01-01 00:00:00"
-    db = sqlite3.connect(d / "caso.db")
-    db.executescript(OLD_SCHEMA)
-    db.executemany("INSERT INTO no(id, tipo, pai, titulo, estado, origem, criado, atualizado) VALUES (?,?,?,?,?,?,?,?)", [
-        (1, "objetivo", None, "Descobrir quem escreveu a carta", "aberto", "usuario", t, t),
-        (2, "frente", 1, "Tinta", "ativa", "agente", t, t),
-        (3, "hipotese", 2, "A tinta data a carta", "viva", "agente", t, t),
-        (4, "teste", 3, "Ferro", "feito", "agente", t, t),
-        (5, "fato", None, "A carta cita a tinta", "vigente", "fonte", t, t),
-        (6, "pista", None, "Talvez seja um canhoto", "aberta", "externo", t, t),
-        (7, "leitura", None, "A carta finge ser antiga", "vigente", "agente", t, t),
-        (8, "questao", 2, "Quando a tinta foi feita?", "aberta", "agente", t, t),
-        (9, "ramo", 8, "Linha da tinta", "ativo", "agente", t, t),
-        (10, "entidade", None, "Carta escrita", "ativa", "agente", t, t)])
-    db.execute("INSERT INTO hipotese VALUES (3, 0.5, 'tinta moderna')")
-    db.execute("INSERT INTO teste(no, alcance, porque, controle_tipo) VALUES (4, 'a', 'p', 'plantado')")
-    db.execute("INSERT INTO execucao(teste, inicio, fim, resultado, nota, sentido) VALUES "
-               "(4, ?, ?, 'negativo', 'nada', 'nenhum: nada legivel aqui')", (t, t))
-    db.execute("INSERT INTO fato(no, natureza, local, citacao, conferido) VALUES (5, 'citacao', 'folha 1', 'tinta', ?)", (t,))
-    db.execute("INSERT INTO fato(no, natureza) VALUES (6, 'inferencia')")
-    db.execute("INSERT INTO entidade VALUES (10, 'evento', NULL)")
-    db.execute("INSERT INTO atributo VALUES (10, 'quando', '1897-03-01', 5, ?)", (t,))
-    db.executemany("INSERT INTO aresta VALUES (?,?,?,?,?)", [(7, "depende", 5, None, t), (7, "sobre", 8, "decisiva", t),
-                                                           (3, "responde", 8, None, t)])
-    db.execute("INSERT INTO ramo VALUES (9, NULL)")
-    db.execute("INSERT INTO passo(ramo, tipo, texto, porque, quando) VALUES (9, 'abriu', 'nasce de Q8', 'comecar', ?)", (t,))
-    db.executemany("INSERT INTO evento(no, acao, texto, quando) VALUES (?,?,?,?)", [
-        (7, "criou", "leitura: A carta finge ser antiga", t), (3, "viva→apoiada", "T4", t), (3, "apoiada→viva", "volta", t)])
-    db.commit()
-    db.close()
-    (r / "corpus").mkdir()
-    c = sqlite3.connect(r / "corpus" / "corpus.db")
-    c.executescript(OLD_CORPUS)
-    c.execute("INSERT INTO colecao(nome) VALUES ('demo')")
-    c.execute("INSERT INTO documento(id, colecao, ref, titulo, tipo) VALUES (1, 'demo', '/x/carta.md', 'carta.md', 'texto')")
-    c.execute("INSERT INTO pedaco(documento, kind, ordem, texto) VALUES (1, 'secao', 0, 'A tinta ferrogalica escurece')")
-    c.commit()
-    c.close()
-
-    m = run(r, "mapa", old_env=True)                                     # old command, old variables: migrates here
-    assert "# MAP — demo" in m and "decisive question: Q8" in m and "ACTIVE BRANCH B9" in m
-    assert "1 hypothesis supported (H3)" in m                            # old event actions still drive the alerts
-    assert (d / "case.db").exists() and not (d / "caso.db").exists() and (d / "CASE.md").exists() and (d / "MAP.md").exists()
-    with sqlite3.connect(d / "case.db") as db:
-        tables = {x[0] for x in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        assert "node" in tables and "no" not in tables and "aresta" not in tables
-        assert dict(db.execute("SELECT id, type FROM node WHERE id IN (5, 6, 9)").fetchall()) == {5: "fact", 6: "clue", 9: "branch"}
-        assert db.execute("SELECT result, meaning FROM run").fetchone() == ("negative", "none: nada legivel aqui")
-        assert db.execute("SELECT control_type FROM test").fetchone()[0] == "planted"
-        migrated = lambda: db.execute("SELECT count(*) FROM event WHERE action='migrated'").fetchone()[0]
-        assert migrated() == 1
-    assert "[fact:current quote/source/-]" in run(r, "ver", "E5", old_env=True)
-    assert "K6 [clue:open inference/external/-]" in run(r, "ver", "K6", old_env=True)
-    k = run(r, "novo", "pista", "Outra pista", "--natureza", "relato", "--origem", "externo", old_env=True).strip()
-    assert k.startswith("K") and "[clue:open report/external/C]" in run(r, "ver", k, old_env=True)
-    assert "K6: open → dropped" in run(r, "estado", "K6", "descartada", "sem base", old_env=True)
-    assert "F2: active → parked" in run(r, "estado", "F2", "estacionada", "pausa", old_env=True)
-    run(r, "estado", "F2", "ativa", "volta", old_env=True)
-    run(r, "liga", "E5", "sustenta", "H3", old_env=True)
-    assert "→ supports H3" in run(r, "ver", "E5", old_env=True)
-    t2 = run(r, "teste", "H3", "Ferro de novo", "--alcance", "b", "--porque", "p", "--controle", "folha",
-             "--controle-tipo", "real", old_env=True).split()[0]
-    out = run(r, "resultado", t2, "negativo", "nada", "--controle-ok", "sim", "--sentido", "revisar: ler de novo a saida",
-              old_env=True)
-    assert "→ negative" in out
-    assert "INDETERMINATE" in run(r, "ja", "ferro de novo", old_env=True)
-    assert "proven by measurement" in run(r, "confere", k, "ok", "--por", "medicao", "--prova", "true", old_env=True)
-    assert run(r, "passo", "pensou", "a tinta e antiga", "--porque", "ferro", old_env=True).startswith("B9 step")
-    assert "thought: a tinta e antiga" in run(r, "trilha", old_env=True)
-    assert "1897-03-01" in run(r, "cronologia", old_env=True)            # class 'evento' and key 'quando' translated
-    assert "corpus #1" in run(r, "busca", "tinta ferrogalica", old_env=True)
-    assert "#1" in run(r, "busca", "escurece", "--modo", "literal", script="corpus.py", old_env=True)
-    st = json.loads(run(r, "abertura", script="hooks.py", stdin=json.dumps({"source": "startup"}), old_env=True))
-    assert "Active case: demo" in st["hookSpecificOutput"]["additionalContext"]
-    run(r, "ramo", "solta", old_env=True)
-    assert "ACTIVE BRANCH: none" in run(r, "mapa", "--tudo", old_env=True)
-    with sqlite3.connect(d / "case.db") as db:                           # opened many times, migrated once
-        assert db.execute("SELECT count(*) FROM event WHERE action='migrated'").fetchone()[0] == 1
-    with sqlite3.connect(r / "corpus" / "corpus.db") as c:
-        assert c.execute("SELECT kind, position, text FROM chunk").fetchone() == ("section", 0, "A tinta ferrogalica escurece")
 
 
 if __name__ == "__main__":

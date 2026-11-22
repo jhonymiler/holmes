@@ -13,11 +13,6 @@ token, exactly as stored and typed.
 > nothing about the case. The material can be reindexed or moved to another search engine without touching the
 > reasoning.
 
-> [!NOTE]
-> holmes used to speak Portuguese. Old commands, options and values are still accepted as aliases, and an old
-> database is migrated in place the first time it is opened (see [Old databases](#old-databases)). The full
-> old → new mapping is in [MIGRATION.md](MIGRATION.md).
-
 ## case.db: the reasoning graph
 
 The tree is the plan: each level answers to the one above.
@@ -262,7 +257,7 @@ refused.
 | Decisions became a dumping ground | `decision` is only what the user determined; the agent's choice of method is a clue of nature `inference`. |
 | Huge text in the nodes | title ≤ 160, summary ≤ 800, quote ≤ 1000. The rest goes to the corpus or `notes/`. |
 | The path was lost: conclusions rediscovered, corrections overwriting the why | `branch` + `step` (above): every line born from a point with a why, immutable steps, forks, `trail`/`tree`/`sheet`. |
-| "Fact" meant "checked against a source", and inferences and reports were stored as facts | a fact is a finding already proven (`new fact --by ..`); what is not proven is a `clue`; `prove` turns a clue into a fact; `reorganize` brings an old database to this model. |
+| "Fact" meant "checked against a source", and inferences and reports were stored as facts | a fact is a finding already proven (`new fact --by ..`); what is not proven is a `clue`; `prove` turns a clue into a fact. |
 
 ### States
 
@@ -384,7 +379,6 @@ With none of that: READING of the primary source or of the last result.
 - **Open contradiction:** `contradicts` between two live items.
 - **Orphan run:** a test 'running' with a dead PID.
 - **Validity counts:** negatives INDETERMINATE, negatives TO REVALIDATE, results INVALID.
-- **Unproven facts** (a database older than the fact/clue model): run `reorganize`.
 - **Open clues** waiting to be proven (`prove K.. --by ..`) or dropped (`state K.. dropped`).
 - **Unverified premises** per front, and general ones under the objective or a target.
 - **UNBLOCKED targets:** open targets that have dependencies, all of them solved, i.e. where to attack.
@@ -395,44 +389,6 @@ With none of that: READING of the primary source or of the last result.
 - **ACTIVE BRANCH:** the line of reasoning in progress and its last two steps.
 - **Inherited:** contradictions, dependencies and negatives of items with `legacy = 1` become one count line
   (detail in `health`).
-
-## Old databases
-
-There are two upgrades, and they are different things:
-
-```mermaid
-flowchart LR
-    PT[("caso.db<br/>Portuguese schema<br/>(table no)")] -- "automatic, on first open<br/>(any command, or use)" --> EN[("case.db<br/>English schema")]
-    EN -- "reorganize (plan)<br/>reorganize --apply" --> FC[("case.db<br/>fact/clue model")]
-```
-
-<details>
-<summary><b>Automatic schema migration</b> (Portuguese → English)</summary>
-
-When a case still has `caso.db` (with `CASO.md`, `MAPA.md`), the first command that opens it renames them to
-`case.db`, `CASE.md`, `MAP.md` and rebuilds every table under its English name in one transaction, translating the
-stored values (types, states, natures, origins, edges, step types, proofs, results, provenances, control types,
-the values the code reads in event actions, edge notes `decisiva`/`lacuna` → `decisive`/`gap`, run meaning
-prefixes `nenhum:`/`revisar:` → `none:`/`revisit:`, the type prefix of `created` event texts) and rebuilding the
-search index. A `migrated` event marks it. Titles,
-summaries, notes and step texts are records and stay as written. A database already in English is left alone.
-Back the database up first: the migration is one-way. The corpus migrates the same way (`colecao`/`documento`/
-`pedaco`/`vetor` → `collection`/`document`/`chunk`/`vector`; chunk kinds `janela`/`secao`/`pagina` →
-`window`/`section`/`page`). Every renamed table, column and value: [MIGRATION.md](MIGRATION.md).
-
-</details>
-
-<details>
-<summary><b>`reorganize`</b> (before the fact/clue model)</summary>
-
-In an older database, inferences and reports were stored as facts, and a "fact" only meant "checked against a
-source". `reorganize` shows the plan; `reorganize --apply` writes it: every fact that is not a proven
-`observation`/`measurement`/`quote` becomes a clue with the same id and edges (`dropped` if it had been retracted
-or contested, `open` otherwise); a stored literal quote with its source linked stays a fact proven by source; an
-old proof with a command becomes `proven_by measurement`, without one `source`; a legacy `draft` fact becomes a
-clue; and every node cited in a step gets that step's branch. The map warns while unproven facts remain.
-
-</details>
 
 ## corpus.db: the material
 

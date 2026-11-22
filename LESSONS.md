@@ -173,7 +173,7 @@ The judging instrument appears in 156 mentions across the reports.
 | Rediscovery | One search command (`search`/`tried`, accent-insensitive BM25, nodes + sources + branch steps, one line per item with its state). The prompt hook injects up to 6 lines without repeating within the session. `test` refuses an identical recipe already done and shows the similar ones. |
 | Negative without validity | `test` requires `--scope`. `instrument` records the sha. A negative without an instrument shows as INDETERMINATE, and when the instrument changes the old negatives show as TO REVALIDATE. |
 | Fact × interpretation | `--origin` (author, source, measured, user, agent, external) and `--grade`. External enters as C automatically. A claim is born a `clue` until proven, and its status shows on every search line. |
-| What makes a fact a fact | A fact is a finding already proven (`new fact --by source\|measurement\|test\|reproduction`, with `--proof` for measurement, test and reproduction). What is not proven is a `clue`; `prove` proves an observation, measurement, quote or report clue into a fact (at grade A); an inference or interpretation never becomes one. `reorganize` brings an old database to the model. |
+| What makes a fact a fact | A fact is a finding already proven (`new fact --by source\|measurement\|test\|reproduction`, with `--proof` for measurement, test and reproduction). What is not proven is a `clue`; `prove` proves an observation, measurement, quote or report clue into a fact (at grade A); an inference or interpretation never becomes one. |
 | Compaction | Per-session reasoning journal (hooks `stop`/`pre-compact`); the post-compaction opening (`start` hook) injects the map + the tail of the journal. State lives in the database, not in the summary. |
 | Volume | One database, a 2 KB `CASE.md`, a generated `MAP.md`. A constitution of 26 rules without history. A short detective skill, with references on demand. No automatic edges: a perceived relation is a candidate `connection` until confirmed. Title and summary with size limits. |
 | Loss of the path | `branch` + `step`: every line born from a point with its why; immutable steps; fork from an earlier step; `trail`, `tree` and `sheet` rebuild the path. Measured in the real case before the piece: 1,238 of 1,283 facts with no place in the tree and the same conclusion rediscovered three times in 17 days. |
@@ -192,8 +192,7 @@ The judging instrument appears in 156 mentions across the reports.
   as inert or as noise in v1.
 - **Method phases as a mandatory gate.** The user felt it as "ceremony". 2.0 enforces the controls (scope,
   instrument, origin) and leaves the phases as method in the skill.
-- **Migrating v1 databases.** 2.0 starts clean from v1 (its own older Portuguese databases are migrated
-  automatically, see MODEL "Old databases"). Material from another system enters through `extract` (JSON
+- **Migrating v1 databases.** 2.0 starts clean from v1. Material from another system enters through `extract` (JSON
   contract) or `source`; items inherited from another system can carry `legacy = 1` (set by the importing
   script; no CLI command sets it), which keeps them out of the alerts until touched.
 

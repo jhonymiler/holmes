@@ -24,9 +24,7 @@ concluir cedo demais custa caro:
 
 > [!NOTE]
 > Este README é o único documento em português. Todo o resto está em inglês: documentação, regras, skills,
-> agentes e a própria CLI, com seus estados e rótulos de saída. As versões anteriores falavam português; os
-> comandos, opções e valores antigos continuam funcionando como apelidos, e um banco de caso antigo é migrado no
-> lugar na primeira vez que é aberto. O mapeamento completo antigo → novo está em [MIGRATION.md](MIGRATION.md).
+> agentes e a própria CLI, com seus estados e rótulos de saída.
 
 ## O problema que ele resolve
 
@@ -152,17 +150,6 @@ H sheet                                                           # uma página:
 > investigação. Faça mudanças no framework em commits separados das mudanças do caso, para poder mandá-las
 > de volta.
 
-<details>
-<summary><b>Vindo da CLI em português?</b></summary>
-
-Nada a fazer à mão. Os comandos, opções e valores antigos são aceitos como apelidos. Um `casos/<caso>/caso.db`
-antigo é migrado no lugar na primeira vez que é aberto (faça backup antes: a migração não tem volta), `CASO.md` e
-`MAPA.md` são renomeados, e as variáveis de ambiente, pastas e argumentos de hook antigos são lidos quando os novos
-não existem. Se um banco antigo ainda tem fatos não provados, rode `reorganize` (só o plano) e depois
-`reorganize --apply`. Mapeamento completo: [MIGRATION.md](MIGRATION.md).
-
-</details>
-
 ## Peças
 
 ```
@@ -170,7 +157,6 @@ CLAUDE.md                        modelo de instruções do projeto (fatos de má
 MODEL.md                         modelo de dados, com diagramas
 EXAMPLE.md                       um caso fictício do começo ao fim, com as saídas reais dos comandos
 LESSONS.md                       por que cada regra existe
-MIGRATION.md                     nomes antigos em português → nomes novos em inglês
 .claude/settings.json            os hooks do holmes (valem no CLI, no VS Code e no app)
 .claude/rules/constitution.md    26 regras de toda sessão
 .claude/skills/detective/        o método (SKILL.md + references/ sob demanda)
@@ -218,14 +204,17 @@ e as saídas reais de cada comando: [EXAMPLE.md](EXAMPLE.md).
 | relacionar | `connections <id\|"texto">` (candidatas; consulta) · `connection <de> <para> <relação> "<por quê>" [--rival ..] [--discriminator ..]` · `state C.. confirmed\|rejected "<motivo>"` |
 | hipóteses | `prob <H> 0.4 "<motivo>"` · `ach <E> <H> CC\|C\|N\|I\|II` · `ach <F>` (matriz) |
 | testar | `test <H> "<t>" --scope .. --why .. [--outside ..] [--control ..] [--control-type real\|planted\|sabotage\|none] [--exploratory]` · `run <T> --pid --log` · `result <T> positive\|negative\|inconclusive\|failed "<nota>" [--control-ok yes\|no] [--meaning ".."]` · `jobs` |
-| fontes | `source <arquivo\|pasta\|url>` · `quote <pedaço> "<afirmação>"` · `prove K.. "<nota>" --by source\|measurement\|test\|reproduction [--proof ..] [--source S..] [--location ..]` (prova uma pista e ela vira fato; a prova não precisa ser fonte) · `reorganize [--apply]` (banco antigo → só fatos provados, pistas, passos religados) |
+| fontes | `source <arquivo\|pasta\|url>` · `quote <pedaço> "<afirmação>"` · `prove K.. "<nota>" --by source\|measurement\|test\|reproduction [--proof ..] [--source S..] [--location ..]` (prova uma pista e ela vira fato; a prova não precisa ser fonte) |
 | mudar | `state <id> <estado> "<motivo>"` · `edit <id> [--title ..] [--summary ..] [--refuted-if ..]` · `link`/`unlink <de> <tipo> <para>` · `attribute <N> <chave> <valor>` |
 | instrumentos | `instrument <caminho> "<nome>" --verifier "<cmd>"` · `proof` (lista) · `proof --execute [--legacy]` |
 
 Estados para `state`, por tipo: hypothesis `alive · supported · refuted · parked`; test `planned · running · done ·
 cancelled`; fact `current · contested · retracted`; clue `open · dropped`; connection `suggested · confirmed ·
-rejected`; branch `active · paused · dead · merged · concluded`. Os demais estão em
-[MIGRATION.md](MIGRATION.md#types-and-states-stored-values).
+rejected`; branch `active · paused · dead · merged · concluded`; objective `open · achieved · abandoned`; target
+`open · solved · blocked`; front `active · parked · closed · discarded`; premise `assumed · verified · refuted`;
+question `open · answered · reformulated · parked`; thread `open · closed · parked`; decision `current · revoked`;
+entity `active · merged`; source `catalogued · indexed`; instrument `current · obsolete`; reading
+`current · superseded`.
 
 </details>
 
@@ -271,13 +260,11 @@ O mod `.claude/skills/holmes/` é opcional e só poda saídas longas do Bash; el
 | `HOLMES_OUTPUT_LIMIT` | 4000 | poda de saída do Bash (0 desliga) |
 | `HOLMES_EMBED_URL` · `HOLMES_EMBED_MODEL` | — | servidor de embeddings para a busca vetorial |
 
-Os nomes antigos em português são lidos quando os novos não existem ([MIGRATION.md](MIGRATION.md)).
-
 </details>
 
 ## Verificado
 
-- ✅ `holmes/test_holmes.py`: 14 testes herméticos, que cobrem:
+- ✅ `holmes/test_holmes.py`: 12 testes herméticos, que cobrem:
   - a árvore e seus limites, e os alvos;
   - execuções e validade (controle visto, script versionado, modo exploratório) e o alerta de túnel;
   - fatos, fontes, citação, entidades e apelidos;
@@ -287,11 +274,8 @@ Os nomes antigos em português são lidos quando os novos não existem ([MIGRATI
   - os hooks;
   - o percurso extração → pista → conexão candidata → questão → hipótese → plano;
   - ramos com fork de um passo, passos, `trail`, `tree` e `sheet`;
-  - a reorganização de banco antigo (fatos não provados viram pistas, passos religados);
   - releitura diante de contradição ou de hipótese central, revalidação de instrumento e retomada após
     compactar;
-  - **um banco antigo em português** (tabelas, colunas, valores, arquivos, variáveis) migrado uma vez ao abrir,
-    com os comandos, opções e valores antigos ainda funcionando nele;
   - o caso sintético com resposta conhecida.
 - ✅ `holmes/eval/evaluate.py recall`: descoberta de relações medida contra gabarito (números e limites em
   `holmes/eval/README.md`).
